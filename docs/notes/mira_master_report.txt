@@ -1,0 +1,544 @@
+El sistema de llama MIRA: Manage Income and Resource Allocation
+
+Por tal motivo de debe de desarrollar un reporte predeterminado y robusto que haga honor a ese nombre de acuerdo la siguiente definición.
+
+Reporte Maestro: Manage Income and Resource Allocation (MIRA)
+
+Este debe pasar a ser el reporte predeterminado de el sistema.
+
+El reporte MIRA trasciende la simple visualización de datos; actúa como una auditoría mensual de la salud financiera del usuario. Su objetivo es responder con precisión tres preguntas: ¿Cuánto dinero entró?, ¿A dónde se asignó? y ¿Qué tan eficiente fue esa asignación?
+
+Para este objetivo el reporte hace uso extensivo de la funcionalidad disponible para mostrar mensajes al usuario ya que el espacio en pantalla es limitado.
+
+Los cálculos se actualizan cada mes el usuario ejecuta el reporte.
+
+Los mensajes deben quedar disponibles para hacer scroll hasta el usuario actualice el reporte.
+
+No se almacenan, son reportes de gastos ingresos personales no se esperan miles de transacciones por periodo.
+
+Para este reporte ahorro se consideran aquellas transacciones que el usuario registro contra categorías de gastos definidas explícitamente como: es_ahorro=True
+
+Se debe aplicar filtros para no mostrar mensajes no relevantes, por el momento definir variaciones del 10% como relevantes sin embargo hay información que siempre se debe dar:
+
+ - Ingresos totales versus períodos anteriores.
+ - Ingresos totales versus presupuesto (si hay ppto disponible).
+ - Gastos totales versus períodos anteriores.
+ - Gastos totales versus presupuesto (si hay ppto disponible).
+ - Advertir al usuario si un ingreso presupuestado no se ha percibido.
+ - Advertir al usuario de un gasto presupuestado no se pagado.
+
+I. Parámetros de Consulta y Filtros
+Para garantizar la precisión en el análisis de tendencias, el reporte se estructura bajo un esquema de periodos de un mes como unidad logica de analisis:
+
+Filtros Obligatorios: Selector de Mes y Año.
+
+Alcance: Los datos presentados corresponden estrictamente al mes calendario seleccionado, comparándolo automáticamente con el mes inmediato anterior, con el promedio de los últimos 3 meses y el promedio de los últimos 6 meses para determinar tendencias. Si no hay datos disponibles con los que comparar el reporte no falla simplemente reporta al usuario que se requiere un mayor período de transacciones para realizar el análisis y le invita a seguir registrando sus ingresos y gastos en la aplicación.
+
+Si hay un presupuesto disponible para el periodo mismo año y mismo mes también se debe de comparar versus el presupuesto. Existe la posibilidad de un usuario haya creado un presupuesto incompleto, solo presupuesto enero y febrero pero estamos consultado marzo, debe haber código defensivo que verifique que para el mes y año analizado la suma de ingresos y gatos en el ppto sea > 0, en caso que esa condición no se cumpla considerar que no hay presupuesto contra el que comparar.
+
+El sistema actualmente no limita a un presupuesto por periodo, un mismo año puede tener N presupuestos.
+
+Hay que agregar lógica de negocios para que para cada año haya un presupuesto predeterminado.
+
+Hay que agregar en la pantalla de presupuesto un botón Definir como predeterminado con lógica en el backend defensiva para que solo haya un ppto predeterminado por año.
+
+II. Resumen Ejecutivo de Flujo de Caja (El Pulso Financiero)
+Ubicado en la parte superior, este bloque muestra los cuatro indicadores críticos con iconos de tendencia (flechas tipo bolsa de valores) que comparan el desempeño contra el mes anterior.
+
+Ingreso Total del Periodo: Sumatoria de todas las entradas de dinero.
+
+Indicador: Flecha verde arriba (si aumentó) o roja abajo (si disminuyó).
+Si hay ppto mostrar indicador versus ppto.
+
+Gasto Operativo Total: Sumatoria de todos los egresos, excluyendo estrictamente las transferencias a metas de ahorro.
+
+Indicador: Flecha roja arriba (si gastó más) o verde abajo (si gastó menos).
+Si hay ppto mostrar indicador versus ppto.
+
+Recursos Destinados al Ahorro: Sumatoria total de los montos transferidos a las diversas metas de ahorro definidas por el usuario.
+
+Indicador: Flecha verde arriba (si ahorró más) o roja abajo (si ahorró menos).
+
+Balance Neto del Periodo: Resultado de: Ingresos - (Gastos + Ahorros). Representa el capital libre al final del mes.
+
+Indicador: Neutro si es igual a cero, verde arriba si es superávit.
+
+Grafico de tendencia acumulada: 
+
+Tendencia acumulada (YTD) (ingresos acumulados, gasto acumulado, balance acumulado, ahorro acumulado) considerando siempre enero del año seleccionado como el mes inicial.
+
+III. Análisis de Asignación de Recursos (Drill-Down Inteligente)
+Esta sección desglosa el destino del dinero mediante dos vistas jerárquicas:
+
+A. Top 5 Categorías de Gasto
+Lógica de Visualización: Muestra las 5 categorías con mayor volumen de gasto, ordenadas de mayor a menor.
+
+Regla de Jerarquía: Solo se muestran Categorías Padre o categorías "sueltas" (sin dependencias).
+
+Interactividad: Al hacer clic en una categoría padre, la interfaz debe expandirse o realizar un "drill-down" para mostrar el desglose de sus Categorías Hijas, permitiendo identificar exactamente qué sub-rubro causó la desviación.
+
+B. Top 5 Etiquetas de Contexto
+Lógica de Visualización: Agrupa los gastos según las etiquetas (tags) asignadas, permitiendo ver el gasto por "propósito" (ej: #Vacaciones, #Trabajo, #MantenimientoHogar).
+
+Interactividad: Al hacer clic en una etiqueta, el reporte debe desglosar las Categorías Hijas (transaccionales) que componen dicho monto, ofreciendo una visión transversal del gasto.
+
+Dado que una transacción puede tener N tags es posible que una misma transacción de repita en varias etiquetas del top 5, este comportamiento es el esperado.
+
+El drill-down de una etiqueta mostrará el agregado por Categoría Hija (o transaccional), permitiendo ver de qué tipo de gastos se compone esa etiqueta
+
+IV. Perspectiva Histórica y Tendencias
+Un gráfico de Barras Apiladas muestra el comportamiento de los últimos 6 periodos (incluyendo el actual).
+
+Funcionalidad de Switch: El usuario puede alternar entre [Ver Ingresos] y [Ver Gastos]. Nunca se muestran ambos simultáneamente para evitar ruido visual.
+
+Composición de Barras: Cada barra está segmentada por los colores de las categorías padre, permitiendo ver visualmente cómo ha crecido o disminuido un rubro específico a través del tiempo.
+
+Exclusión Crítica: Las transacciones marcadas como "Ahorro" están estrictamente prohibidas en este gráfico para no desvirtuar la realidad del consumo operativo.
+
+V. MIRA Advisor: El Área de Mensajes e Insights Avanzados
+Esta sección inferior es el corazón del asesor financiero. MIRA analiza los datos y genera mensajes claros, directos y con valor estratégico:
+
+1. Mensajes de Comparativa Directa
+Estos son ejemplos no una lista taxativa 
+
+"Los ingresos de este mes fueron un {N}% {mayores/menores} en relación al mes pasado."
+
+"Los gastos operativos fueron un {N}% {mayores/menores} en relación al mes pasado."
+
+Alerta de Déficit: "⚠️ Este mes has gastado más de lo que has ingresado. Estás utilizando {MONEDA_PREDETERMINADA} {X} de tus reservas."
+
+Confirmación de Salud: "✅ Vas bien: tienes {MONEDA_PREDETERMINADA} {X} disponibles para asignar a nuevas metas de inversión."
+
+Si hay ppto mostrar mensajes de comparativa directa contra el presupuesto
+
+2. Análisis de Comportamiento (Insights de Tendencia)
+Análisis de Fin de Semana: "El {N}% de tus gastos ocurre en fines de semana. Tu costo promedio por sábado y domingo es de {MONEDA_PREDETERMINADA} {X}."
+
+Detección de Gastos Hormiga: "Tus transacciones de bajo monto (menores a {MONEDA_PREDETERMINADA} 200) suman {MONEDA_PREDETERMINADA} {X}. Esto representa el {N}% de tu gasto total."
+
+Impacto de Etiquetas: "La etiqueta #{Nombre_Etiqueta} ha consumido el {N}% de tus ingresos. Evalúa si este gasto se alinea con tus prioridades actuales."
+
+Si hay ppto comparativas contra el presupuesto
+
+3. Métricas de Supervivencia y Libertad
+Días de Supervivencia (Burn Rate): "Basado en tu gasto promedio diario, tu saldo actual te permite cubrir {N} días de gastos sin recibir nuevos ingresos."
+
+Proyección de Metas: "A este ritmo de ahorro, completarás tu meta '{Nombre_Meta}' en {Mes/Año}, adelantándote {N} meses a lo previsto."
+
+Índice de Eficiencia MIRA (50/30/20): "Tu distribución de este mes es: {X}% Necesidades / {Y}% Deseos / {Z}% Ahorro. Tu desviación respecto al modelo ideal es del {N}%."
+
+4. Tasa de Ahorro Real (La "Estrella")Este es el indicador de salud financiera más importante. No importa cuánto ganas, sino cuánto conservas.Qué mide: El porcentaje de ingresos que no se gastó.Visualización: Un medidor (tipo velocímetro) o un porcentaje grande.Fórmula: $\frac{\text{Ingresos} - \text{Gastos}}{\text{Ingresos}} \times 100$Toque amigable: Si es > 20%, un mensaje de "¡Vas por excelente camino!"; si es < 0%, una alerta: "Estás tirando de ahorros o deuda".
+
+5. Ratio gasto / ingreso: Gasto total / Ingreso total
+
+6. Concentración de gasto
+
+Muy útil:
+
+“El 40% de tu gasto está en 1 categoría”
+
+7. Dependencia de ingreso
+
+“El 80% de tus ingresos proviene de una sola categoría”
+
+
+VI. Semántica de Colores y Simbolismo
+Para mantener la coherencia visual con mercados financieros:
+
+Ingresos < Real: Rojo con flecha hacia abajo (pérdida de capacidad).
+
+Egresos > Real: Verde con flecha hacia arriba (más capital disponible del esperado).
+
+Gastos > Real: Rojo con flecha hacia arriba (exceso de gasto).
+
+Gastos < Real: Verde con flecha hacia abajo (ahorro por eficiencia).
+
+Igualdad: Gris o color neutro (cumplimiento exacto).
+
+=====================================================================
+QA CHECKLIST — REPORTE MIRA
+
+Organizado por niveles: crítico → importante → refinamiento
+
+🔴 1. QA CRÍTICO (rompe la lógica financiera)
+1.1 Integridad de cálculos
+
+ Ingreso Total = suma exacta de transacciones de ingreso
+
+ Gasto Total = suma exacta de egresos (excluyendo ahorro)
+
+ Ahorro = suma de transferencias a metas
+
+ Balance Neto = Ingreso - (Gasto + Ahorro)
+
+👉 Test:
+
+Dataset controlado con valores conocidos
+
+Validar exactitud (no tolerancias)
+
+1.2 Exclusión de transferencias internas
+
+ Transferencias entre cuentas NO aparecen como ingreso ni gasto
+
+ No afectan métricas ni tendencias
+
+1.3 Reglas de clasificación
+
+ Reembolsos reducen gasto (no suman ingreso)
+
+ Pagos de deuda no duplican gasto
+
+ Ahorro no aparece como gasto operativo
+
+1.4 Consistencia entre secciones
+
+ Total gasto en resumen = suma de categorías
+
+ Total gasto en gráfico = total gasto reportado
+
+ Top 5 no supera el total global
+
+1.5 Manejo de división por cero
+
+ Si ingresos = 0 → no hay % inválidos
+
+ No aparecen NaN / Infinity
+
+ Se muestran mensajes adecuados
+
+🟠 2. QA DE DATOS Y PERIODOS
+2.1 Comparación de periodos
+
+ Mes actual vs mes anterior correcto
+
+ Promedio 3 meses correcto
+
+ Promedio 6 meses correcto
+
+👉 Test:
+
+Dataset con valores distintos por mes
+
+2.2 Periodos con datos insuficientes
+
+ Sin datos previos → no rompe
+
+ Muestra mensaje: “requiere más historial”
+
+ No inventa comparaciones
+
+2.3 Primer mes del usuario
+
+ No hay tendencias falsas
+
+ No hay flechas engañosas
+
+2.4 Edición retroactiva
+
+ Si cambia una transacción pasada → el reporte se actualiza correctamente
+
+ No hay inconsistencias cacheadas
+
+🟡 3. QA DE PRESUPUESTO
+3.1 Selección de presupuesto
+
+ Solo se usa el presupuesto marcado como “predeterminado”
+
+ Si no hay default → comportamiento definido (no crash)
+
+3.2 Comparación vs presupuesto
+
+ Ingreso vs presupuesto correcto
+
+ Gasto vs presupuesto correcto
+
+ Mensajes correctos (no invertidos)
+
+3.3 Alertas de presupuesto
+
+ Detecta ingreso no percibido
+
+ Detecta gasto no ejecutado
+
+ No genera falsos positivos
+
+3.4 Conflicto de múltiples presupuestos
+
+ Sistema no mezcla presupuestos
+
+ No duplica comparaciones
+
+🟢 4. QA DE INSIGHTS (MIRA ADVISOR)
+4.1 Umbral de relevancia (10%)
+
+ Cambios <10% → NO generan mensajes
+
+ Cambios ≥10% → sí generan mensajes
+
+4.2 Priorización de mensajes
+
+ Déficit aparece primero
+
+ Alertas críticas no quedan ocultas
+
+ No hay spam de mensajes
+
+4.3 Exactitud de insights
+
+ % calculados correctamente
+
+ Montos correctos
+
+ Etiquetas correctas
+
+4.4 Explicabilidad
+
+ Cambios importantes tienen causa clara
+
+ No hay mensajes ambiguos
+
+4.5 Mensajes contradictorios
+
+ No aparecen mensajes opuestos
+
+Ej: “gastas menos” + “déficit”
+
+🔵 5. QA DE DRILL-DOWN
+5.1 Categorías
+
+ Solo muestra categorías padre
+
+ Drill-down muestra hijas correctas
+
+ Totales coinciden
+
+5.2 Etiquetas (tags)
+
+ Suma de etiquetas = total gasto etiquetado
+
+ No duplicación de montos
+
+ Manejo correcto de múltiples tags
+
+5.3 Interactividad
+
+ Click funciona siempre
+
+ No rompe con categorías vacías
+
+🟣 6. QA DE GRÁFICO HISTÓRICO
+6.1 Datos correctos
+
+ Solo últimos 6 periodos
+
+ Incluye periodo actual
+
+ Excluye ahorro correctamente
+
+6.2 Segmentación
+
+ Colores correctos por categoría padre
+
+ Sumas por barra correctas
+
+6.3 Switch Ingresos/Gastos
+
+ Nunca se muestran ambos a la vez
+
+ Cambio no rompe datos
+
+⚫ 7. QA DE CASOS BORDE
+7.1 Usuario sin datos
+
+ No crashea
+
+ Mensaje claro
+
+7.2 Solo ingresos
+
+ No rompe métricas
+
+ Insights coherentes
+
+7.3 Solo gastos
+
+ Detecta déficit correctamente
+
+7.4 Montos extremos
+
+ Valores muy altos no rompen UI
+
+ Valores muy pequeños no generan ruido
+
+7.5 Datos inconsistentes
+
+ Duplicados no inflan resultados
+
+ Datos corruptos no rompen cálculo
+
+🟤 8. QA DE UX Y VISUAL
+8.1 Flechas e indicadores
+
+ Verde/rojo correcto según contexto
+
+ No invertidos
+
+8.2 Redondeo
+
+ % coherentes (no 99.999%)
+
+ Montos bien formateados
+
+8.3 Mensajes
+
+ Claros y accionables
+
+ Sin lenguaje técnico
+
+8.4 Consistencia visual
+
+ Mismo número en todas partes
+
+ No hay discrepancias visibles
+
+🧪 9. TESTS RECOMENDADOS (muy importante)
+Dataset mínimo QA
+
+Crea escenarios controlados:
+
+Caso base equilibrado
+
+Déficit
+
+Superávit alto
+
+Sin ingresos
+
+Sin gastos
+
+Con presupuesto vs sin presupuesto
+
+Con múltiples presupuestos
+
+Con tags múltiples
+
+Con categorías jerárquicas
+
+Con transferencias internas
+
+=====================================================================
+EXTENSIÓN: INSIGHTS EN TIEMPO REAL POR TRANSACCIÓN
+
+Se habilitó una capa de insights en tiempo real para que el usuario no dependa de ejecutar manualmente el reporte mensual.
+
+Flujo al registrar una operación:
+1) Se guarda la transacción.
+2) Se reconstruye un contexto mensual mínimo (ingresos/gastos reales, metas/presupuesto y valores por categoría).
+3) Se evalúan reglas KPI por tipo de transacción (ingreso o gasto).
+4) Si aplican varias reglas, se prioriza una sola y se guarda como evento de insight.
+5) Si no cruza umbral relevante, no se muestra insight.
+
+Reglas anti-ruido:
+- Solo eventos por cruce de umbral (before/after).
+- Solo un insight por transacción.
+- Priorización explícita por utilidad.
+- Cooldown para reglas de comportamiento atípico.
+
+Persistencia:
+- Tabla insight_events para auditoría, deduplicación y medición de valor.
+
+=====================================================================
+EXTENSIÓN: SISTEMA DE LOGROS (SIN UI DEDICADA)
+
+Se agregó un sistema inicial de logros evaluado al registrar cada transacción.
+
+Regla de prioridad de mensaje (solo 1 por transacción):
+1) Logro de mejora financiera.
+2) Logro de uso/aprendizaje.
+3) Insight operativo en tiempo real.
+
+Canal de comunicación:
+- Reutiliza el mismo canal de mensajes contextual ya existente (sin nueva pantalla de logros).
+
+Persistencia:
+- Tabla `achievement_events` para trazabilidad y evitar duplicados.
+
+Logros iniciales implementados (versión conservadora):
+- Cumplir meta de ingresos del mes.
+- Ingreso por encima de promedio histórico.
+- Registrar ahorro en el mes.
+- Ahorro superior al mes anterior.
+- Racha de 3 meses con ahorro.
+- Hitos de uso del asistente NL (100/500/1000/3000/5000).
+- Hitos de consulta de Reporte Maestro MIRA (10/100/500/1000).
+- Hitos de aportes a ahorro (1/10/50/100).
+
+=====================================================================
+EXTENSIÓN: MENSAJE CONTEXTUAL DIARIO AL INICIO
+
+Se agregó un mensaje contextual diario (máximo 1 por día), evaluado al iniciar la app.
+
+Regla de activación:
+- Si `_last_daily_message` es distinto a la fecha actual, se evalúan triggers.
+- Si hay mensaje relevante, se muestra uno solo y se guarda `_last_daily_message = hoy`.
+- Si no hay relevancia, no se muestra nada.
+
+Triggers iniciales:
+- Sin presupuesto definido para el año actual.
+- Sin metas de ahorro y día de mes > 10.
+- Sin transacciones en el mes y día de mes > 20.
+
+La visualización se programa con delay (~2 segundos) después de renderizar la ventana principal.
+
+=====================================================================
+ACTUALIZACIÓN DE ARQUITECTURA: MOTOR UNIFICADO DE MENSAJERÍA
+
+La iniciativa quedó unificada bajo un solo resolver de mensajes con tres fuentes:
+- Transacciones (`achievement` + `realtime_insight`).
+- Inicio de aplicación (`daily_context`).
+- Política global: máximo 1 mensaje por evento.
+
+Persistencia unificada:
+- Tabla `message_events` como historial canónico de mensajes mostrados.
+- `insight_events` y `achievement_events` se conservan para trazabilidad específica de cada frente.
+
+Resolver único:
+- `resolve_single_message(candidates, policy)` ordena por prioridad,
+  aplica cooldown/deduplicación y emite uno o ninguno.
+
+=====================================================================
+AJUSTES POSTERIORES (PERFORMANCE, PUREZA Y CONSISTENCIA)
+
+1) Contexto mensual optimizado
+- `build_monthly_context` evita releer todas las transacciones del mes para calcular ahorro.
+- El ahorro mensual se obtiene con agregación SQL directa sobre categorías marcadas como ahorro.
+
+2) Evaluación de logros sin efectos secundarios
+- La evaluación solo genera candidatos.
+- Los contadores se aplican después de seleccionar y persistir el mensaje.
+
+3) Ruta única de insights
+- Se mantiene una sola ruta canónica de selección (`select_best_operation_message`) para transacciones.
+
+4) Deduplicación estructural
+- Se agregaron constraints UNIQUE en `message_events` para evitar duplicados por transacción y por mensaje diario.
+
+5) Política update/delete
+- Los mensajes emitidos son históricos y no se revierten al editar/eliminar transacciones.
+
+6) Reglas declarativas mínimas
+- Hitos de logros movidos a constantes de catálogo central.
+
+7) Contadores fuera de settings
+- Contadores de logros migrados a `achievement_counters`.
+
+=====================================================================
+AJUSTES PRE-MERGE (RESOLVER / DEDUP / CONTEXTO)
+
+- `resolve_single_message` ahora soporta `persist=False` para resolver sin efectos (simulación/preview).
+- Persistencia separada en `persist_message_event(...)`.
+- Se elimina `_message_already_shown` y se centraliza deduplicación en cooldown + constraints DB.
+- Se agrega logging cuando `INSERT OR IGNORE` no inserta (deduplicación estructural).
+- `build_monthly_context` agrupa más agregados en menos consultas.
+- `extra_context` del evento se normaliza con esquema mínimo: `category_id`, `amount`, `source`.

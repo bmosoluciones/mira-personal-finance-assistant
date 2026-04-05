@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=MIRA
+Comment=Personal Finance Assistant
+Exec=mira
+Icon=solutions.bmogroup.mira
+Categories=Office;Finance;
+Keywords=finance;budget;expenses;income;personal-finance;
+StartupNotify=true
+Terminal=false

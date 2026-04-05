@@ -1,0 +1,83 @@
+site_name: MIRA - User Manual
+site_description: User documentation for MIRA, an offline personal finance assistant.
+repo_name: bmosoluciones/mira-personal-finance-assistant
+repo_url: https://github.com/bmosoluciones/mira-personal-finance-assistant
+
+theme:
+  name: material
+  language: en
+  custom_dir: docs/overrides
+  logo: images/mira-nav-logo.svg
+  favicon: images/mira.ico
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+          site_name: MIRA - User Manual
+          site_description: User documentation for MIRA, an offline personal finance assistant.
+          theme:
+            language: en
+        - locale: es
+          name: Espanol
+          build: true
+          site_name: MIRA - Manual de Usuario
+          site_description: Manual de uso de MIRA, asistente de finanzas personales offline.
+          theme:
+            language: es
+          nav_translations:
+            Home: Inicio
+            Installation and Launch: Instalacion y Arranque
+            First Steps: Primeros Pasos
+            Interface Guide: Guia de la Interfaz
+            Practical Workflows: Flujos Practicos
+            Credit Cards: Tarjetas de Credito
+            Natural Language: Lenguaje Natural
+            Import, Export and Backup: Importacion, Exportacion y Respaldo
+            Optional Local AI: IA Local Opcional
+            Troubleshooting: Solucion de Problemas
+            Appendices: Anexos
+            AI JSON Contract: Contrato JSON IA
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  install_links:
+    # Public download URLs shown on the custom home page when provided.
+    exe: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1a2.exe"
+    zip: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1a2.zip"
+    flatpak: "https://github.com/bmosoluciones/solutions.bmogroup.mira"
+    snap: "https://github.com/bmosoluciones/solutions.bmogroup.mira/blob/main/solutions.bmogroup.mira.yml"
+
+nav:
+  - Home: index.md
+  - Installation and Launch: instalacion.md
+  - First Steps: primeros_pasos.md
+  - Interface Guide: guia_interfaz.md
+  - Practical Workflows: flujos_practicos.md
+  - Credit Cards: tarjetas_credito.md
+  - Natural Language: entrada_lenguaje_natural.md
+  - Import, Export and Backup: importar_exportar_respaldo.md
+  - Optional Local AI: modelos_ia_opcional.md
+  - Troubleshooting: solucion_problemas.md
+  - FAQ: faq.md
+  - Appendices:
+      - AI JSON Contract: ia_json_format.md

@@ -1,0 +1,487 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
+
+"""Peewee models for the MIRA SQLite database."""
+
+from __future__ import annotations
+
+import sqlite3
+from dataclasses import dataclass
+from datetime import date, datetime
+from pathlib import Path
+
+from peewee import (
+    AutoField,
+    BooleanField,
+    CharField,
+    CompositeKey,
+    DateField,
+    DateTimeField,
+    FloatField,
+    ForeignKeyField,
+    IntegerField,
+    Model,
+    Proxy,
+    SQL,
+    SqliteDatabase,
+    TextField,
+)
+
+DB_PROXY: Proxy = Proxy()
+SCHEMA_VERSION = 2
+
+
+@dataclass(frozen=True)
+class SchemaInspection:
+    status: str
+    user_version: int | None
+    tables: frozenset[str]
+    error: str | None = None
+
+
+class BaseModel(Model):
+    class Meta:
+        database = DB_PROXY
+
+
+class Account(BaseModel):
+    id = AutoField()
+    name = CharField(unique=True)
+    # Monetary values are stored as exact integer cents in SQLite to avoid
+    # floating-point drift in balances, reports, and budget aggregates.
+    balance = IntegerField(column_name="balance_cents", default=0)
+    account_type = CharField(default="bank")
+    currency = CharField(default="USD")
+    is_default = BooleanField(default=False)
+    created_at = DateTimeField(default=datetime.now)
+
+    class Meta:
+        table_name = "accounts"
+
+
+class Transaction(BaseModel):
+    id = AutoField()
+    account = ForeignKeyField(
+        Account, backref="transactions", null=True, column_name="account_id", on_delete="SET NULL"
+    )
+    type = CharField()
+    amount = IntegerField(column_name="amount_cents")
+    description = TextField(null=True)
+    category = CharField(null=True)
+    category_id = IntegerField(
+        null=True,
+        constraints=[SQL("REFERENCES categories(id) ON DELETE SET NULL")],
+    )
+    subcategory = CharField(null=True)
+    note = TextField(null=True)
+    payment_method = CharField(default="cash")
+    receipt_path = TextField(null=True)
+    to_account_id = IntegerField(
+        null=True,
+        constraints=[SQL("REFERENCES accounts(id) ON DELETE SET NULL")],
+    )
+    is_transfer = BooleanField(default=False)
+    exchange_rate = FloatField(null=True)
+    converted_amount = IntegerField(column_name="converted_amount_cents", null=True)
+    date = DateField(default=date.today)
+    created_at = DateTimeField(default=datetime.now)
+
+    class Meta:
+        table_name = "transactions"
+
+
+class Bucket(BaseModel):
+    id = AutoField()
+    name = CharField(unique=True)
+    budget_amount = IntegerField(column_name="budget_amount_cents")
+    spent_amount = IntegerField(column_name="spent_amount_cents", default=0)
+    period = CharField(default="monthly")
+    start_day = IntegerField(default=1)
+    end_day = IntegerField(default=31)
+    alert_threshold = FloatField(default=0.75)
+
+    class Meta:
+        table_name = "buckets"
+
+
+class Setting(BaseModel):
+    key = CharField(primary_key=True)
+    value = TextField(null=True)
+
+    class Meta:
+        table_name = "settings"
+
+
+class Currency(BaseModel):
+    code = CharField(primary_key=True)
+    name = CharField()
+    region = CharField(default="americas")
+
+    class Meta:
+        table_name = "currencies"
+
+
+class Category(BaseModel):
+    id = AutoField()
+    name = CharField(unique=True)
+    type = CharField()
+    color = CharField(default="#888888")
+    icon = CharField(default="")
+    is_savings = BooleanField(default=False)
+    parent_id = IntegerField(null=True)
+
+    class Meta:
+        table_name = "categories"
+
+
+class Tag(BaseModel):
+    id = AutoField()
+    name = CharField(unique=True)
+    icon = CharField(default="")
+    color = CharField(default="#888888")
+    created_at = DateTimeField(default=datetime.now)
+
+    class Meta:
+        table_name = "tags"
+
+
+class TransactionTag(BaseModel):
+    transaction_id = IntegerField(
+        constraints=[SQL("REFERENCES transactions(id) ON DELETE CASCADE")],
+    )
+    tag = ForeignKeyField(Tag, backref="transaction_links", column_name="tag_id", on_delete="CASCADE")
+
+    class Meta:
+        table_name = "transaction_tags"
+        primary_key = CompositeKey("transaction_id", "tag")
+
+
+class RecurringTransaction(BaseModel):
+    id = AutoField()
+    account = ForeignKeyField(
+        Account,
+        backref="recurring_transactions",
+        null=True,
+        column_name="account_id",
+        on_delete="SET NULL",
+    )
+    type = CharField()
+    amount = IntegerField(column_name="amount_cents")
+    description = TextField(null=True)
+    category = CharField(null=True)
+    category_id = IntegerField(
+        null=True,
+        constraints=[SQL("REFERENCES categories(id) ON DELETE SET NULL")],
+    )
+    note = TextField(null=True)
+    day_of_month = IntegerField(default=1)
+
+    class Meta:
+        table_name = "recurring_transactions"
+
+
+class RecurringTransactionTag(BaseModel):
+    recurring_id = IntegerField(
+        constraints=[SQL("REFERENCES recurring_transactions(id) ON DELETE CASCADE")],
+    )
+    tag = ForeignKeyField(Tag, backref="recurring_links", column_name="tag_id", on_delete="CASCADE")
+
+    class Meta:
+        table_name = "recurring_transaction_tags"
+        primary_key = CompositeKey("recurring_id", "tag")
+
+
+class BudgetMaster(BaseModel):
+    id = AutoField()
+    code = CharField(unique=True)
+    year = IntegerField()
+    is_default_year = BooleanField(default=False)
+    currency = CharField(default="USD")
+    created_at = DateTimeField(default=datetime.now)
+
+    class Meta:
+        table_name = "budget_master"
+
+
+class BudgetDetail(BaseModel):
+    id = AutoField()
+    budget = ForeignKeyField(BudgetMaster, backref="details", column_name="budget_id", on_delete="CASCADE")
+    category = ForeignKeyField(Category, backref="budget_details", column_name="category_id", on_delete="CASCADE")
+    year = IntegerField()
+    month = IntegerField()
+    amount = IntegerField(column_name="amount_cents", default=0)
+
+    class Meta:
+        table_name = "budget_detail"
+        indexes = ((("budget", "category", "year", "month"), True),)
+
+
+class SavingsGoal(BaseModel):
+    id = AutoField()
+    name = CharField(unique=True)
+    target_amount = IntegerField(column_name="target_amount_cents")
+    current_amount = IntegerField(column_name="current_amount_cents", default=0)
+    currency = CharField(default="NIO")
+    category_id = IntegerField(
+        null=True,
+        constraints=[SQL("REFERENCES categories(id) ON DELETE SET NULL")],
+    )
+    target_date = CharField(null=True)
+    created_at = DateTimeField(default=datetime.now)
+
+    class Meta:
+        table_name = "savings_goals"
+
+
+class InsightEvent(BaseModel):
+    id = AutoField()
+    user_id = IntegerField(default=1)
+    transaction_id = IntegerField()
+    insight_code = CharField()
+    message = TextField()
+    priority = IntegerField(default=0)
+    created_at = DateTimeField(default=datetime.now)
+    period_key = CharField()
+    extra_context = TextField(null=True)
+
+    class Meta:
+        table_name = "insight_events"
+
+
+class AchievementEvent(BaseModel):
+    id = AutoField()
+    user_id = IntegerField(default=1)
+    transaction_id = IntegerField()
+    achievement_code = CharField()
+    message = TextField()
+    priority = IntegerField(default=0)
+    created_at = DateTimeField(default=datetime.now)
+    period_key = CharField()
+    extra_context = TextField(null=True)
+
+    class Meta:
+        table_name = "achievement_events"
+
+
+class AchievementCounter(BaseModel):
+    id = AutoField()
+    user_id = IntegerField(default=1)
+    counter_key = CharField()
+    counter_value = IntegerField(default=0)
+    updated_at = DateTimeField(default=datetime.now)
+
+    class Meta:
+        table_name = "achievement_counters"
+        indexes = ((("user_id", "counter_key"), True),)
+
+
+class MessageEvent(BaseModel):
+    id = AutoField()
+    user_id = IntegerField(default=1)
+    message_code = CharField()
+    message_type = CharField()
+    source_event_type = CharField()
+    source_event_id = IntegerField(null=True)
+    period_key = CharField(null=True)
+    reference_date = DateField(null=True)
+    context_category_id = IntegerField(null=True)
+    context_amount = IntegerField(column_name="context_amount_cents", null=True)
+    context_source = CharField(null=True)
+    shown_at = DateTimeField(default=datetime.now)
+    priority = IntegerField(default=0)
+    message_text = TextField()
+
+    class Meta:
+        table_name = "message_events"
+
+
+ALL_MODELS = [
+    Account,
+    Transaction,
+    Bucket,
+    Setting,
+    Currency,
+    Category,
+    Tag,
+    TransactionTag,
+    SavingsGoal,
+    RecurringTransaction,
+    RecurringTransactionTag,
+    BudgetMaster,
+    BudgetDetail,
+    InsightEvent,
+    AchievementEvent,
+    AchievementCounter,
+    MessageEvent,
+]
+
+EXPECTED_TABLES = frozenset(model._meta.table_name for model in ALL_MODELS)
+
+
+def create_peewee_database(path: str) -> SqliteDatabase:
+    return SqliteDatabase(
+        path,
+        pragmas={"journal_mode": "wal", "foreign_keys": 1},
+        check_same_thread=False,
+    )
+
+
+def bind_database(database: SqliteDatabase) -> None:
+    DB_PROXY.initialize(database)
+
+
+def inspect_database_schema_details(
+    path: str | Path,
+    *,
+    current_version: int = SCHEMA_VERSION,
+    min_migratable_version: int | None = None,
+) -> SchemaInspection:
+    """Inspect a database file and classify its schema compatibility."""
+    target = Path(path).expanduser()
+    if not target.exists():
+        return SchemaInspection(status="missing", user_version=None, tables=frozenset())
+
+    minimum_version = current_version if min_migratable_version is None else min_migratable_version
+
+    conn: sqlite3.Connection | None = None
+    try:
+        conn = sqlite3.connect(target)
+        tables = frozenset(
+            str(row[0])
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+            ).fetchall()
+        )
+        if not tables:
+            return SchemaInspection(status="empty", user_version=0, tables=tables)
+
+        quick_check_row = conn.execute("PRAGMA quick_check").fetchone()
+        quick_check = str(quick_check_row[0]).strip().lower() if quick_check_row else ""
+        if quick_check != "ok":
+            return SchemaInspection(
+                status="invalid",
+                user_version=None,
+                tables=tables,
+                error=f"PRAGMA quick_check returned {quick_check or 'no result'!r}.",
+            )
+
+        stored_user_version = int(conn.execute("PRAGMA user_version").fetchone()[0] or 0)
+    except sqlite3.DatabaseError as exc:
+        return SchemaInspection(status="invalid", user_version=None, tables=frozenset(), error=str(exc))
+    finally:
+        if conn is not None:
+            conn.close()
+
+    recognized_tables = tables & EXPECTED_TABLES
+    if not recognized_tables:
+        return SchemaInspection(
+            status="invalid",
+            user_version=stored_user_version,
+            tables=tables,
+            error="The file does not contain recognizable MIRA tables.",
+        )
+
+    missing_tables = EXPECTED_TABLES.difference(tables)
+    if stored_user_version == current_version:
+        if missing_tables:
+            return SchemaInspection(
+                status="invalid",
+                user_version=stored_user_version,
+                tables=tables,
+                error=f"Missing required MIRA tables: {', '.join(sorted(missing_tables))}.",
+            )
+        return SchemaInspection(status="current", user_version=stored_user_version, tables=tables)
+
+    if minimum_version <= stored_user_version < current_version:
+        if missing_tables:
+            return SchemaInspection(
+                status="invalid",
+                user_version=stored_user_version,
+                tables=tables,
+                error=f"Missing required MIRA tables: {', '.join(sorted(missing_tables))}.",
+            )
+        return SchemaInspection(status="migratable", user_version=stored_user_version, tables=tables)
+
+    return SchemaInspection(status="legacy", user_version=stored_user_version, tables=tables)
+
+
+def inspect_database_schema(
+    path: str | Path,
+    *,
+    current_version: int = SCHEMA_VERSION,
+    min_migratable_version: int | None = None,
+) -> str:
+    """Return a coarse-grained compatibility status for a database file."""
+    return inspect_database_schema_details(
+        path,
+        current_version=current_version,
+        min_migratable_version=min_migratable_version,
+    ).status
+
+
+def initialize_schema(database: SqliteDatabase) -> None:
+    database.create_tables(ALL_MODELS, safe=True)
+    # Schema v2 intentionally uses *_cents columns for all persisted money.
+    # Keep explicit index names for backwards compatibility with existing checks.
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON transactions(account_id)")
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date)")
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)")
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category)")
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON transactions(category_id)")
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_date_type ON transactions(date, type)")
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_budget_detail_budget_id ON budget_detail(budget_id)")
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_budget_detail_category_id ON budget_detail(category_id)")
+    database.execute_sql(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_budget_master_default_per_year "
+        "ON budget_master(year) WHERE is_default_year = 1"
+    )
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_categories_type ON categories(type)")
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_categories_is_savings ON categories(is_savings)")
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON categories(parent_id)")
+    database.execute_sql(
+        "CREATE INDEX IF NOT EXISTS idx_transaction_tags_transaction_id ON transaction_tags(transaction_id)"
+    )
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag_id ON transaction_tags(tag_id)")
+    database.execute_sql(
+        "CREATE INDEX IF NOT EXISTS idx_recurring_transaction_tags_recurring_id "
+        "ON recurring_transaction_tags(recurring_id)"
+    )
+    database.execute_sql(
+        "CREATE INDEX IF NOT EXISTS idx_recurring_transaction_tags_tag_id ON recurring_transaction_tags(tag_id)"
+    )
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_insight_events_tx ON insight_events(transaction_id)")
+    database.execute_sql(
+        "CREATE INDEX IF NOT EXISTS idx_insight_events_period ON insight_events(period_key, insight_code)"
+    )
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_insight_events_created_at ON insight_events(created_at)")
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_achievement_events_tx ON achievement_events(transaction_id)")
+    database.execute_sql(
+        "CREATE INDEX IF NOT EXISTS idx_achievement_events_period ON achievement_events(period_key, achievement_code)"
+    )
+    database.execute_sql(
+        "CREATE INDEX IF NOT EXISTS idx_message_events_code_type ON message_events(message_code, message_type)"
+    )
+    database.execute_sql(
+        "CREATE INDEX IF NOT EXISTS idx_message_events_source ON message_events(source_event_type, source_event_id)"
+    )
+    database.execute_sql(
+        "CREATE INDEX IF NOT EXISTS idx_message_events_reference_date " "ON message_events(reference_date)"
+    )
+    database.execute_sql(
+        "CREATE INDEX IF NOT EXISTS idx_message_events_period_category "
+        "ON message_events(period_key, context_category_id)"
+    )
+    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_message_events_shown_at ON message_events(shown_at)")
+    database.execute_sql(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_message_events_tx_type "
+        "ON message_events(source_event_type, source_event_id, message_type) "
+        "WHERE source_event_type = 'transaction' AND source_event_id IS NOT NULL"
+    )
+    database.execute_sql("DROP INDEX IF EXISTS uq_message_events_daily")
+    database.execute_sql(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_message_events_daily_reference "
+        "ON message_events(source_event_type, message_type, reference_date) "
+        "WHERE source_event_type = 'app_start' AND message_type = 'daily_context' "
+        "AND reference_date IS NOT NULL"
+    )
+    database.execute_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")

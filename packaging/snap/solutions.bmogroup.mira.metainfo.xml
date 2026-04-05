@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>solutions.bmogroup.mira</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>MIRA</name>
+  <summary>Offline personal finance assistant</summary>
+  <description>
+    <p>
+      MIRA is a desktop application for personal finance management that keeps data local.
+    </p>
+    <p>
+      Track income and expenses, organize accounts, categories, budgets, and savings goals,
+      and review reports without sending your financial data to external services.
+    </p>
+  </description>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Dashboard overview</caption>
+      <image>https://raw.githubusercontent.com/bmosoluciones/mira-personal-finance-assistant/main/docs/images/mira_dashboard.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Budget planning view</caption>
+      <image>https://raw.githubusercontent.com/bmosoluciones/mira-personal-finance-assistant/main/docs/images/mira_budget.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Main report view</caption>
+      <image>https://raw.githubusercontent.com/bmosoluciones/mira-personal-finance-assistant/main/docs/images/mira_main_report.png</image>
+    </screenshot>
+  </screenshots>
+  <x-branding>
+    <color type="primary" scheme_preference="light">#0f766e</color>
+    <color type="primary" scheme_preference="dark">#5eead4</color>
+  </x-branding>
+  <url type="homepage">https://github.com/bmosoluciones/mira-personal-finance-assistant</url>
+  <url type="bugtracker">https://github.com/bmosoluciones/mira-personal-finance-assistant/issues</url>
+  <update_contact>development@bmogroup.solutions</update_contact>
+  <x-developer id="solutions.bmogroup">
+    <name>BMO Soluciones</name>
+  </x-developer>
+  <launchable type="desktop-id">solutions.bmogroup.mira.desktop</launchable>
+  <requires>
+    <display_length compare="ge">832</display_length>
+  </requires>
+  <x-supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </x-supports>
+  <keywords>
+    <keyword>finance</keyword>
+    <keyword>budget</keyword>
+    <keyword>expenses</keyword>
+    <keyword>income</keyword>
+  </keywords>
+  <releases>
+    <release version="0.0.1a2" date="2026-04-03">
+      <description>
+        <p>Public alpha release of MIRA with published Windows and wheel artifacts.</p>
+        <ul>
+          <li>Offline-first personal finance workflow</li>
+          <li>Annual budgets, reports, and savings goals</li>
+          <li>Deterministic natural-language transaction entry</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1" />
+</component>

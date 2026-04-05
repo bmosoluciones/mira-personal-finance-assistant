@@ -1,0 +1,35 @@
+modules = ["python-3.11"]
+[agent]
+expertMode = true
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash run_mira.sh"
+
+[workflows.workflow.metadata]
+outputType = "vnc"
+
+[nix]
+channel = "stable-25_05"
+packages = ["awsebcli", "c-ares", "cacert", "cairo", "cargo", "chromedriver", "dbus", "ffmpeg-full", "flex", "freetype", "ghostscript", "glibcLocales", "gobject-introspection", "grpc", "gtk3", "lcms2", "libcxx", "libffi", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "pkg-config", "qhull", "rustc", "tcl", "tk", "util-linux", "xsimd", "zlib", "xorg.xorgserver", "xvfb-run", "libGL", "libxkbcommon", "fontconfig", "xorg.libX11", "xorg.libxcb", "xorg.libXext", "xorg.libXrender", "xorg.libXi", "xorg.libXrandr", "zstd", "bzip2", "xcb-util-cursor", "xorg.xcbutil", "xorg.xcbutilimage", "xorg.xcbutilkeysyms", "xorg.xcbutilrenderutil", "xorg.xcbutilwm", "glib", "gcc", "libgcc", "gh"]
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
+exposeLocalhost = true

@@ -1,0 +1,31 @@
+name: Snap Package
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - packaging/snap/snapcraft.yaml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snap-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-snap:
+    name: Build snap
+    # Pin 24.04 so the host runner does not drift away from the core24 target base.
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build snap from manifest
+        id: snapcraft
+        uses: snapcore/action-build@v1
+        with:
+          path: packaging/snap

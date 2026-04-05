@@ -1,0 +1,400 @@
+Requerimiento técnico: manejo de tarjetas de crédito
+
+Una tarjeta de crédito será modelada como una cuenta de tipo credit. Los consumos realizados con la tarjeta se registran como gastos normales asociados a esa cuenta. Los pagos de tarjeta se registran como traslados internos desde otra cuenta hacia la cuenta de tipo credit y no deben afectar los KPIs de gasto o ingreso.
+
+La implementación de tarjetas de crédito debe aprovechar la infraestructura existente sin complicar la implementación.
+
+1. Objetivo
+
+Incorporar soporte para tarjetas de crédito en MIRA de forma consistente con el modelo financiero actual, permitiendo:
+
+ - registrar consumos realizados con tarjeta de crédito
+ - registrar pagos de tarjeta de crédito
+ - reflejar correctamente la deuda asociada a la tarjeta
+ - evitar doble contabilización en reportes y KPIs
+ - mantener compatibilidad con el flujo de lenguaje natural y con el Reporte Maestro MIRA
+
+2. Alcance funcional
+
+La funcionalidad debe cubrir:
+
+ - creación y edición de cuentas tipo tarjeta de crédito
+ - registro de gastos usando una tarjeta de crédito
+ - registro de pagos a tarjeta de crédito como traslado entre cuentas
+ - visualización del saldo/deuda de la tarjeta
+ - exclusión de pagos de tarjeta de crédito del cálculo de gastos operativos
+ - soporte desde el asistente de lenguaje natural
+ - consistencia con reportes, balances y análisis
+ - ampliar el parser de lenguaje natural para asociar transacciones a cuentas tipo credit
+ - implementar una transacción de pago de tarjeta de crédito, debe reusar lo mas posible la infraestructura actual de transferencias entre cuentas, debe tener un filtro de cuenta origen tipo bank o cash y cuenta destino solo debe ser tipo credit
+ - agregar un reporte adicional en la sección de reportes: Balance de cuentas y tarjetas de crédito, este reporte debe mostrar, por cuenta, nombre, tipo, moneda, balance actual y total consolidado en moneda predeterminada del sistema.
+ - las tarjetas de crédito permiten hacer pagos en cualquier moneda, el sistema promete llevar el saldo en la moneda predeterminada de el sistema, las transacciones en moneda extranjera deben hacer uso de la funcionalidad actual y convertir transacciones en moneda extranjera a la moneda predeterminada
+
+3. Modelo conceptual
+3.1 Definición
+
+Una tarjeta de crédito será modelada como una cuenta con tipo especial.
+
+3.2 Regla principal
+
+ - una compra con tarjeta se registra como gasto
+ - un pago de tarjeta se registra como traslado entre cuentas
+ - un pago de tarjeta no debe registrarse como gasto
+ - el saldo de la tarjeta de crédito se muestra negativo, es una deuda no un recurso
+ - las transferencias entre cuentas registras como pago de tarjetas de créditos disminuyen el saldo negativo o lo acercan a cero.
+ - si el balance de un tarjeta de crédito llegase a mostrar saldo positivo implica que se han realizado mas pagos que los gastos asociados, esto puede significar gastos no registrados.
+ - el comportamiento esperado es:
+   - compras → el saldo se vuelve más negativo
+   - pagos → acerca el saldo a cero (reduce la deuda)
+ - si el saldo de una cuenta credit es mayor a 0 y el usuario verifico que no tiene registros pendientes, representa un crédito a favor del usuario.
+ - una compra con tarjeta se registra como gasto en el momento del consumo
+ - hay tarjetas de crédito que tienen planes de lealtad como cash back o programas de puntos no monetarios que el usuario puede solicitar aplicar como crédito a su cuenta, estos deberán poder ingresarse como ingresos asociados a la cuenta de tipo credit
+ - los ingresos registrados en una cuenta de tipo credit deben computar en los KPI de ingresos y el calculo de el balance neto
+
+Los ingresos registrados en una cuenta de tipo credit también deben afectar el balance de la cuenta, acercándolo a cero o llevándolo a saldo positivo si exceden la deuda pendiente.
+
+3.3 Justificación
+
+El gasto ocurre en el momento del consumo. El pago posterior solo cancela una obligación previamente adquirida y no representa un nuevo consumo.
+
+Esto refuerza el concepto de que pagar con un tarjeta de crédito es pagar con un dinero que aun no tienes y que después debes de reponer al banco emisor de la tarjeta.
+
+4. Requerimientos de datos
+4.1 Tabla accounts
+
+Se utilizará la tabla existente accounts.
+
+Campo relevante:
+
+account_type TEXT NOT NULL DEFAULT 'bank'
+
+Valores requeridos para account_type:
+
+ - bank
+ - cash
+ - credit
+
+Requiere actualizar el setup inicial para permitir definir el tipo de cuenta al crear cuentas iniciales y si el usuario si el usuario omite la configuración inicial de cuentas, el sistema creará una cuenta operativa por defecto de tipo bank. Las cuentas de tipo credit serán opcionales y podrán crearse posteriormente.
+
+Se requiere al momento de crear una nueva cuenta poder detallar el saldo inicial de la misma, este saldo inicial puede ser una transacción de tipo initial_balance que no debe sumar en ningún KPI de ingreso gasto o ahorro, este flujo debe incorporarse en el setup inicial:
+
+ - nombre la cuenta
+ - moneda de la cuenta
+ - tipo de cuenta (bank, cash, credit)
+ - saldo inicial de la cuenta
+
+Al momento de crear una cuenta tipo credit, el saldo inicial debe poder ser:
+
+- cero (tarjeta nueva)
+- negativo (deuda preexistente)
+- positivo (crédito a favor del usuario)
+
+Validar que el usuario pueda registrar saldos iniciales negativos en UI
+
+En esta fase, para tarjeta de crédito se utilizará:
+
+account_type = 'credit'
+
+Regla de saldo
+
+Las cuentas de tipo credit representan deuda.
+Su saldo debe poder reflejar deuda pendiente (saldo negativo):
+
+Modelo recomendado:
+
+ - compras incrementan saldo adeudado
+ - pagos (traslados entre cuentas) reducen saldo adeudado
+
+5. Reglas de negocio
+5.1 Compra con tarjeta de crédito
+
+Cuando el usuario registra un gasto y la cuenta seleccionada es una cuenta de tipo credit:
+
+se crea una transacción de tipo expense
+
+ - is_transfer = 0
+ - account_id = tarjeta
+ - afecta KPIs de gasto
+ - aumenta el balance adeudado de la tarjeta
+
+Una compra con tarjeta NO debe registrarse como transferencia entre cuentas.
+
+5.2 Pago de tarjeta de crédito
+
+Cuando el usuario paga la tarjeta desde otra cuenta:
+
+se crea una transacción de traslado
+
+ - is_transfer = 1
+ - account_id = cuenta_origen
+ - to_account_id = cuenta_tarjeta
+ - no afecta KPIs de ingreso ni gasto
+ - reduce el saldo de la cuenta origen
+ - reduce la deuda pendiente de la tarjeta (disminuye valor negativo)
+
+Si el saldo de tarjeta de crédito llega a ser positivo quiere decir que se ha pagado mas de los gastos registrados, puede indicar que hay registros pendientes como comisiones o intereses.
+
+En UX al implementar la pantalla de pago solo se debe permitir pagar de una cuenta tipo banck o cash a una cuenta tipo credit.
+
+Para este efecto en UX filtrar en cuenta origen solo cuentas tipo bank o cash y cuenta destino tipo credit
+
+5.3 Restricción
+
+No se debe permitir registrar un pago de tarjeta como gasto operativo cuando el usuario indique claramente que se trata de un pago o abono a tarjeta.
+
+5.4 Reportes
+
+Las transacciones con is_transfer = 1 deben excluirse de:
+
+ - gasto total
+ - ingreso total
+ - ahorro
+ - análisis de categorías
+ - top de gastos
+ - reporte de cascada
+ - KPIs del Reporte Maestro MIRA
+
+6. Requerimientos de base de datos
+6.1 Cambios mínimos
+
+No se requieren tablas nuevas si ya existen:
+
+ - accounts.account_type
+ - transactions.to_account_id
+ - transactions.is_transfer
+
+6.2 Validaciones lógicas
+
+Debe existir validación en backend para impedir combinaciones inválidas, por ejemplo:
+
+ - is_transfer = 1 sin to_account_id
+ - traslado hacia la misma cuenta
+ - gasto normal con is_transfer = 1
+ - ingreso normal con is_transfer = 1 si el flujo pretendido es pago de tarjeta
+ - transferencia hacia cuenta tipo credit sin monto válido
+ - pago de tarjeta con cuenta origen también tipo credit
+
+6.3 API/métodos DB requeridos
+
+Se recomienda agregar o formalizar métodos como:
+
+ - create_credit_account(...)
+ - record_credit_card_payment(from_account_id, credit_account_id, amount, date, note)
+ - get_credit_accounts()
+ - get_account_debt(account_id) o reutilizar balance
+ - is_credit_account(account_id)
+
+7. Requerimientos de backend
+7.1 Registro de gasto
+
+El flujo actual de registrar gasto debe aceptar cuenta tipo credit sin tratarla como transferencia.
+
+7.2 Registro de pago
+
+Debe implementarse una operación explícita para pagos de tarjeta:
+
+Entrada:
+
+ - cuenta origen
+ - cuenta destino tipo credit
+ - monto
+ - moneda origin
+ - moneda destino
+ - monto destino
+ - fecha
+ - descripción opcional
+
+Salida:
+
+transacción persistida como traslado interno
+
+7.3 Resumen financiero
+
+La lógica de resumen (summarize_financials) debe:
+
+ - excluir transferencias
+ - contar solo transacciones reales de ingreso/gasto
+ - seguir separando ahorro de gasto operativo
+
+7.4 Cálculo de balances
+
+Al registrar:
+
+ - gasto con tarjeta: aumentar deuda de la cuenta credit
+ - pago a tarjeta: disminuir balance de cuenta origen y disminuir deuda de cuenta credit
+
+El balance de cuentas debe actualizarse de forma inmediata tras cada transacción.
+
+8. Requerimientos del asistente de lenguaje natural
+8.1 Nuevas intenciones
+
+El asistente debe reconocer al menos dos intenciones distintas:
+
+a) gasto con tarjeta
+
+Ejemplos:
+
+“gasté 500 en supermercado con la tarjeta”
+“compré una cena por 800 con visa”
+“pagué 3000 de gasolina con mastercard”
+
+Resultado:
+
+ - action = add_expense
+ - account = tarjeta_detectada
+
+b) pago de tarjeta
+
+Ejemplos:
+
+“pagué 2000 de la tarjeta”
+“aboné 1500 a visa desde bac”
+“transferí 300 a la mastercard”
+
+Resultado:
+
+ - action = transfer
+ - from_account = cuenta_origen
+ - to_account = tarjeta
+ - is_transfer = 1
+
+8.2 Regla de prioridad
+
+Si el texto contiene verbos como:
+
+ - pagar tarjeta
+ - abonar tarjeta
+ - cancelar tarjeta
+
+y además referencia una cuenta tipo credit, el sistema debe priorizar interpretación de traslado, no de gasto.
+
+8.3 Ambigüedad
+
+Si el usuario dice:
+
+“pagué 1000 de la tarjeta”
+
+y no especifica cuenta origen, el sistema puede:
+
+ - usar cuenta por defecto, o
+ - responder con acción none solicitando aclaración
+
+Para MVP, sirve usar cuenta por defecto si existe una sola cuenta bancaria principal.
+
+9. Requerimientos de UI
+9.1 Pantalla de cuentas
+
+Debe permitirse crear cuenta con tipo:
+
+ - banco
+ - efectivo
+ - tarjeta de crédito
+
+9.2 Visualización
+
+Las tarjetas deben mostrarse diferenciadas del resto de cuentas.
+
+Campos mínimos:
+
+ - nombre
+ - tipo
+ - balance (negativo significa deuda)
+ - moneda
+
+9.3 Registro manual de transacciones
+
+En formulario de gasto:
+
+ - debe poder seleccionarse una tarjeta como cuenta origen del gasto
+
+En formulario de traslado:
+
+ - debe poder seleccionarse una cuenta bancaria/cash como origen
+ - una cuenta credit como destino
+
+9.4 UX recomendada
+
+Renombrar visualmente el traslado a tarjeta como:
+
+“Pago de tarjeta”
+o
+
+“Abono a tarjeta”
+
+aunque internamente sea una transferencia.
+
+El usuario nunca debe ver el término "transferencia" al pagar una tarjeta.
+
+10. Impacto en reportes
+10.1 Reporte Maestro MIRA
+
+Debe considerar:
+
+ - como gasto
+ - consumos realizados con tarjeta
+ - como no gasto
+ - pagos de tarjeta
+
+10.2 Reporte de cascada
+
+Debe reflejar:
+
+ - ingreso
+ - gasto operativo real
+ - ahorro
+ - balance
+
+No debe incluir pagos de tarjeta como egreso operativo.
+
+10.3 Top categorías
+
+Las compras con tarjeta deben aparecer normalmente según categoría y tags.
+
+10.4 Concentración de gasto
+
+Debe considerar compras con tarjeta igual que compras desde banco/efectivo.
+
+11. Criterios de aceptación
+
+La funcionalidad se considerará terminada cuando:
+
+ - se puedan crear cuentas tipo credit
+ - una compra con tarjeta incremente la deuda de la tarjeta
+ - un pago de tarjeta se registre como traslado entre cuentas
+ - los pagos de tarjeta no incrementen gastos del período
+ - el Reporte Maestro MIRA muestre correctamente compras con tarjeta
+ - el asistente pueda diferenciar entre compra con tarjeta y pago de tarjeta en casos comunes
+ - no exista doble contabilización en KPIs
+ - las transferencias internas queden excluidas de análisis financieros
+ - hay una transacción en UX para pago de tarjeta de crédito que internamente se basa en la lógica de traslados entre cuentas
+ - las compras y pagos de tarjeta en moneda extranjera se convierten correctamente a la moneda predeterminada del sistema y actualizan el balance de la cuenta sin romper KPIs
+ - no permitir is_transfer=1 con account_type='credit' como origen Y destino a la vez
+ - validar que to_account_id exista y sea tipo 'credit' en pagos
+ - prevenir pagos con fecha anterior a la creación de la cuenta
+ - validar que el monto del pago no exceda la deuda actual (opcional, pero recomendado)
+
+13. Riesgos conocidos
+
+ - ambigüedad en lenguaje natural al interpretar “pagué tarjeta”
+ - usuarios que esperan que pago de tarjeta aparezca como gasto
+ - inconsistencias si no se define claramente semántica del balance de cuentas credit
+ - errores de clasificación si una transferencia se guarda como gasto
+
+14. Alcance
+
+MIRA no realiza conciliación automática de tarjetas de crédito.
+
+El saldo de la tarjeta se calcula únicamente en base a las transacciones registradas por el usuario.
+
+Los estados de cuenta emitidos por el banco pueden incluir cargos adicionales como:
+
+ - intereses
+ - comisiones
+ - seguros
+ - ajustes
+
+Estos movimientos deben ser registrados manualmente por el usuario para mantener consistencia entre el sistema y el estado de cuenta.
+
+Se considera una buena práctica que el usuario revise periódicamente su estado de cuenta y registre cualquier cargo no identificado.
+
+El objetivo de este enfoque es promover una mayor comprensión de las finanzas personales y evitar correcciones automáticas que oculten el origen de los movimientos.

@@ -1,0 +1,462 @@
+:root {
+  --mira-ink: #17212b;
+  --mira-slate: #4f6272;
+  --mira-line: rgba(23, 33, 43, 0.12);
+  --mira-surface: linear-gradient(145deg, rgba(15, 118, 110, 0.08), rgba(14, 165, 166, 0.03));
+  --mira-card: #f7fbfb;
+  --mira-accent: #0f766e;
+  --mira-accent-strong: #115e59;
+  --mira-highlight: #ecfeff;
+  --mira-header: #23408e;
+  --mira-header-strong: #1a3272;
+  --mira-header-text: #f8fbff;
+  --mira-header-muted: rgba(248, 251, 255, 0.82);
+}
+
+.md-header {
+  background: linear-gradient(135deg, var(--mira-header), var(--mira-header-strong));
+  box-shadow: 0 10px 30px rgba(35, 64, 142, 0.22);
+}
+
+.md-header__button.md-logo {
+  margin: 0.1rem 0.25rem 0.1rem 0;
+  padding: 0.1rem;
+}
+
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  width: auto;
+  height: 2.15rem;
+}
+
+.md-header__title {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.md-header__topic,
+.md-search__input,
+.md-search__icon,
+.md-search-result__meta,
+.md-source__repository,
+.md-source__facts {
+  color: var(--mira-header-text);
+}
+
+.md-search__form {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.md-search__input::placeholder {
+  color: var(--mira-header-muted);
+}
+
+[data-md-color-scheme="default"] .md-tabs {
+  background-color: var(--mira-header-strong);
+}
+
+[data-md-color-scheme="default"] .md-header__source {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 0.85rem;
+}
+
+[data-md-color-scheme="default"] .md-sidebar--primary {
+  padding-top: 0.5rem;
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+
+.mira-home {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 2rem;
+  padding: 1.25rem 1.5rem;
+  margin: 0 0 1.5rem;
+  border: 1px solid var(--mira-line);
+  border-radius: 1.5rem;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(23, 33, 43, 0.08);
+}
+
+.mira-home__eyebrow {
+  display: inline-flex;
+  margin-bottom: 0.65rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: var(--mira-highlight);
+  color: var(--mira-accent-strong);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.mira-home__title {
+  margin: 0;
+  color: var(--mira-ink);
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+  line-height: 1.1;
+}
+
+.mira-home__lead {
+  margin: 0.7rem 0 0;
+  color: var(--mira-slate);
+  font-size: 1rem;
+  line-height: 1.65;
+  max-width: 44rem;
+}
+
+.mira-home__points {
+  display: grid;
+  gap: 0.55rem;
+  margin: 1rem 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.mira-home__points li {
+  position: relative;
+  padding-left: 1.4rem;
+  color: var(--mira-ink);
+  font-size: 0.95rem;
+}
+
+.mira-home__points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.58rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--mira-accent), #14b8a6);
+}
+
+.mira-home__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.mira-home__actions .md-button,
+.mira-install-dropdown__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   INSTALL DROPDOWN
+   ============================================================ */
+
+.mira-install-dropdown {
+  position: relative;
+  align-self: flex-start;
+}
+
+.mira-install-dropdown__toggle {
+  gap: 0.55rem;
+  cursor: pointer;
+  border: none;
+}
+
+.mira-install-dropdown.is-open .mira-install-dropdown__toggle {
+  filter: brightness(0.98);
+}
+
+.mira-install-dropdown__indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.mira-install-dropdown.is-open .mira-install-dropdown__indicator {
+  font-size: 1.05rem;
+}
+
+.mira-install-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  left: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 18rem;
+  padding: 0.45rem;
+  border: 1px solid var(--mira-line);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 45px rgba(23, 33, 43, 0.12);
+}
+
+.mira-install-dropdown__menu[hidden] {
+  display: none;
+}
+
+.mira-install-dropdown__item {
+  padding: 0.72rem 0.8rem;
+  border-radius: 0.8rem;
+  color: var(--mira-ink);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mira-install-dropdown__item:hover,
+.mira-install-dropdown__item:focus-visible {
+  background: var(--mira-highlight);
+  color: var(--mira-accent-strong);
+  outline: none;
+}
+
+/* ============================================================
+   CAROUSEL — image-first with overlaid controls & subtitles
+   ============================================================ */
+
+.mira-home__visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mira-carousel {
+  position: relative;
+  width: 100%;
+  border-radius: 0.85rem;
+  overflow: hidden;
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.6) inset,
+    0 8px 32px rgba(23, 33, 43, 0.18);
+}
+
+.mira-carousel__viewport {
+  overflow: hidden;
+}
+
+.mira-carousel__track {
+  display: flex;
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.mira-carousel__slide {
+  position: relative;
+  flex: 0 0 100%;
+  margin: 0;
+}
+
+.mira-carousel__img-link {
+  display: block;
+  cursor: zoom-in;
+}
+
+.mira-carousel__img-link img {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: opacity 150ms ease;
+}
+
+.mira-carousel__img-link:hover img {
+  opacity: 0.92;
+}
+
+.mira-carousel__slide figcaption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2.5rem 4rem 0.85rem;
+  background: linear-gradient(to top, rgba(8, 16, 24, 0.75) 0%, transparent 100%);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+}
+
+/* Overlay navigation arrows */
+.mira-carousel__control {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--mira-accent-strong);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.mira-carousel__control:hover,
+.mira-carousel__control:focus-visible {
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.26);
+  outline: none;
+}
+
+.mira-carousel__control[data-direction="-1"] {
+  left: 0.65rem;
+}
+
+.mira-carousel__control[data-direction="1"] {
+  right: 0.65rem;
+}
+
+/* Overlay indicator dots */
+.mira-carousel__dots {
+  position: absolute;
+  bottom: 0.55rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.mira-carousel__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition:
+    width 200ms ease,
+    background-color 200ms ease;
+}
+
+.mira-carousel__dot.is-active {
+  width: 1.25rem;
+  background: #ffffff;
+}
+
+.mira-carousel__dot:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.65);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   FEATURE CARDS
+   ============================================================ */
+
+.mira-home__cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0 0 2rem;
+}
+
+.mira-home__card {
+  padding: 1.25rem 1.2rem 1.1rem;
+  border: 1px solid var(--mira-line);
+  border-top: 3px solid var(--mira-accent);
+  border-radius: 1rem;
+  background: var(--mira-card);
+  transition:
+    box-shadow 200ms ease,
+    transform 200ms ease;
+}
+
+.mira-home__card:hover {
+  box-shadow: 0 8px 28px rgba(15, 118, 110, 0.13);
+  transform: translateY(-2px);
+}
+
+.mira-home__card-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.6rem;
+  line-height: 1;
+}
+
+.mira-home__card h3 {
+  margin-top: 0;
+  margin-bottom: 0.4rem;
+  color: var(--mira-ink);
+  font-size: 1rem;
+}
+
+.mira-home__card p {
+  margin: 0 0 0.85rem;
+  color: var(--mira-slate);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.mira-home__card a {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--mira-accent-strong);
+  text-decoration: none;
+}
+
+.mira-home__card a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================================
+   PAGE CONTENT BELOW CARDS
+   ============================================================ */
+
+.mira-home__content {
+  padding-top: 0.5rem;
+}
+
+.mira-home__content h1:first-child {
+  display: none;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media screen and (max-width: 900px) {
+  .mira-home {
+    grid-template-columns: 1fr;
+    padding: 1.1rem;
+  }
+
+  .mira-install-dropdown {
+    width: 100%;
+  }
+
+  .mira-install-dropdown__toggle {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .mira-install-dropdown__menu {
+    min-width: 100%;
+  }
+
+  .mira-home__cards {
+    grid-template-columns: 1fr;
+  }
+}

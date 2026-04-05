@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
+
+"""Canonical financial KPI helpers shared across MIRA."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from mira.db.money import MONEY_ZERO, Money, money_to_decimal, round_money
+
+SavingsLookup = tuple[set[int], set[str]]
+
+
+def build_savings_lookup(categories: list[dict[str, Any]]) -> SavingsLookup:
+    savings_ids: set[int] = set()
+    savings_names: set[str] = set()
+    for category in categories:
+        if str(category.get("type") or "").strip().casefold() != "expense":
+            continue
+        if int(category.get("is_savings") or 0) != 1:
+            continue
+
+        category_id = category.get("id")
+        if category_id is not None:
+            savings_ids.add(int(category_id))
+
+        name = str(category.get("name") or "").strip().casefold()
+        if name:
+            savings_names.add(name)
+
+    return savings_ids, savings_names
+
+
+def is_savings_transaction(tx: dict[str, Any], savings_lookup: SavingsLookup) -> bool:
+    if str(tx.get("type") or "").strip().casefold() != "expense":
+        return False
+
+    savings_ids, savings_names = savings_lookup
+    category_id = tx.get("category_id")
+    if category_id is not None:
+        try:
+            if int(category_id) in savings_ids:
+                return True
+        except (TypeError, ValueError):
+            pass
+
+    category_name = str(tx.get("category") or "").strip().casefold()
+    return bool(category_name) and category_name in savings_names
+
+
+def summarize_financial_kpis(
+    transactions: list[dict[str, Any]],
+    savings_lookup: SavingsLookup,
+) -> dict[str, Money]:
+    income = MONEY_ZERO
+    expense = MONEY_ZERO
+    savings = MONEY_ZERO
+
+    for tx in transactions:
+        if int(tx.get("is_transfer") or 0) == 1:
+            continue
+
+        amount = money_to_decimal(tx.get("amount")) or MONEY_ZERO
+        tx_type = str(tx.get("type") or "").strip().casefold()
+        if tx_type == "income":
+            income += amount
+            continue
+        if tx_type != "expense":
+            continue
+
+        if is_savings_transaction(tx, savings_lookup):
+            savings += amount
+        else:
+            expense += amount
+
+    income = round_money(income)
+    expense = round_money(expense)
+    savings = round_money(savings)
+    return {
+        "income": income,
+        "expense": expense,
+        "savings": savings,
+        "net": round_money(income - expense),
+    }

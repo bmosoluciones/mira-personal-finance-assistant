@@ -1,0 +1,3 @@
+[submodule "packaging/flatpak"]
+	path = packaging/flatpak
+	url = https://github.com/bmosoluciones/solutions.bmogroup.mira.git
