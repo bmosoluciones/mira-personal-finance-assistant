@@ -1704,6 +1704,26 @@ class WaterfallChartBuilder:
         }
 
 
+class MessageBuilder:
+    """Collects analysis messages for the MIRA report chat advisor.
+
+    Pass an instance explicitly to each message-generation method so that data
+    flow is visible at every call site. Call :meth:`build` when all messages
+    have been added to obtain the accumulated list.
+    """
+
+    def __init__(self) -> None:
+        self._messages: list[dict[str, Any]] = []
+
+    def add(self, code: str, level: str, text: str, *, always: bool = False, pct: float | None = None) -> None:
+        """Append a single message dict to the collection."""
+        self._messages.append({"code": code, "level": level, "text": text, "always": always, "pct": pct})
+
+    def build(self) -> list[dict[str, Any]]:
+        """Return a snapshot of all collected messages."""
+        return list(self._messages)
+
+
 class ReportMessageGenerator:
     """Generates and filters analysis messages for the MIRA master report chat advisor."""
 
@@ -1725,20 +1745,16 @@ class ReportMessageGenerator:
         self._month = month
         self._relevance_threshold = relevance_threshold
         self._language = _normalize_report_language(language)
-        self._messages: list[dict[str, Any]] = []
 
     def _t(self, es: str, en: str, *, params: dict[str, Any] | None = None) -> str:
         return _report_text(self._language, es, en, params=params)
 
-    def _add(self, code: str, level: str, text: str, *, always: bool = False, pct: float | None = None) -> None:
-        self._messages.append({"code": code, "level": level, "text": text, "always": always, "pct": pct})
-
-    def _generate_income_vs_previous(self) -> None:
+    def _generate_income_vs_previous(self, builder: MessageBuilder) -> None:
         income_vs_previous = self._metrics.income_vs_previous
         income_prev_pct = income_vs_previous.pct
         lifestyle_inflation_metrics = self._metrics.lifestyle_inflation_metrics
         if income_prev_pct is None:
-            self._add(
+            builder.add(
                 "income_vs_previous_missing",
                 "warning",
                 self._t(
@@ -1749,7 +1765,7 @@ class ReportMessageGenerator:
             )
         else:
             trend = self._t("mayores", "higher") if income_prev_pct >= 0 else self._t("menores", "lower")
-            self._add(
+            builder.add(
                 "income_vs_previous",
                 "info",
                 self._t(
@@ -1764,7 +1780,7 @@ class ReportMessageGenerator:
         expense_vs_previous = self._metrics.expense_vs_previous
         expense_prev_pct = expense_vs_previous.pct
         if expense_prev_pct is None:
-            self._add(
+            builder.add(
                 "expense_vs_previous_missing",
                 "warning",
                 self._t(
@@ -1775,7 +1791,7 @@ class ReportMessageGenerator:
             )
         else:
             trend = self._t("mayores", "higher") if expense_prev_pct >= 0 else self._t("menores", "lower")
-            self._add(
+            builder.add(
                 "expense_vs_previous",
                 "info",
                 self._t(
@@ -1787,7 +1803,7 @@ class ReportMessageGenerator:
                 pct=abs(expense_prev_pct),
             )
             if bool(lifestyle_inflation_metrics.is_alert):
-                self._add(
+                builder.add(
                     "lifestyle_inflation_alert",
                     "warning",
                     self._t(
@@ -1805,7 +1821,7 @@ class ReportMessageGenerator:
                     ),
                 )
 
-    def _generate_budget_messages(self) -> None:
+    def _generate_budget_messages(self, builder: MessageBuilder) -> None:
         budget_context = self._metrics.budget_context
         income_vs_budget = self._metrics.income_vs_budget
         expense_vs_budget = self._metrics.expense_vs_budget
@@ -1815,7 +1831,7 @@ class ReportMessageGenerator:
         expense_budget_pct = expense_vs_budget.pct if expense_vs_budget is not None else None
         if income_budget_pct is not None:
             trend = self._t("por encima", "above") if income_budget_pct >= 0 else self._t("por debajo", "below")
-            self._add(
+            builder.add(
                 "income_vs_budget",
                 "info",
                 self._t(
@@ -1828,7 +1844,7 @@ class ReportMessageGenerator:
             )
         if expense_budget_pct is not None:
             trend = self._t("por encima", "above") if expense_budget_pct >= 0 else self._t("por debajo", "below")
-            self._add(
+            builder.add(
                 "expense_vs_budget",
                 "info",
                 self._t(
@@ -1840,7 +1856,7 @@ class ReportMessageGenerator:
                 pct=abs(expense_budget_pct),
             )
         for item in budget_context.missing_income_categories:
-            self._add(
+            builder.add(
                 "missing_budgeted_income",
                 "warning",
                 self._t(
@@ -1851,7 +1867,7 @@ class ReportMessageGenerator:
                 always=True,
             )
         for item in budget_context.missing_expense_categories:
-            self._add(
+            builder.add(
                 "missing_budgeted_expense",
                 "warning",
                 self._t(
@@ -1862,11 +1878,11 @@ class ReportMessageGenerator:
                 always=True,
             )
 
-    def _generate_net_messages(self) -> None:
+    def _generate_net_messages(self, builder: MessageBuilder) -> None:
         current_summary = self._metrics.current_summary
         savings_efficiency_metrics = self._metrics.savings_efficiency_metrics
         if current_summary.net < 0:
-            self._add(
+            builder.add(
                 "deficit",
                 "critical",
                 self._t(
@@ -1877,7 +1893,7 @@ class ReportMessageGenerator:
                 always=True,
             )
         else:
-            self._add(
+            builder.add(
                 "surplus",
                 "success",
                 self._t(
@@ -1888,7 +1904,7 @@ class ReportMessageGenerator:
                 always=True,
             )
             if bool(savings_efficiency_metrics.has_surplus_leakage_alert):
-                self._add(
+                builder.add(
                     "surplus_leakage",
                     "warning",
                     self._t(
@@ -1899,7 +1915,7 @@ class ReportMessageGenerator:
                     always=True,
                 )
 
-    def _generate_debt_messages(self) -> None:
+    def _generate_debt_messages(self, builder: MessageBuilder) -> None:
         debt_payment_total = self._metrics.debt_payment_total
         debt_payment_income_pct = self._metrics.debt_payment_income_pct
         debt_payment_expense_pct = self._metrics.debt_payment_expense_pct
@@ -1911,7 +1927,7 @@ class ReportMessageGenerator:
                 else "info"
             )
             if debt_payment_income_pct is not None and debt_payment_expense_pct is not None:
-                self._add(
+                builder.add(
                     "credit_debt_load",
                     debt_level,
                     self._t(
@@ -1927,7 +1943,7 @@ class ReportMessageGenerator:
                     pct=max(debt_payment_income_pct, debt_payment_expense_pct),
                 )
             else:
-                self._add(
+                builder.add(
                     "credit_debt_load",
                     "warning",
                     self._t(
@@ -1940,7 +1956,7 @@ class ReportMessageGenerator:
 
         if cc.expense_count > 0 or cc.payment_count > 0:
             if cc.expense_amount > cc.payment_amount:
-                self._add(
+                builder.add(
                     "credit_card_usage_vs_payments",
                     "warning",
                     self._t(
@@ -1957,7 +1973,7 @@ class ReportMessageGenerator:
                     always=True,
                 )
             else:
-                self._add(
+                builder.add(
                     "credit_card_usage_vs_payments",
                     "info",
                     self._t(
@@ -1973,7 +1989,7 @@ class ReportMessageGenerator:
                     always=True,
                 )
 
-    def _generate_spending_pattern_messages(self) -> None:
+    def _generate_spending_pattern_messages(self, builder: MessageBuilder) -> None:
         total_expense = self._metrics.total_expense
         weekend_total = self._metrics.weekend_total
         weekend_days = self._metrics.weekend_days
@@ -1983,7 +1999,7 @@ class ReportMessageGenerator:
 
         weekend_pct = (weekend_total / total_expense * 100.0) if total_expense > 0 else 0.0
         weekend_avg = (weekend_total / len(weekend_days)) if weekend_days else 0.0
-        self._add(
+        builder.add(
             "weekend_behavior",
             "info",
             self._t(
@@ -1995,7 +2011,7 @@ class ReportMessageGenerator:
         )
 
         small_pct = (small_total / total_expense * 100.0) if total_expense > 0 else 0.0
-        self._add(
+        builder.add(
             "small_expenses",
             "info",
             self._t(
@@ -2009,7 +2025,7 @@ class ReportMessageGenerator:
         if top_tags and current_summary.income > 0:
             top_tag_name, top_tag_amount = top_tags[0]
             tag_income_pct = (top_tag_amount / current_summary.income) * 100.0
-            self._add(
+            builder.add(
                 "tag_impact",
                 "info",
                 self._t(
@@ -2021,7 +2037,7 @@ class ReportMessageGenerator:
             )
 
         if current_summary.income <= 0:
-            self._add(
+            builder.add(
                 "zero_income",
                 "warning",
                 self._t(
@@ -2031,10 +2047,10 @@ class ReportMessageGenerator:
                 always=True,
             )
 
-    def _generate_burn_rate_message(self) -> None:
+    def _generate_burn_rate_message(self, builder: MessageBuilder) -> None:
         burn_days = self._metrics.burn_days
         if burn_days is not None:
-            self._add(
+            builder.add(
                 "burn_rate",
                 "info",
                 self._t(
@@ -2044,7 +2060,7 @@ class ReportMessageGenerator:
                 ),
             )
 
-    def _generate_goal_messages(self) -> None:
+    def _generate_goal_messages(self, builder: MessageBuilder) -> None:
         avg_3 = self._metrics.avg_3
         current_summary = self._metrics.current_summary
         completed_goals = self._goal_data.completed_goals
@@ -2056,7 +2072,7 @@ class ReportMessageGenerator:
 
         if completed_goals:
             latest_completed_goal = completed_goals[0]
-            self._add(
+            builder.add(
                 "goals_completed",
                 "success",
                 self._t(
@@ -2072,7 +2088,7 @@ class ReportMessageGenerator:
             focus_target_date = cast(date | None, focus_goal.parsed_target_date)
             focus_currency = str(focus_goal.currency or "").strip()
             if focus_target_date is not None and focus_target_date < report_period_end:
-                self._add(
+                builder.add(
                     "goal_overdue",
                     "warning",
                     self._t(
@@ -2092,7 +2108,7 @@ class ReportMessageGenerator:
                 )
                 required_monthly_savings = float(focus_goal.remaining_amount) / months_remaining
                 if monthly_savings_avg and monthly_savings_avg >= required_monthly_savings:
-                    self._add(
+                    builder.add(
                         "goal_on_track",
                         "success",
                         self._t(
@@ -2109,7 +2125,7 @@ class ReportMessageGenerator:
                         always=True,
                     )
                 else:
-                    self._add(
+                    builder.add(
                         "goal_off_track",
                         "warning",
                         self._t(
@@ -2126,7 +2142,7 @@ class ReportMessageGenerator:
                         always=True,
                     )
             else:
-                self._add(
+                builder.add(
                     "goal_progress",
                     "info",
                     self._t(
@@ -2150,7 +2166,7 @@ class ReportMessageGenerator:
                     break
                 months_to_goal = remaining / monthly_savings_avg
                 eta_year, eta_month = shift_month(self._year, self._month, int(round(months_to_goal)))
-                self._add(
+                builder.add(
                     "goal_projection",
                     "info",
                     self._t(
@@ -2161,9 +2177,9 @@ class ReportMessageGenerator:
                 )
                 break
 
-    def _generate_50_30_20_message(self) -> None:
+    def _generate_50_30_20_message(self, builder: MessageBuilder) -> None:
         mira_50_30_20 = self._metrics.mira_50_30_20
-        self._add(
+        builder.add(
             "mira_50_30_20",
             "info",
             self._t(
@@ -2178,7 +2194,7 @@ class ReportMessageGenerator:
             ),
         )
 
-    def _generate_freedom_margin_message(self) -> None:
+    def _generate_freedom_margin_message(self, builder: MessageBuilder) -> None:
         freedom_margin_metrics = self._metrics.freedom_margin_metrics
         freedom_margin_pct = cast(float | None, freedom_margin_metrics.pct)
         if freedom_margin_pct is None:
@@ -2217,7 +2233,7 @@ class ReportMessageGenerator:
                 else "info" if freedom_zone == "construction_zone" else "success"
             )
         )
-        self._add(
+        builder.add(
             "freedom_margin",
             freedom_level,
             self._t(
@@ -2232,7 +2248,7 @@ class ReportMessageGenerator:
             always=True,
         )
 
-    def _generate_ratios_messages(self) -> None:
+    def _generate_ratios_messages(self, builder: MessageBuilder) -> None:
         income_total = self._metrics.income_total
         savings_rate = self._metrics.savings_rate
         expense_income_ratio = self._metrics.expense_income_ratio
@@ -2251,7 +2267,7 @@ class ReportMessageGenerator:
                     else self._t("Continúa monitoreando tu ritmo.", "Keep monitoring your pace.")
                 )
             )
-            self._add(
+            builder.add(
                 "savings_rate",
                 "info",
                 self._t(
@@ -2262,7 +2278,7 @@ class ReportMessageGenerator:
             )
 
         if expense_income_ratio is not None:
-            self._add(
+            builder.add(
                 "expense_income_ratio",
                 "info",
                 self._t(
@@ -2274,7 +2290,7 @@ class ReportMessageGenerator:
 
         if concentration_pct is not None and top_categories:
             top_name, _top_amount = top_categories[0]
-            self._add(
+            builder.add(
                 "expense_concentration",
                 "info",
                 self._t(
@@ -2286,7 +2302,7 @@ class ReportMessageGenerator:
 
         if dependence_pct is not None and income_by_root and income_total > 0:
             root_name, _root_amount = max(income_by_root.items(), key=lambda item: item[1])
-            self._add(
+            builder.add(
                 "income_dependence",
                 "info",
                 self._t(
@@ -2298,22 +2314,22 @@ class ReportMessageGenerator:
 
     def generate(self) -> list[dict[str, Any]]:
         """Generate all messages, filter by threshold, and return sorted list."""
-        self._messages = []
-        self._generate_income_vs_previous()
-        self._generate_budget_messages()
-        self._generate_net_messages()
-        self._generate_debt_messages()
-        self._generate_spending_pattern_messages()
-        self._generate_burn_rate_message()
-        self._generate_goal_messages()
-        self._generate_50_30_20_message()
-        self._generate_freedom_margin_message()
-        self._generate_ratios_messages()
+        builder = MessageBuilder()
+        self._generate_income_vs_previous(builder)
+        self._generate_budget_messages(builder)
+        self._generate_net_messages(builder)
+        self._generate_debt_messages(builder)
+        self._generate_spending_pattern_messages(builder)
+        self._generate_burn_rate_message(builder)
+        self._generate_goal_messages(builder)
+        self._generate_50_30_20_message(builder)
+        self._generate_freedom_margin_message(builder)
+        self._generate_ratios_messages(builder)
 
         threshold_pct = self._relevance_threshold * 100.0
         filtered = [
             msg
-            for msg in self._messages
+            for msg in builder.build()
             if msg["always"] or msg.get("pct") is None or float(msg["pct"]) >= threshold_pct
         ]
         filtered.sort(key=lambda msg: (_message_level_priority(str(msg["level"])), str(msg["code"])))

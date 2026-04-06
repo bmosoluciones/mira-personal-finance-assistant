@@ -23,6 +23,7 @@ from mira.reports.mira_master import (
     GoalProgressAnalyzer,
     GoalRow,
     LifestyleInflationMetrics,
+    MessageBuilder,
     MetricsResult,
     Mira503020,
     ReportInputs,
@@ -624,6 +625,50 @@ class TestReportMetricsCalculator:
         # Savings are excluded from operational expense categories
         assert result.top_categories == []
         assert result.total_expense == 0.0
+
+
+# ---------------------------------------------------------------------------
+# MessageBuilder tests
+# ---------------------------------------------------------------------------
+
+
+class TestMessageBuilder:
+    def test_build_returns_empty_list_initially(self) -> None:
+        b = MessageBuilder()
+        assert b.build() == []
+
+    def test_add_then_build_returns_added_message(self) -> None:
+        b = MessageBuilder()
+        b.add("test_code", "info", "Test message")
+        result = b.build()
+        assert len(result) == 1
+        assert result[0]["code"] == "test_code"
+        assert result[0]["level"] == "info"
+        assert result[0]["text"] == "Test message"
+        assert result[0]["always"] is False
+        assert result[0]["pct"] is None
+
+    def test_add_with_always_and_pct(self) -> None:
+        b = MessageBuilder()
+        b.add("code", "warning", "msg", always=True, pct=42.5)
+        result = b.build()
+        assert result[0]["always"] is True
+        assert result[0]["pct"] == 42.5
+
+    def test_build_returns_snapshot_not_live_reference(self) -> None:
+        b = MessageBuilder()
+        b.add("first", "info", "First")
+        snapshot = b.build()
+        b.add("second", "info", "Second")
+        # snapshot should not be affected by subsequent adds
+        assert len(snapshot) == 1
+        assert len(b.build()) == 2
+
+    def test_multiple_adds_accumulate(self) -> None:
+        b = MessageBuilder()
+        for i in range(5):
+            b.add(f"code_{i}", "info", f"Message {i}")
+        assert len(b.build()) == 5
 
 
 # ---------------------------------------------------------------------------
