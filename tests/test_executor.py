@@ -53,31 +53,46 @@ class TestExecutorAddIncome:
         txs = db.transaction.list(tx_type="income")
         assert any(t["amount"] == pytest.approx(1000.0) for t in txs)
 
-    def test_updates_account_balance(self, executor, db):
+    def test_updates_named_account_balance(self, executor, db):
+        db.account.create("savings", account_type="bank", opening_balance=0.0, currency="USD")
         executor.execute(_action(action="add_income", amount=500.0, converted_amount=500.0, account="savings"))
         acc = db.account.find_by_name("savings")
         assert acc is not None
         assert acc["balance"] == pytest.approx(500.0)
 
+    def test_unknown_account_falls_back_to_default(self, executor, db):
+        executor.execute(_action(action="add_income", amount=500.0, converted_amount=500.0, account="nonexistent_xyz"))
+        assert db.account.find_by_name("nonexistent_xyz") is None
+        default_acc = db.account.get_default()
+        assert default_acc is not None
+        assert default_acc["balance"] == pytest.approx(500.0)
+
     def test_uses_converted_amount(self, executor, db):
         executor.execute(_action(action="add_income", amount=500.0, converted_amount=480.0, exchange_rate=0.96))
-        acc = db.account.find_by_name(localized_default_account_name(db.setting.get("language")))
-        assert acc["balance"] == pytest.approx(480.0)
+        default_acc = db.account.get_default()
+        assert default_acc is not None
+        assert default_acc["balance"] == pytest.approx(480.0)
 
-    def test_localizes_fallback_account_name_from_database_language(self, executor, db):
+    def test_uses_default_account_regardless_of_language(self, executor, db):
         db.setting.set("language", "es")
 
         executor.execute(_action(action="add_income", amount=500.0, converted_amount=500.0))
 
-        acc = db.account.find_by_name("Cuenta principal")
-        assert acc is not None
-        assert acc["balance"] == pytest.approx(500.0)
-        assert db.account.find_by_name("Main account") is None
+        default_acc = db.account.get_default()
+        assert default_acc is not None
+        assert default_acc["balance"] == pytest.approx(500.0)
+        assert db.account.find_by_name("Cuenta principal") is None
 
-    def test_creates_income_category_when_missing(self, executor, db):
-        executor.execute(_action(action="add_income", amount=120.0, converted_amount=120.0, category="consultoria"))
-        cat = db.category.find_by_name("consultoria", "income")
-        assert cat is not None
+    def test_unknown_category_is_not_created_for_income(self, executor, db):
+        executor.execute(_action(action="add_income", amount=120.0, converted_amount=120.0, category="consultoria_xyz"))
+        cat = db.category.find_by_name("consultoria_xyz", "income")
+        assert cat is None
+
+    def test_fuzzy_category_match_income(self, executor, db):
+        db.setting.seed_initial_data(include_default_categories=True, account_names=[])
+        executor.execute(_action(action="add_income", amount=120.0, converted_amount=120.0, category="salary"))
+        txs = db.transaction.list(tx_type="income")
+        assert any(tx["category"] is not None and tx["category"] != "" for tx in txs)
 
 
 class TestExecutorAddExpense:
@@ -87,25 +102,38 @@ class TestExecutorAddExpense:
         assert any(t["amount"] == pytest.approx(50.0) for t in txs)
 
     def test_decreases_account_balance(self, executor, db):
+        db.account.create("checking", account_type="bank", opening_balance=0.0, currency="USD")
         executor.execute(_action(action="add_income", amount=300.0, converted_amount=300.0, account="checking"))
         executor.execute(_action(action="add_expense", amount=100.0, converted_amount=100.0, account="checking"))
         acc = db.account.find_by_name("checking")
         assert acc["balance"] == pytest.approx(200.0)
 
-    def test_creates_expense_category_when_missing(self, executor, db):
-        executor.execute(_action(action="add_expense", amount=45.0, converted_amount=45.0, category="cafeteria"))
-        cat = db.category.find_by_name("cafeteria", "expense")
-        assert cat is not None
+    def test_unknown_category_is_not_created_for_expense(self, executor, db):
+        executor.execute(_action(action="add_expense", amount=45.0, converted_amount=45.0, category="cafeteria_xyz"))
+        cat = db.category.find_by_name("cafeteria_xyz", "expense")
+        assert cat is None
 
-    def test_savings_expense_uses_canonical_savings_category(self, executor, db):
+    def test_savings_expense_matches_seeded_savings_category(self, executor, db):
+        db.setting.seed_initial_data(include_default_categories=True, account_names=[])
         executor.execute(_action(action="add_expense", amount=60.0, converted_amount=60.0, category="savings"))
 
         txs = db.transaction.list(tx_type="expense")
-        assert any(tx["category"] == "Ahorro" for tx in txs)
+        matched_categories = [tx["category"] for tx in txs if tx.get("category") is not None]
+        assert len(matched_categories) > 0
+        savings_cat = db.category.find_by_name(matched_categories[0])
+        assert savings_cat is not None
+        assert int(savings_cat.get("is_savings") or 0) == 1
 
-        cat = db.category.find_by_name("Ahorro", "expense")
+    def test_savings_expense_matches_seeded_ahorro_category(self, executor, db):
+        db.setting.seed_initial_data(include_default_categories=True, account_names=[], language="es")
+        executor.execute(_action(action="add_expense", amount=60.0, converted_amount=60.0, category="ahorro"))
+
+        txs = db.transaction.list(tx_type="expense")
+        matched = [tx["category"] for tx in txs if tx.get("category") is not None]
+        assert len(matched) > 0
+        cat = db.category.find_by_name(matched[0])
         assert cat is not None
-        assert int(cat["is_savings"] or 0) == 1
+        assert int(cat.get("is_savings") or 0) == 1
 
     def test_reuses_existing_category_name_across_transaction_types(self, executor, db):
         db.category.create("impuestos", "income")
@@ -222,6 +250,8 @@ class TestExecutorReport:
         assert result.action == "report"
 
     def test_report_with_category_filter(self, executor, db):
+        db.category.create("food", "expense")
+        db.category.create("transport", "expense")
         executor.execute(_action(action="add_expense", amount=20, converted_amount=20, category="food"))
         executor.execute(_action(action="add_expense", amount=10, converted_amount=10, category="transport"))
 
@@ -284,6 +314,10 @@ def test_execute_unknown_action_uses_none_handler(executor):
 
 
 def test_report_filters_by_multiple_categories_account_and_amount_range(executor, db):
+    db.account.create("wallet", account_type="bank", opening_balance=0.0, currency="USD")
+    db.account.create("bank", account_type="bank", opening_balance=0.0, currency="USD")
+    db.category.create("food", "expense")
+    db.category.create("transport", "expense")
     executor.execute(_action(action="add_expense", amount=10, converted_amount=10, category="food", account="wallet"))
     executor.execute(
         _action(action="add_expense", amount=20, converted_amount=20, category="transport", account="wallet")
@@ -351,3 +385,71 @@ def test_period_range_custom_and_all_time(monkeypatch):
     assert start == "2026-01-01"
     assert end == "2026-01-31"
     assert preset == "custom"
+
+
+class TestCategoryMatching:
+    """Tests for the category fuzzy-matching helpers."""
+
+    def _cats(self, names_types: list[tuple[str, str]]) -> list[dict]:
+        return [{"name": n, "type": t, "id": i} for i, (n, t) in enumerate(names_types)]
+
+    def test_exact_match_returns_correct_category(self):
+        cats = self._cats([("Food", "expense"), ("Transport", "expense")])
+        result = executor_module._find_best_category_match("Food", cats)
+        assert result is not None
+        assert result["name"] == "Food"
+
+    def test_case_insensitive_exact_match(self):
+        cats = self._cats([("Food", "expense"), ("Transport", "expense")])
+        result = executor_module._find_best_category_match("food", cats)
+        assert result is not None
+        assert result["name"] == "Food"
+
+    def test_synonym_lookup_english_to_spanish_category(self):
+        cats = self._cats([("Alimentación", "expense"), ("Transporte", "expense")])
+        result = executor_module._find_best_category_match("food", cats)
+        assert result is not None
+        assert result["name"] == "Alimentación"
+
+    def test_synonym_lookup_spanish_to_english_category(self):
+        cats = self._cats([("Food", "expense"), ("Transport", "expense")])
+        result = executor_module._find_best_category_match("comida", cats)
+        assert result is not None
+        assert result["name"] == "Food"
+
+    def test_synonym_lookup_savings(self):
+        cats = self._cats([("Savings", "expense"), ("Housing", "expense")])
+        result = executor_module._find_best_category_match("savings", cats)
+        assert result is not None
+        assert result["name"] == "Savings"
+
+    def test_synonym_lookup_ahorro(self):
+        cats = self._cats([("Ahorro", "expense"), ("Vivienda", "expense")])
+        result = executor_module._find_best_category_match("ahorro", cats)
+        assert result is not None
+        assert result["name"] == "Ahorro"
+
+    def test_fuzzy_substring_match(self):
+        cats = self._cats([("Groceries and Pantry", "expense"), ("Transport", "expense")])
+        result = executor_module._find_best_category_match("groceries", cats)
+        assert result is not None
+        assert result["name"] == "Groceries and Pantry"
+
+    def test_garbage_input_returns_none(self):
+        cats = self._cats([("Food", "expense"), ("Transport", "expense"), ("Housing", "expense")])
+        assert executor_module._find_best_category_match("en", cats) is None
+        assert executor_module._find_best_category_match("mi", cats) is None
+
+    def test_empty_category_list_returns_none(self):
+        assert executor_module._find_best_category_match("food", []) is None
+
+    def test_score_similarity_exact(self):
+        assert executor_module._score_name_similarity("food", "food") == 1.0
+
+    def test_score_similarity_containment(self):
+        score = executor_module._score_name_similarity("groceries", "groceries and pantry")
+        assert score >= executor_module._CATEGORY_MATCH_THRESHOLD
+
+    def test_score_similarity_garbage_short_word(self):
+        score = executor_module._score_name_similarity("en", "entertainment")
+        assert score < executor_module._CATEGORY_MATCH_THRESHOLD

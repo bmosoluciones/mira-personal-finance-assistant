@@ -693,6 +693,7 @@ class TestCategories:
 
         categories = {(cat["name"], cat["type"]) for cat in db.category.list()}
         expected = {
+            # Original categories
             ("Salary and Compensation", "income"),
             ("Net Salary (Payroll)", "income"),
             ("Services and Sales", "income"),
@@ -705,6 +706,27 @@ class TestCategories:
             ("Fuel and Tolls", "expense"),
             ("Savings", "expense"),
             ("Emergency Fund", "expense"),
+            # New comprehensive income categories
+            ("Other Active Income", "income"),
+            ("Business Income", "income"),
+            ("Passive Income", "income"),
+            ("Transfers and Gifts Received", "income"),
+            ("Other Income", "income"),
+            ("Overtime and Tips", "income"),
+            ("Royalties and Affiliates", "income"),
+            ("Reimbursements", "income"),
+            # New comprehensive expense categories
+            ("Personal Shopping", "expense"),
+            ("Family and Social", "expense"),
+            ("Pets", "expense"),
+            ("Business Expenses", "expense"),
+            ("Donations and Charity", "expense"),
+            ("Miscellaneous", "expense"),
+            ("Travel and Vacations", "expense"),
+            ("Clothing and Footwear", "expense"),
+            ("Veterinarian", "expense"),
+            ("Investment Savings", "expense"),
+            ("Specific Savings Goals", "expense"),
         }
 
         assert expected.issubset(categories)
@@ -715,6 +737,8 @@ class TestCategories:
         assert category_rows["Savings Goals"]["parent_id"] is None
         assert category_rows["Savings"]["parent_id"] == category_rows["Savings Goals"]["id"]
         assert category_rows["Emergency Fund"]["parent_id"] == category_rows["Savings"]["id"]
+        assert category_rows["Investment Savings"]["parent_id"] == category_rows["Savings"]["id"]
+        assert category_rows["Overtime and Tips"]["parent_id"] == category_rows["Other Active Income"]["id"]
 
     def test_seed_initial_data_creates_default_tags_by_language(self, db):
         db.setting.seed_initial_data(include_default_categories=True, account_names=None)
@@ -730,9 +754,13 @@ class TestCategories:
         categories = {c["name"]: c for c in db.category.list()}
         assert "Salario y Remuneración" in categories
         assert "Ahorro" in categories
+        assert "Compras Personales" in categories
+        assert "Mascotas" in categories
+        assert "Donaciones y Caridad" in categories
         assert categories["Metas de ahorro"]["parent_id"] is None
         assert categories["Ahorro"]["parent_id"] == categories["Metas de ahorro"]["id"]
         assert categories["Fondo de Emergencia"]["parent_id"] == categories["Ahorro"]["id"]
+        assert categories["Ahorro para Inversión"]["parent_id"] == categories["Ahorro"]["id"]
 
         tag_names = {t["name"] for t in db.tag.list()}
         assert {"Fijo", "Variable", "Necesario", "Discrecional"}.issubset(tag_names)
@@ -2930,18 +2958,23 @@ class TestSavingsGoalCategoryProtections:
 
 
 class TestSeededCategoriesSavings:
-    def test_seed_has_exactly_one_savings_expense_category(self, db):
-        """seed_initial_data must not create duplicate savings categories."""
+    def test_seed_has_expected_savings_expense_categories(self, db):
+        """seed_initial_data must include the comprehensive savings/investment category set."""
         db.setting.seed_initial_data(include_default_categories=True, account_names=None)
         expense_cats = db.category.list(cat_type="expense", include_savings=True)
         savings_cats = [c for c in expense_cats if int(c.get("is_savings") or 0) == 1]
-        savings_names = [c["name"] for c in savings_cats]
-        assert savings_names == [
-            "Emergency Fund",
-            "Retirement or Investments Plan",
-            "Savings",
-            "Savings Goals",
-        ]
+        savings_names = sorted(c["name"] for c in savings_cats)
+        expected = sorted(
+            [
+                "Emergency Fund",
+                "Investment Savings",
+                "Retirement or Investments Plan",
+                "Savings",
+                "Savings Goals",
+                "Specific Savings Goals",
+            ]
+        )
+        assert savings_names == expected
 
     def test_seed_links_default_savings_goal_to_seeded_savings_category(self, db):
         db.setting.seed_initial_data(include_default_categories=True, account_names=None)

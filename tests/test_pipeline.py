@@ -88,29 +88,29 @@ class TestPipelineWithTransactionParserEngine:
     def test_pipeline_reflects_balance(self, pipeline, db):
         pipeline.process("received 1000 salary")
         pipeline.process("spent 200 on rent")
-        acc = db.account.find_by_name(localized_default_account_name(db.setting.get("language")))
-        assert acc["balance"] == pytest.approx(800.0)
+        default_acc = db.account.get_default()
+        assert default_acc is not None
+        assert default_acc["balance"] == pytest.approx(800.0)
 
     def test_prompt_transactions_use_explicit_account_when_provided(self, pipeline, db):
+        db.account.create("savings", account_type="bank", opening_balance=0.0, currency="USD")
         result = pipeline.process("received 500 in savings account")
         assert result.success is True
         assert result.action == "add_income"
 
-        general = db.account.find_by_name(localized_default_account_name(db.setting.get("language")))
         savings = db.account.find_by_name("savings")
 
         assert savings is not None
         assert savings["balance"] == pytest.approx(500.0)
-        assert general is None
 
     def test_prompt_transactions_use_default_account_when_not_provided(self, pipeline, db):
         result = pipeline.process("received 300 salary")
         assert result.success is True
         assert result.action == "add_income"
 
-        general = db.account.find_by_name(localized_default_account_name(db.setting.get("language")))
-        assert general is not None
-        assert general["balance"] == pytest.approx(300.0)
+        default_acc = db.account.get_default()
+        assert default_acc is not None
+        assert default_acc["balance"] == pytest.approx(300.0)
 
     def test_empty_input_handled(self, pipeline):
         result = pipeline.process("")
