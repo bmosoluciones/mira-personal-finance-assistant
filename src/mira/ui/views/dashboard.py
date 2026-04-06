@@ -58,8 +58,8 @@ class DashboardView(QWidget):
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 16, 20, 16)
-        layout.setSpacing(14)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(10)
 
         layout.addWidget(_section_title(_tr_db(self._db, "view.dashboard.title", "Dashboard")))
 
@@ -89,7 +89,7 @@ class DashboardView(QWidget):
 
         # KPI summary cards
         cards_row = QHBoxLayout()
-        cards_row.setSpacing(12)
+        cards_row.setSpacing(8)
         self._income_card = CardWidget(_tr_db(self._db, "dashboard.card.income", "Income"), "$0.00")
         self._expense_card = CardWidget(_tr_db(self._db, "dashboard.card.expense", "Expense"), "$0.00")
         self._net_card = CardWidget(_tr_db(self._db, "dashboard.card.net", "Net"), "$0.00")

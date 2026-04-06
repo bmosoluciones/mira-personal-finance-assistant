@@ -15,22 +15,22 @@ class CardWidget(QFrame):
         super().__init__()
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet("QFrame{background:#3C4C61;border:1px solid #6E8198;border-radius:10px;}")
-        self.setMinimumHeight(160)
+        self.setMinimumHeight(110)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 16, 20, 16)
+        layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(4)
 
         self._title_lbl = QLabel(title)
         self._title_lbl.setWordWrap(True)
         self._title_lbl.setStyleSheet(
-            "font-size:14px;font-weight:700;color:#D6DEE8;background:transparent;border:none;"
+            "font-size:12px;font-weight:700;color:#D6DEE8;background:transparent;border:none;"
         )
         layout.addWidget(self._title_lbl)
 
         self._value_lbl = QLabel(value)
         self._value_lbl.setStyleSheet(
-            f"font-size:34px;font-weight:700;color:{color};background:transparent;border:none;"
+            f"font-size:26px;font-weight:700;color:{color};background:transparent;border:none;"
         )
         layout.addWidget(self._value_lbl)
 
@@ -51,7 +51,7 @@ class CardWidget(QFrame):
 
     def set_color(self, color: str) -> None:
         self._value_lbl.setStyleSheet(
-            f"font-size:34px;font-weight:700;color:{color};background:transparent;border:none;"
+            f"font-size:26px;font-weight:700;color:{color};background:transparent;border:none;"
         )
 
     def set_context(

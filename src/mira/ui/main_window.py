@@ -92,7 +92,7 @@ from mira.ui.views.transactions import TransactionsView
 # Constants
 # ---------------------------------------------------------------------------
 
-_SIDEBAR_WIDTH = 190
+_SIDEBAR_WIDTH = 170
 _FOOTER_HEIGHT = 180  # collapsed prompt drawer
 _LOGO_BG = "#0F2A40"
 _SIDEBAR_BG = "#252526"
@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
         self._startup_cancelled = False
 
         self.setWindowTitle(tr("app.title", self._language, default="MIRA - Personal Finance Assistant"))
-        self.resize(1180, 720)
+        self._resize_to_screen()
         self._apply_theme(self._theme)
         self._build_menu()
         self._build_ui()
@@ -230,6 +230,21 @@ class MainWindow(QMainWindow):
 
     def _build_menu(self) -> None:
         MenuBuilder().build(self)
+
+    # ------------------------------------------------------------------
+    # Screen-aware sizing
+    # ------------------------------------------------------------------
+
+    def _resize_to_screen(self) -> None:
+        """Resize the window to fit comfortably on the available screen."""
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            self.resize(1180, 720)
+            return
+        available = screen.availableGeometry()
+        w = min(1180, int(available.width() * 0.85))
+        h = min(720, int(available.height() * 0.88))
+        self.resize(w, h)
 
     # ------------------------------------------------------------------
     # Central widget layout
@@ -309,8 +324,8 @@ class MainWindow(QMainWindow):
         # App name header
         header = QLabel("MIRA")
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header.setFont(QFont("Arial", 14, QFont.Weight.Bold))
-        header.setStyleSheet("padding:14px 0;")
+        header.setFont(QFont("Arial", 13, QFont.Weight.Bold))
+        header.setStyleSheet("padding:10px 0;")
         layout.addWidget(header)
 
         # Navigation list
@@ -320,11 +335,11 @@ class MainWindow(QMainWindow):
                 background:palette(window);
                 border:none;
                 color:palette(text);
-                font-size:13px;
+                font-size:12px;
                 outline:none;
             }}
             QListWidget::item {{
-                padding:10px 16px;
+                padding:7px 12px;
                 border-left:3px solid transparent;
             }}
             QListWidget::item:selected {{
@@ -452,12 +467,12 @@ class MainWindow(QMainWindow):
         panel.setStyleSheet("")
 
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(6)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(4)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         avatar = QLabel("\U0001f916")
-        avatar.setFont(QFont("Arial", 28))
+        avatar.setFont(QFont("Arial", 22))
         avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
         avatar.setStyleSheet("background:transparent;")
         layout.addWidget(avatar)
@@ -535,15 +550,15 @@ class MainWindow(QMainWindow):
         self._chat_content.setStyleSheet("")
 
         content_layout = QVBoxLayout(self._chat_content)
-        content_layout.setContentsMargins(10, 8, 10, 8)
-        content_layout.setSpacing(6)
+        content_layout.setContentsMargins(10, 6, 10, 6)
+        content_layout.setSpacing(4)
 
         # Response drawer
         self._response_browser = QTextBrowser()
         self._response_browser.setStyleSheet(
             "QTextBrowser{border:1px solid palette(mid);" "border-radius:4px;font-size:12px;padding:6px;}"
         )
-        self._response_browser.setMaximumHeight(130)
+        self._response_browser.setMaximumHeight(100)
         self._response_browser.setPlaceholderText(
             tr(
                 "prompt.response_placeholder",
