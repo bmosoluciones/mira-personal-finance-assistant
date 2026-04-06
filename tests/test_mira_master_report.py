@@ -270,8 +270,8 @@ def test_credit_card_spending_vs_internal_payments_warns_about_possible_indebted
     assert payload["metrics"]["credit_card_payment_amount"] == pytest.approx(150.0)
     assert payload["metrics"]["credit_card_gap_amount"] == pytest.approx(50.0)
     assert messages["credit_card_usage_vs_payments"] == (
-        "En tarjetas de credito registraste 2 gasto(s) por 200.00 y 1 pago(s) internos por 150.00. "
-        "Como los gastos superan los pagos, hay senal de posible endeudamiento por 50.00."
+        "En tarjetas de crédito registraste 2 gasto(s) por 200.00 y 1 pago(s) internos por 150.00. "
+        "Como los gastos superan los pagos, hay señal de posible endeudamiento por 50.00."
     )
 
 

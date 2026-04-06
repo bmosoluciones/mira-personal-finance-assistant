@@ -7,7 +7,7 @@ from datetime import date
 from typing import Any, cast
 
 from mira.db.model import BudgetDetail, Category
-from mira.reports.mira_master import build_report_payload, month_bounds, shift_month
+from mira.reports.mira_master import ReportInputs, build_report_payload, month_bounds, shift_month
 
 
 def transactions_for_month(db: Any, year: int, month: int) -> list[dict[str, Any]]:
@@ -115,25 +115,27 @@ def get_mira_master_report(
         language = "en"
 
     return build_report_payload(
-        year=year,
-        month=month,
-        month_transactions=month_txs,
-        month_transactions_raw=month_txs_raw,
-        previous_transactions=previous_txs,
-        trailing_3=trailing_3,
-        comparison_trailing_6=trailing_6,
-        historical_6=historical_6,
-        ytd_months=ytd_months,
-        categories=categories,
-        tags_by_tx=tags_by_tx,
-        budget=budget,
-        budget_monthly_by_type=budget_grouped,
-        budget_category_rows=budget_rows,
-        accounts=accounts,
-        account_balance_total=account_balance_total,
-        savings_goals=goals,
-        relevance_threshold=relevance_threshold,
-        language=language,
+        ReportInputs(
+            year=year,
+            month=month,
+            month_transactions=month_txs,
+            month_transactions_raw=month_txs_raw,
+            previous_transactions=previous_txs,
+            trailing_3=trailing_3,
+            comparison_trailing_6=trailing_6,
+            historical_6=historical_6,
+            ytd_months=ytd_months,
+            categories=categories,
+            tags_by_tx=tags_by_tx,
+            budget=budget,
+            budget_monthly_by_type=budget_grouped,
+            budget_category_rows=budget_rows,
+            accounts=accounts,
+            account_balance_total=account_balance_total,
+            savings_goals=goals,
+            relevance_threshold=relevance_threshold,
+            language=language,
+        )
     )
 
 

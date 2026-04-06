@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import calendar
 from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Any, TypedDict, cast
+from typing import Any, cast
 
 from mira.finance_summary import build_savings_lookup, is_savings_transaction, summarize_financial_kpis
 
@@ -17,22 +18,239 @@ _DEBT_KEYWORDS = ("deuda", "prestamo", "préstamo", "loan", "tarjeta", "credit")
 _MAX_WATERFALL_EXPENSE_STEPS = 6
 
 
-class _ComparisonValue(TypedDict):
+# ---------------------------------------------------------------------------
+# Typed data-transfer objects (DTOs)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class GoalRow:
+    """Parsed, normalised representation of a single savings goal."""
+
+    name: str
+    currency: str
+    target_amount: float
+    current_amount: float
+    remaining_amount: float
+    progress_ratio: float
+    progress_pct: float
+    target_date: str | None
+    parsed_target_date: date | None
+    achieved: bool
+
+
+@dataclass
+class GoalAnalysisResult:
+    """Output of :class:`GoalProgressAnalyzer`."""
+
+    goal_rows: list[GoalRow]
+    completed_goals: list[GoalRow]
+    active_goals: list[GoalRow]
+    goals_summary: dict[str, Any]
+    report_period_end: date
+
+
+@dataclass
+class SummaryMetrics:
+    """Monthly financial KPIs: income, expenses, savings, net, debt, refunds."""
+
+    income: float
+    expense_operational: float
+    savings: float
+    net: float
+    debt_payment: float
+    refunds: float
+
+
+@dataclass
+class AvgMetrics:
+    """Rolling-average metrics for income, expenses, savings and net.
+
+    Values are ``None`` when there is insufficient history.
+    """
+
+    income: float | None
+    expense_operational: float | None
+    savings: float | None
+    net: float | None
+
+
+@dataclass
+class ComparisonResult:
+    """Variance, percentage-change and directional signal between two values."""
+
     base: float | None
     variance: float | None
     pct: float | None
     signal: str
 
 
-class _BudgetContext(TypedDict):
+@dataclass
+class BudgetContextData:
+    """Budget availability and completeness for the current reporting period."""
+
     has_budget: bool
     budget_id: int | None
     budget_code: str | None
     income: float
     expense_operational: float
     is_complete_for_period: bool
-    missing_income_categories: list[str]
-    missing_expense_categories: list[str]
+    missing_income_categories: list[str] = field(default_factory=list)
+    missing_expense_categories: list[str] = field(default_factory=list)
+
+
+@dataclass
+class LifestyleInflationMetrics:
+    """Expense-growth-relative-to-income indicator."""
+
+    income_growth_pct: float | None
+    expense_growth_pct: float | None
+    expense_to_income_growth_ratio: float | None
+    is_applicable: bool
+    is_alert: bool
+
+
+@dataclass
+class SavingsEfficiencyMetrics:
+    """How effectively available surplus is routed to savings goals."""
+
+    surplus_amount: float
+    goal_funding_amount: float
+    goal_funding_efficiency_pct: float | None
+    surplus_leakage_amount: float
+    has_surplus_leakage_alert: bool
+
+
+@dataclass
+class FreedomMarginMetrics:
+    """Income-minus-expenses margin as a fraction of income."""
+
+    pct: float | None
+    zone: str | None
+    label: str | None
+    is_red_alert: bool
+
+
+@dataclass
+class GoalContributionMetrics:
+    """Savings-goal contribution counts and amounts for the current period."""
+
+    count: int
+    amount: float
+    by_goal: dict[str, float]
+
+
+@dataclass
+class Mira503020:
+    """50/30/20 budget rule percentage breakdown and deviation score."""
+
+    needs_pct: float
+    wants_pct: float
+    savings_pct: float
+    deviation_pct: float
+
+
+@dataclass
+class CreditCardStats:
+    """Credit-card expense vs. internal payment stats for one month."""
+
+    expense_count: int
+    expense_amount: float
+    payment_count: int
+    payment_amount: float
+    gap_amount: float
+
+
+@dataclass
+class ReportInputs:
+    """All raw inputs required to produce the MIRA master report payload.
+
+    Replaces the long keyword-argument list previously passed to
+    ``build_report_payload`` and ``ReportMetricsCalculator``.
+    """
+
+    year: int
+    month: int
+    month_transactions: list[dict[str, Any]]
+    month_transactions_raw: list[dict[str, Any]]
+    previous_transactions: list[dict[str, Any]]
+    trailing_3: list[list[dict[str, Any]]]
+    comparison_trailing_6: list[tuple[int, int, list[dict[str, Any]]]]
+    historical_6: list[tuple[int, int, list[dict[str, Any]]]]
+    ytd_months: list[tuple[int, int, list[dict[str, Any]]]]
+    categories: list[dict[str, Any]]
+    tags_by_tx: dict[int, list[dict[str, Any]]]
+    budget: dict[str, Any] | None
+    budget_monthly_by_type: dict[str, dict[str, float]] | None
+    budget_category_rows: list[dict[str, Any]] | None
+    accounts: list[dict[str, Any]]
+    account_balance_total: float
+    savings_goals: list[dict[str, Any]]
+    relevance_threshold: float = 0.10
+    language: str = "en"
+
+
+@dataclass
+class MetricsResult:
+    """All computed metrics returned by :class:`ReportMetricsCalculator`.
+
+    All sub-structures are typed dataclasses — no stringly-typed dict access
+    is needed anywhere in :class:`WaterfallChartBuilder`,
+    :class:`ReportMessageGenerator`, or the ``build_report_payload`` orchestrator.
+    """
+
+    current_summary: SummaryMetrics
+    previous_summary: SummaryMetrics
+    avg_3: AvgMetrics
+    avg_6: AvgMetrics
+    ytd: list[dict[str, Any]]
+    credit_card: CreditCardStats
+    top_category_totals: dict[str, float]
+    top_category_children: dict[str, dict[str, float]]
+    tag_totals: dict[str, float]
+    tag_children: dict[str, dict[str, float]]
+    top_categories: list[tuple[str, float]]
+    top_tags: list[tuple[str, float]]
+    weekend_total: float
+    weekend_days: dict[str, float]
+    daily_expense_totals: dict[str, float]
+    small_total: float
+    income_by_root: dict[str, float]
+    waterfall_category_totals: list[tuple[str, float]]
+    normal_waterfall_categories: list[tuple[str, float]]
+    displayed_waterfall_categories: list[tuple[str, float]]
+    remaining_waterfall_categories: list[tuple[str, float]]
+    inconsistent_waterfall_entry: tuple[str, float] | None
+    stacked_6: dict[str, list[dict[str, Any]]]
+    budget_context: BudgetContextData
+    comparisons: dict[str, dict[str, ComparisonResult | None]]
+    income_vs_budget: ComparisonResult | None
+    expense_vs_budget: ComparisonResult | None
+    income_vs_previous: ComparisonResult
+    expense_vs_previous: ComparisonResult
+    lifestyle_inflation_metrics: LifestyleInflationMetrics
+    savings_efficiency_metrics: SavingsEfficiencyMetrics
+    freedom_margin_metrics: FreedomMarginMetrics
+    goal_contribution_metrics: GoalContributionMetrics
+    generic_analysis: dict[str, Any]
+    history_hints: list[str]
+    income_total: float
+    total_expense: float
+    debt_payment_total: float
+    debt_payment_income_pct: float | None
+    debt_payment_expense_pct: float | None
+    savings_rate: float | None
+    expense_income_ratio: float | None
+    avg_daily_expense: float
+    burn_days: float | None
+    daily_living_cost: float
+    goal_completion_index_pct: float | None
+    concentration_pct: float | None
+    dependence_pct: float | None
+    net_after_expenses: float
+    top_total: float
+    days_in_month: int
+    mira_50_30_20: Mira503020
 
 
 def _normalize_report_language(language: str | None) -> str:
@@ -81,7 +299,7 @@ def _tx_text(tx: dict[str, Any]) -> str:
     return f"{category} {description} {note}"
 
 
-def _month_summary(transactions: list[dict[str, Any]], savings_lookup) -> dict[str, float]:
+def _month_summary(transactions: list[dict[str, Any]], savings_lookup) -> SummaryMetrics:
     summary = summarize_financial_kpis(transactions, savings_lookup)
     debt_payment_total = 0.0
     refunds_total = 0.0
@@ -104,14 +322,14 @@ def _month_summary(transactions: list[dict[str, Any]], savings_lookup) -> dict[s
 
         if any(keyword in text for keyword in _DEBT_KEYWORDS):
             debt_payment_total += amount
-    return {
-        "income": float(summary["income"]),
-        "expense_operational": float(summary["expense"]),
-        "savings": float(summary["savings"]),
-        "debt_payment": round(debt_payment_total, 2),
-        "refunds": round(refunds_total, 2),
-        "net": float(summary["net"]),
-    }
+    return SummaryMetrics(
+        income=float(summary["income"]),
+        expense_operational=float(summary["expense"]),
+        savings=float(summary["savings"]),
+        debt_payment=round(debt_payment_total, 2),
+        refunds=round(refunds_total, 2),
+        net=float(summary["net"]),
+    )
 
 
 def _trend_signal(section: str, variance: float | None) -> str:
@@ -129,7 +347,7 @@ def _message_level_priority(level: str) -> int:
 def _build_lifestyle_inflation_metrics(
     income_growth_pct: float | None,
     expense_growth_pct: float | None,
-) -> dict[str, Any]:
+) -> LifestyleInflationMetrics:
     ratio = None
     safe_income_growth = income_growth_pct if income_growth_pct is not None else 0.0
     if (
@@ -144,19 +362,19 @@ def _build_lifestyle_inflation_metrics(
     is_alert = (
         is_applicable and expense_growth_pct is not None and expense_growth_pct >= max(0.0, safe_income_growth * 0.9)
     )
-    return {
-        "income_growth_pct": round(income_growth_pct, 2) if income_growth_pct is not None else None,
-        "expense_growth_pct": round(expense_growth_pct, 2) if expense_growth_pct is not None else None,
-        "expense_to_income_growth_ratio": round(ratio, 2) if ratio is not None else None,
-        "is_applicable": is_applicable,
-        "is_alert": is_alert,
-    }
+    return LifestyleInflationMetrics(
+        income_growth_pct=round(income_growth_pct, 2) if income_growth_pct is not None else None,
+        expense_growth_pct=round(expense_growth_pct, 2) if expense_growth_pct is not None else None,
+        expense_to_income_growth_ratio=round(ratio, 2) if ratio is not None else None,
+        is_applicable=is_applicable,
+        is_alert=is_alert,
+    )
 
 
 def _build_goal_contribution_metrics(
     month_transactions: list[dict[str, Any]],
     savings_goals: list[dict[str, Any]],
-) -> dict[str, Any]:
+) -> GoalContributionMetrics:
     goal_category_names: dict[int, str] = {}
     for goal in savings_goals:
         category_id = goal.get("category_id")
@@ -187,11 +405,11 @@ def _build_goal_contribution_metrics(
         contribution_total += amount
         contribution_count += 1
 
-    return {
-        "count": contribution_count,
-        "amount": round(contribution_total, 2),
-        "by_goal": {name: round(amount, 2) for name, amount in sorted(contributions_by_goal.items())},
-    }
+    return GoalContributionMetrics(
+        count=contribution_count,
+        amount=round(contribution_total, 2),
+        by_goal={name: round(amount, 2) for name, amount in sorted(contributions_by_goal.items())},
+    )
 
 
 def _build_savings_efficiency_metrics(
@@ -199,30 +417,25 @@ def _build_savings_efficiency_metrics(
     net_amount: float,
     goal_contribution_amount: float,
     has_active_goals: bool,
-) -> dict[str, Any]:
+) -> SavingsEfficiencyMetrics:
     efficiency_pct = None
     if net_amount > 0:
         efficiency_pct = (goal_contribution_amount / net_amount) * 100.0
 
     leakage_amount = max(0.0, net_amount - goal_contribution_amount) if net_amount > 0 else 0.0
     has_surplus_leakage_alert = net_amount > 0 and has_active_goals and goal_contribution_amount <= 0.005
-    return {
-        "surplus_amount": round(net_amount, 2) if net_amount > 0 else 0.0,
-        "goal_funding_amount": round(goal_contribution_amount, 2),
-        "goal_funding_efficiency_pct": round(efficiency_pct, 2) if efficiency_pct is not None else None,
-        "surplus_leakage_amount": round(leakage_amount, 2),
-        "has_surplus_leakage_alert": has_surplus_leakage_alert,
-    }
+    return SavingsEfficiencyMetrics(
+        surplus_amount=round(net_amount, 2) if net_amount > 0 else 0.0,
+        goal_funding_amount=round(goal_contribution_amount, 2),
+        goal_funding_efficiency_pct=round(efficiency_pct, 2) if efficiency_pct is not None else None,
+        surplus_leakage_amount=round(leakage_amount, 2),
+        has_surplus_leakage_alert=has_surplus_leakage_alert,
+    )
 
 
-def _build_freedom_margin_metrics(income_total: float, total_expense: float) -> dict[str, Any]:
+def _build_freedom_margin_metrics(income_total: float, total_expense: float) -> FreedomMarginMetrics:
     if income_total <= 0:
-        return {
-            "pct": None,
-            "zone": None,
-            "label": None,
-            "is_red_alert": False,
-        }
+        return FreedomMarginMetrics(pct=None, zone=None, label=None, is_red_alert=False)
 
     freedom_margin_pct = ((income_total - total_expense) / income_total) * 100.0
     if freedom_margin_pct >= 30.0:
@@ -238,17 +451,17 @@ def _build_freedom_margin_metrics(income_total: float, total_expense: float) -> 
         zone = "red_alert"
         label = "alerta_roja"
 
-    return {
-        "pct": round(freedom_margin_pct, 2),
-        "zone": zone,
-        "label": label,
-        "is_red_alert": freedom_margin_pct < 0,
-    }
+    return FreedomMarginMetrics(
+        pct=round(freedom_margin_pct, 2),
+        zone=zone,
+        label=label,
+        is_red_alert=freedom_margin_pct < 0,
+    )
 
 
-def _build_goal_completion_index(goal_rows: list[dict[str, Any]], active_goals: list[dict[str, Any]]) -> float | None:
+def _build_goal_completion_index(goal_rows: list[GoalRow], active_goals: list[GoalRow]) -> float | None:
     if active_goals:
-        return round(sum(float(goal["progress_pct"]) for goal in active_goals) / len(active_goals), 2)
+        return round(sum(goal.progress_pct for goal in active_goals) / len(active_goals), 2)
     if goal_rows:
         return 100.0
     return None
@@ -590,250 +803,290 @@ def _build_sustainability_score(
     return {"score": round(score, 2), "classification": classification}
 
 
-def build_report_payload(
-    *,
-    year: int,
-    month: int,
-    month_transactions: list[dict[str, Any]],
-    month_transactions_raw: list[dict[str, Any]],
-    previous_transactions: list[dict[str, Any]],
-    trailing_3: list[list[dict[str, Any]]],
-    comparison_trailing_6: list[tuple[int, int, list[dict[str, Any]]]],
-    historical_6: list[tuple[int, int, list[dict[str, Any]]]],
-    ytd_months: list[tuple[int, int, list[dict[str, Any]]]],
-    categories: list[dict[str, Any]],
-    tags_by_tx: dict[int, list[dict[str, Any]]],
-    budget: dict[str, Any] | None,
-    budget_monthly_by_type: dict[str, dict[str, float]] | None,
-    budget_category_rows: list[dict[str, Any]] | None,
-    accounts: list[dict[str, Any]],
-    account_balance_total: float,
-    savings_goals: list[dict[str, Any]],
-    relevance_threshold: float = 0.10,
-    language: str = "en",
-) -> dict[str, Any]:
-    report_language = _normalize_report_language(language)
+class GoalProgressAnalyzer:
+    """Parses, sorts, and summarises savings-goal progress for one reporting period."""
 
-    def _t(es: str, en: str, *, params: dict[str, Any] | None = None) -> str:
-        return _report_text(report_language, es, en, params=params)
+    def __init__(
+        self,
+        savings_goals: list[dict[str, Any]],
+        year: int,
+        month: int,
+        *,
+        language: str = "en",
+    ) -> None:
+        self._goals = savings_goals
+        self._year = year
+        self._month = month
+        self._language = _normalize_report_language(language)
 
-    uncategorized_label = _t("(sin categoría)", "(uncategorized)")
-    untagged_label = _t("(sin tag)", "(untagged)")
-    default_goal_name = _t("Meta", "Goal")
-    other_expenses_label = _t("Otros gastos", "Other expenses")
-    inconsistent_expense_label = _t(
-        "Gastos con categoría inconsistente",
-        "Expenses with inconsistent category",
-    )
+    def _t(self, es: str, en: str, *, params: dict[str, Any] | None = None) -> str:
+        return _report_text(self._language, es, en, params=params)
 
-    threshold_pct = relevance_threshold * 100.0
-    savings_lookup = build_savings_lookup(categories)
-    current_summary = _month_summary(month_transactions, savings_lookup)
-    previous_summary = _month_summary(previous_transactions, savings_lookup)
-    credit_account_ids = {
-        int(account["id"])
-        for account in accounts
-        if account.get("id") is not None and str(account.get("account_type") or "") == "credit"
-    }
+    def analyze(self) -> GoalAnalysisResult:
+        """Parse raw goal dicts into GoalRow instances and return a GoalAnalysisResult."""
+        default_goal_name = self._t("Meta", "Goal")
+        report_period_end = month_bounds(self._year, self._month)[1]
 
-    credit_card_expense_count = 0
-    credit_card_expense_amount = 0.0
-    credit_card_payment_count = 0
-    credit_card_payment_amount = 0.0
-    for tx in month_transactions_raw:
-        account_id_raw = tx.get("account_id")
-        if account_id_raw is None:
-            continue
-        try:
-            account_id = int(account_id_raw)
-        except (TypeError, ValueError):
-            continue
-        if account_id not in credit_account_ids:
-            continue
-
-        tx_type = str(tx.get("type") or "")
-        amount = float(tx.get("amount") or 0.0)
-        is_transfer = int(tx.get("is_transfer") or 0) == 1
-        if tx_type == "expense" and not is_transfer:
-            credit_card_expense_count += 1
-            credit_card_expense_amount += amount
-        elif tx_type == "income" and is_transfer:
-            credit_card_payment_count += 1
-            credit_card_payment_amount += amount
-
-    credit_card_gap_amount = round(credit_card_expense_amount - credit_card_payment_amount, 2)
-
-    trailing_3_summaries = [_month_summary(items, savings_lookup) for items in trailing_3]
-    trailing_6_summaries = [_month_summary(items, savings_lookup) for _y, _m, items in comparison_trailing_6]
-    historical_6_summaries = [_month_summary(items, savings_lookup) for _y, _m, items in historical_6]
-
-    def _avg(summaries: list[dict[str, float]], key: str) -> float | None:
-        if not summaries:
-            return None
-        return round(sum(item[key] for item in summaries) / len(summaries), 2)
-
-    avg_3 = {
-        "income": _avg(trailing_3_summaries, "income"),
-        "expense_operational": _avg(trailing_3_summaries, "expense_operational"),
-        "savings": _avg(trailing_3_summaries, "savings"),
-        "net": _avg(trailing_3_summaries, "net"),
-    }
-    avg_6 = {
-        "income": _avg(trailing_6_summaries, "income"),
-        "expense_operational": _avg(trailing_6_summaries, "expense_operational"),
-        "savings": _avg(trailing_6_summaries, "savings"),
-        "net": _avg(trailing_6_summaries, "net"),
-    }
-
-    ytd = []
-    cumulative = {"income": 0.0, "expense_operational": 0.0, "savings": 0.0, "net": 0.0}
-    for ym_year, ym_month, txs in ytd_months:
-        summary = _month_summary(txs, savings_lookup)
-        cumulative["income"] += summary["income"]
-        cumulative["expense_operational"] += summary["expense_operational"]
-        cumulative["savings"] += summary["savings"]
-        cumulative["net"] += summary["net"]
-        ytd.append(
-            {
-                "year": ym_year,
-                "month": ym_month,
-                "income": round(cumulative["income"], 2),
-                "expense_operational": round(cumulative["expense_operational"], 2),
-                "savings": round(cumulative["savings"], 2),
-                "net": round(cumulative["net"], 2),
-            }
-        )
-
-    report_period_end = month_bounds(year, month)[1]
-    goal_rows: list[dict[str, Any]] = []
-    for raw_goal in savings_goals:
-        goal_name = str(raw_goal.get("name") or default_goal_name)
-        target_amount = float(raw_goal.get("target_amount") or 0.0)
-        current_amount = float(raw_goal.get("current_amount") or 0.0)
-        remaining_amount = max(0.0, float(raw_goal.get("remaining_amount") or (target_amount - current_amount)))
-        progress_ratio = float(raw_goal.get("progress") or 0.0)
-        target_date_text = str(raw_goal.get("target_date") or "").strip()
-        parsed_target_date = None
-        if target_date_text:
-            try:
-                parsed_target_date = date.fromisoformat(target_date_text)
-            except ValueError:
-                parsed_target_date = None
-        goal_rows.append(
-            {
-                "name": goal_name,
-                "currency": str(raw_goal.get("currency") or "").strip(),
-                "target_amount": round(target_amount, 2),
-                "current_amount": round(current_amount, 2),
-                "remaining_amount": round(remaining_amount, 2),
-                "progress_ratio": progress_ratio,
-                "progress_pct": round(min(progress_ratio * 100.0, 100.0), 1),
-                "target_date": target_date_text or None,
-                "parsed_target_date": parsed_target_date,
-                "achieved": remaining_amount <= 0.005 or progress_ratio >= 1.0,
-            }
-        )
-
-    completed_goals = [goal for goal in goal_rows if bool(goal["achieved"])]
-    active_goals = [goal for goal in goal_rows if not bool(goal["achieved"])]
-    active_goals.sort(
-        key=lambda goal: (
-            goal["parsed_target_date"] is None,
-            cast(date | None, goal["parsed_target_date"]) or date.max,
-            float(goal["remaining_amount"]),
-            str(goal["name"]).casefold(),
-        )
-    )
-
-    goals_summary_items: list[str] = []
-    if goal_rows:
-        ordered_summary_goals = active_goals[:2] + completed_goals[:1]
-        for goal in ordered_summary_goals:
-            deadline_suffix = (
-                _t(" Meta: {target_date}.", " Deadline: {target_date}.", params={"target_date": goal["target_date"]})
-                if goal.get("target_date")
-                else ""
-            )
-            if bool(goal["achieved"]):
-                goals_summary_items.append(
-                    _t(
-                        "{goal_name}: cumplida ({current:.2f}/{target:.2f} {currency}).",
-                        "{goal_name}: achieved ({current:.2f}/{target:.2f} {currency}).",
-                        params={
-                            "goal_name": goal["name"],
-                            "current": float(goal["current_amount"]),
-                            "target": float(goal["target_amount"]),
-                            "currency": goal["currency"],
-                        },
-                    )
+        goal_rows: list[GoalRow] = []
+        for raw_goal in self._goals:
+            goal_name = str(raw_goal.get("name") or default_goal_name)
+            target_amount = float(raw_goal.get("target_amount") or 0.0)
+            current_amount = float(raw_goal.get("current_amount") or 0.0)
+            remaining_amount = max(0.0, float(raw_goal.get("remaining_amount") or (target_amount - current_amount)))
+            progress_ratio = float(raw_goal.get("progress") or 0.0)
+            target_date_text = str(raw_goal.get("target_date") or "").strip()
+            parsed_target_date = None
+            if target_date_text:
+                try:
+                    parsed_target_date = date.fromisoformat(target_date_text)
+                except ValueError:
+                    parsed_target_date = None
+            goal_rows.append(
+                GoalRow(
+                    name=goal_name,
+                    currency=str(raw_goal.get("currency") or "").strip(),
+                    target_amount=round(target_amount, 2),
+                    current_amount=round(current_amount, 2),
+                    remaining_amount=round(remaining_amount, 2),
+                    progress_ratio=progress_ratio,
+                    progress_pct=round(min(progress_ratio * 100.0, 100.0), 1),
+                    target_date=target_date_text or None,
+                    parsed_target_date=parsed_target_date,
+                    achieved=remaining_amount <= 0.005 or progress_ratio >= 1.0,
                 )
-            else:
-                goals_summary_items.append(
-                    _t(
-                        "{goal_name}: {progress:.1f}% completada, faltan {remaining:.2f} {currency}.{deadline}",
-                        "{goal_name}: {progress:.1f}% complete, {remaining:.2f} {currency} remaining.{deadline}",
-                        params={
-                            "goal_name": goal["name"],
-                            "progress": float(goal["progress_pct"]),
-                            "remaining": float(goal["remaining_amount"]),
-                            "currency": goal["currency"],
-                            "deadline": deadline_suffix,
-                        },
+            )
+
+        completed_goals = [g for g in goal_rows if g.achieved]
+        active_goals = [g for g in goal_rows if not g.achieved]
+        active_goals.sort(
+            key=lambda g: (
+                g.parsed_target_date is None,
+                g.parsed_target_date or date.max,
+                g.remaining_amount,
+                g.name.casefold(),
+            )
+        )
+
+        goals_summary_items: list[str] = []
+        if goal_rows:
+            for goal in active_goals[:2] + completed_goals[:1]:
+                deadline_suffix = (
+                    self._t(
+                        " Meta: {target_date}.",
+                        " Deadline: {target_date}.",
+                        params={"target_date": goal.target_date},
                     )
+                    if goal.target_date
+                    else ""
                 )
+                if goal.achieved:
+                    goals_summary_items.append(
+                        self._t(
+                            "{goal_name}: cumplida ({current:.2f}/{target:.2f} {currency}).",
+                            "{goal_name}: achieved ({current:.2f}/{target:.2f} {currency}).",
+                            params={
+                                "goal_name": goal.name,
+                                "current": goal.current_amount,
+                                "target": goal.target_amount,
+                                "currency": goal.currency,
+                            },
+                        )
+                    )
+                else:
+                    goals_summary_items.append(
+                        self._t(
+                            "{goal_name}: {progress:.1f}% completada, faltan {remaining:.2f} {currency}.{deadline}",
+                            "{goal_name}: {progress:.1f}% complete, {remaining:.2f} {currency} remaining.{deadline}",
+                            params={
+                                "goal_name": goal.name,
+                                "progress": goal.progress_pct,
+                                "remaining": goal.remaining_amount,
+                                "currency": goal.currency,
+                                "deadline": deadline_suffix,
+                            },
+                        )
+                    )
 
-    goals_summary = {
-        "total_goals": len(goal_rows),
-        "completed_goals": len(completed_goals),
-        "active_goals": len(active_goals),
-        "headline": (
-            _t(
-                "No tienes metas de ahorro configuradas todavia.",
-                "You do not have any savings goals configured yet.",
-            )
-            if not goal_rows
-            else _t(
-                "Resumen: {completed} metas cumplidas y {active} en progreso.",
-                "Summary: {completed} goals achieved and {active} in progress.",
-                params={"completed": len(completed_goals), "active": len(active_goals)},
-            )
-        ),
-        "items": goals_summary_items,
-    }
-    goal_contribution_metrics = _build_goal_contribution_metrics(month_transactions, savings_goals)
-
-    roots_meta: dict[str, dict[str, Any]] = {}
-    root_rollup_meta: dict[str, dict[str, Any]] = {}
-    by_id = {int(cat["id"]): cat for cat in categories if cat.get("id") is not None}
-    for cat in categories:
-        name = str(cat.get("name") or "").strip()
-        if not name:
-            continue
-        parent_id = cat.get("parent_id")
-        root_cat = cat
-        if parent_id is not None and int(parent_id) in by_id:
-            root_cat = by_id[int(parent_id)]
-        root = str(root_cat.get("name") or name)
-        root_type = str(root_cat.get("type") or cat.get("type") or "")
-        root_is_savings = bool(int(root_cat.get("is_savings") or 0)) or bool(int(cat.get("is_savings") or 0))
-        roots_meta[name.casefold()] = {
-            "root": root,
-            "color": str(cat.get("color") or "#888888"),
-            "type": str(cat.get("type") or ""),
-            "is_savings": bool(int(cat.get("is_savings") or 0)),
-            "root_type": root_type,
-            "root_is_savings": root_is_savings,
+        goals_summary = {
+            "total_goals": len(goal_rows),
+            "completed_goals": len(completed_goals),
+            "active_goals": len(active_goals),
+            "headline": (
+                self._t(
+                    "No tienes metas de ahorro configuradas todavía.",
+                    "You do not have any savings goals configured yet.",
+                )
+                if not goal_rows
+                else self._t(
+                    "Resumen: {completed} metas cumplidas y {active} en progreso.",
+                    "Summary: {completed} goals achieved and {active} in progress.",
+                    params={"completed": len(completed_goals), "active": len(active_goals)},
+                )
+            ),
+            "items": goals_summary_items,
         }
-        root_rollup_meta[root.casefold()] = {"type": root_type, "is_savings": root_is_savings}
 
-    # Este reporte siempre se calcula para un único mes seleccionado por año/mes,
-    # pero ese mes puede ser histórico. Si una categoría se renombra después,
-    # necesitamos usar el category_id persistido para reconstruir correctamente
-    # la raíz del mes consultado.
-    def _resolve_tx_root_meta(tx: dict[str, Any]) -> dict[str, Any]:
+        return GoalAnalysisResult(
+            goal_rows=goal_rows,
+            completed_goals=completed_goals,
+            active_goals=active_goals,
+            goals_summary=goals_summary,
+            report_period_end=report_period_end,
+        )
+
+
+class ReportMetricsCalculator:
+    """Computes KPIs, comparisons, and advanced financial metrics from transaction data."""
+
+    def __init__(self, inputs: ReportInputs, goal_result: GoalAnalysisResult) -> None:
+        self._inputs = inputs
+        self._goal_result = goal_result
+        self._language = _normalize_report_language(inputs.language)
+        self._savings_lookup = build_savings_lookup(inputs.categories)
+        self._uncategorized_label = _report_text(self._language, "(sin categoría)", "(uncategorized)")
+        self._untagged_label = _report_text(self._language, "(sin tag)", "(untagged)")
+        self._other_expenses_label = _report_text(self._language, "Otros gastos", "Other expenses")
+        self._inconsistent_expense_label = _report_text(
+            self._language,
+            "Gastos con categoría inconsistente",
+            "Expenses with inconsistent category",
+        )
+
+    def _t(self, es: str, en: str, *, params: dict[str, Any] | None = None) -> str:
+        return _report_text(self._language, es, en, params=params)
+
+    def _compute_credit_card_stats(self) -> CreditCardStats:
+        credit_account_ids = {
+            int(account["id"])
+            for account in self._inputs.accounts
+            if account.get("id") is not None and str(account.get("account_type") or "") == "credit"
+        }
+        expense_count = 0
+        expense_amount = 0.0
+        payment_count = 0
+        payment_amount = 0.0
+        for tx in self._inputs.month_transactions_raw:
+            account_id_raw = tx.get("account_id")
+            if account_id_raw is None:
+                continue
+            try:
+                account_id = int(account_id_raw)
+            except (TypeError, ValueError):
+                continue
+            if account_id not in credit_account_ids:
+                continue
+            tx_type = str(tx.get("type") or "")
+            amount = float(tx.get("amount") or 0.0)
+            is_transfer = int(tx.get("is_transfer") or 0) == 1
+            if tx_type == "expense" and not is_transfer:
+                expense_count += 1
+                expense_amount += amount
+            elif tx_type == "income" and is_transfer:
+                payment_count += 1
+                payment_amount += amount
+        return CreditCardStats(
+            expense_count=expense_count,
+            expense_amount=round(expense_amount, 2),
+            payment_count=payment_count,
+            payment_amount=round(payment_amount, 2),
+            gap_amount=round(expense_amount - payment_amount, 2),
+        )
+
+    def _compute_trailing_data(
+        self,
+    ) -> tuple[AvgMetrics, AvgMetrics, list[SummaryMetrics]]:
+        trailing_3_summaries = [_month_summary(items, self._savings_lookup) for items in self._inputs.trailing_3]
+        trailing_6_summaries = [
+            _month_summary(items, self._savings_lookup) for _y, _m, items in self._inputs.comparison_trailing_6
+        ]
+        historical_6_summaries = [
+            _month_summary(items, self._savings_lookup) for _y, _m, items in self._inputs.historical_6
+        ]
+
+        def _avg(summaries: list[SummaryMetrics], attr: str) -> float | None:
+            if not summaries:
+                return None
+            return round(sum(getattr(s, attr) for s in summaries) / len(summaries), 2)
+
+        avg_3 = AvgMetrics(
+            income=_avg(trailing_3_summaries, "income"),
+            expense_operational=_avg(trailing_3_summaries, "expense_operational"),
+            savings=_avg(trailing_3_summaries, "savings"),
+            net=_avg(trailing_3_summaries, "net"),
+        )
+        avg_6 = AvgMetrics(
+            income=_avg(trailing_6_summaries, "income"),
+            expense_operational=_avg(trailing_6_summaries, "expense_operational"),
+            savings=_avg(trailing_6_summaries, "savings"),
+            net=_avg(trailing_6_summaries, "net"),
+        )
+        return avg_3, avg_6, historical_6_summaries
+
+    def _compute_ytd(self) -> list[dict[str, Any]]:
+        ytd: list[dict[str, Any]] = []
+        cum_income = 0.0
+        cum_expense = 0.0
+        cum_savings = 0.0
+        cum_net = 0.0
+        for ym_year, ym_month, txs in self._inputs.ytd_months:
+            s = _month_summary(txs, self._savings_lookup)
+            cum_income += s.income
+            cum_expense += s.expense_operational
+            cum_savings += s.savings
+            cum_net += s.net
+            ytd.append(
+                {
+                    "year": ym_year,
+                    "month": ym_month,
+                    "income": round(cum_income, 2),
+                    "expense_operational": round(cum_expense, 2),
+                    "savings": round(cum_savings, 2),
+                    "net": round(cum_net, 2),
+                }
+            )
+        return ytd
+
+    def _build_category_metadata(self) -> tuple[dict[int, Any], dict[str, Any], dict[str, Any]]:
+        by_id: dict[int, Any] = {int(cat["id"]): cat for cat in self._inputs.categories if cat.get("id") is not None}
+        roots_meta: dict[str, dict[str, Any]] = {}
+        root_rollup_meta: dict[str, dict[str, Any]] = {}
+        for cat in self._inputs.categories:
+            name = str(cat.get("name") or "").strip()
+            if not name:
+                continue
+            parent_id = cat.get("parent_id")
+            root_cat = cat
+            if parent_id is not None and int(parent_id) in by_id:
+                root_cat = by_id[int(parent_id)]
+            root = str(root_cat.get("name") or name)
+            root_type = str(root_cat.get("type") or cat.get("type") or "")
+            root_is_savings = bool(int(root_cat.get("is_savings") or 0)) or bool(int(cat.get("is_savings") or 0))
+            roots_meta[name.casefold()] = {
+                "root": root,
+                "color": str(cat.get("color") or "#888888"),
+                "type": str(cat.get("type") or ""),
+                "is_savings": bool(int(cat.get("is_savings") or 0)),
+                "root_type": root_type,
+                "root_is_savings": root_is_savings,
+            }
+            root_rollup_meta[root.casefold()] = {"type": root_type, "is_savings": root_is_savings}
+        return by_id, roots_meta, root_rollup_meta
+
+    def _resolve_tx_root_meta(
+        self,
+        tx: dict[str, Any],
+        by_id: dict[int, Any],
+        roots_meta: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Resolve the root category metadata for a transaction.
+
+        Uses the persisted category_id FK so that historical transactions remain
+        correctly mapped even after a category is renamed.
+        """
         tx_type = str(tx.get("type") or "")
         tx_cat_name = str(tx.get("category") or "").strip()
         tx_cat_id = tx.get("category_id")
+        uncategorized_label = self._uncategorized_label
         if tx_cat_id is not None:
             try:
                 resolved_cat = by_id.get(int(tx_cat_id))
@@ -871,301 +1124,701 @@ def build_report_payload(
             },
         )
 
-    top_category_totals: dict[str, float] = defaultdict(float)
-    top_category_children: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
-    tag_totals: dict[str, float] = defaultdict(float)
-    tag_children: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
-    waterfall_expense_totals: dict[str, float] = defaultdict(float)
+    def _process_transactions(
+        self,
+        by_id: dict[int, Any],
+        roots_meta: dict[str, Any],
+        root_rollup_meta: dict[str, Any],
+    ) -> dict[str, Any]:
+        top_category_totals: dict[str, float] = defaultdict(float)
+        top_category_children: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        tag_totals: dict[str, float] = defaultdict(float)
+        tag_children: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        waterfall_expense_totals: dict[str, float] = defaultdict(float)
+        weekend_total = 0.0
+        weekend_days: dict[str, float] = defaultdict(float)
+        daily_expense_totals: dict[str, float] = defaultdict(float)
+        small_total = 0.0
+        income_by_root: dict[str, float] = defaultdict(float)
 
-    weekend_total = 0.0
-    weekend_days: dict[str, float] = defaultdict(float)
-    daily_expense_totals: dict[str, float] = defaultdict(float)
-    small_total = 0.0
-    income_by_root: dict[str, float] = defaultdict(float)
-
-    for tx in month_transactions:
-        tx_type = str(tx.get("type") or "")
-        amount = float(tx.get("amount") or 0.0)
-        cat_name = str(tx.get("category") or "").strip()
-        root_meta = _resolve_tx_root_meta(tx)
-        root_name = str(root_meta.get("root") or uncategorized_label)
-
-        if tx_type == "income":
-            income_by_root[root_name] += amount
-            continue
-
-        if tx_type != "expense":
-            continue
-
-        if is_savings_transaction(tx, savings_lookup):
-            continue
-
-        child_label = str(tx.get("subcategory") or "").strip() or (cat_name or uncategorized_label)
-        top_category_totals[root_name] += amount
-        top_category_children[root_name][child_label] += amount
-        root_rollup = root_rollup_meta.get(root_name.casefold()) or {"type": "expense", "is_savings": False}
-        waterfall_root_name = (
-            root_name if str(root_rollup.get("type") or "expense") == "expense" else inconsistent_expense_label
-        )
-        waterfall_expense_totals[waterfall_root_name] += amount
-
-        tx_id = int(tx.get("id") or 0)
-        for tg in tags_by_tx.get(tx_id, []):
-            tag_name = str(tg.get("name") or "").strip() or untagged_label
-            tag_totals[tag_name] += amount
-            tag_children[tag_name][child_label] += amount
-
-        tx_date = str(tx.get("date") or "")
-        if tx_date:
-            parsed_day = None
-            try:
-                parsed_day = datetime.fromisoformat(tx_date.replace("Z", "+00:00")).date()
-            except ValueError:
-                try:
-                    parsed_day = datetime.strptime(tx_date[:10], "%Y-%m-%d").date()
-                except ValueError:
-                    parsed_day = None
-            if parsed_day is not None and parsed_day.weekday() >= 5:
-                weekend_total += amount
-                weekend_days[parsed_day.isoformat()] += amount
-            if parsed_day is not None:
-                daily_expense_totals[parsed_day.isoformat()] += amount
-
-        if amount < 200.0:
-            small_total += amount
-
-    top_categories = sorted(top_category_totals.items(), key=lambda item: item[1], reverse=True)[:5]
-    top_tags = sorted(tag_totals.items(), key=lambda item: item[1], reverse=True)[:5]
-    waterfall_category_totals = sorted(
-        ((name, round(amount, 2)) for name, amount in waterfall_expense_totals.items() if amount > 0),
-        key=lambda item: item[1],
-        reverse=True,
-    )
-    inconsistent_waterfall_entry = next(
-        (item for item in waterfall_category_totals if item[0] == inconsistent_expense_label),
-        None,
-    )
-    normal_waterfall_categories = [item for item in waterfall_category_totals if item[0] != inconsistent_expense_label]
-    displayed_waterfall_categories = list(normal_waterfall_categories[:_MAX_WATERFALL_EXPENSE_STEPS])
-    remaining_waterfall_categories = normal_waterfall_categories[_MAX_WATERFALL_EXPENSE_STEPS:]
-    if remaining_waterfall_categories:
-        displayed_waterfall_categories.append(
-            (other_expenses_label, round(sum(amount for _name, amount in remaining_waterfall_categories), 2))
-        )
-    if inconsistent_waterfall_entry is not None:
-        displayed_waterfall_categories.append(inconsistent_waterfall_entry)
-
-    def _monthly_root_stack(monthly_txs: list[dict[str, Any]], section: str) -> dict[str, float]:
-        acc: dict[str, float] = defaultdict(float)
-        for tx in monthly_txs:
+        for tx in self._inputs.month_transactions:
             tx_type = str(tx.get("type") or "")
-            if section == "income" and tx_type != "income":
-                continue
-            if section == "expense" and tx_type != "expense":
-                continue
+            amount = float(tx.get("amount") or 0.0)
             cat_name = str(tx.get("category") or "").strip()
-            root_meta = roots_meta.get(
-                cat_name.casefold(), {"root": cat_name or uncategorized_label, "is_savings": False}
-            )
-            if section == "expense" and is_savings_transaction(tx, savings_lookup):
+            root_meta = self._resolve_tx_root_meta(tx, by_id, roots_meta)
+            root_name = str(root_meta.get("root") or self._uncategorized_label)
+
+            if tx_type == "income":
+                income_by_root[root_name] += amount
                 continue
-            root_name = str(root_meta.get("root") or uncategorized_label)
-            acc[root_name] += float(tx.get("amount") or 0.0)
-        return {k: round(v, 2) for k, v in acc.items()}
 
-    stacked_6: dict[str, list[dict[str, Any]]] = {"income": [], "expense": []}
-    for m_year, m_month, txs in historical_6:
-        period = f"{m_year:04d}-{m_month:02d}"
-        stacked_6["income"].append({"period": period, "segments": _monthly_root_stack(txs, "income")})
-        stacked_6["expense"].append({"period": period, "segments": _monthly_root_stack(txs, "expense")})
+            if tx_type != "expense":
+                continue
 
-    budget_context: _BudgetContext = {
-        "has_budget": False,
-        "budget_id": None,
-        "budget_code": None,
-        "income": 0.0,
-        "expense_operational": 0.0,
-        "is_complete_for_period": False,
-        "missing_income_categories": [],
-        "missing_expense_categories": [],
-    }
-    if budget is not None and budget_monthly_by_type is not None:
-        income_budget = round(sum(budget_monthly_by_type.get("income", {}).values()), 2)
-        expense_budget = round(sum(budget_monthly_by_type.get("expense", {}).values()), 2)
-        if (income_budget + expense_budget) > 0.0:
-            budget_context["has_budget"] = True
-            budget_context["budget_id"] = int(budget["id"])
-            budget_context["budget_code"] = str(budget.get("code") or "")
-            budget_context["income"] = income_budget
-            budget_context["expense_operational"] = expense_budget
-            budget_context["is_complete_for_period"] = True
-            actual_income_by_cat_id: dict[int, float] = defaultdict(float)
-            actual_expense_by_cat_id: dict[int, float] = defaultdict(float)
-            for tx in month_transactions:
-                cat_id_raw = tx.get("category_id")
+            if is_savings_transaction(tx, self._savings_lookup):
+                continue
+
+            child_label = str(tx.get("subcategory") or "").strip() or (cat_name or self._uncategorized_label)
+            top_category_totals[root_name] += amount
+            top_category_children[root_name][child_label] += amount
+            root_rollup = root_rollup_meta.get(root_name.casefold()) or {"type": "expense", "is_savings": False}
+            waterfall_root_name = (
+                root_name
+                if str(root_rollup.get("type") or "expense") == "expense"
+                else self._inconsistent_expense_label
+            )
+            waterfall_expense_totals[waterfall_root_name] += amount
+
+            tx_id = int(tx.get("id") or 0)
+            for tg in self._inputs.tags_by_tx.get(tx_id, []):
+                tag_name = str(tg.get("name") or "").strip() or self._untagged_label
+                tag_totals[tag_name] += amount
+                tag_children[tag_name][child_label] += amount
+
+            tx_date = str(tx.get("date") or "")
+            if tx_date:
+                parsed_day = None
+                try:
+                    parsed_day = datetime.fromisoformat(tx_date.replace("Z", "+00:00")).date()
+                except ValueError:
+                    try:
+                        parsed_day = datetime.strptime(tx_date[:10], "%Y-%m-%d").date()
+                    except ValueError:
+                        parsed_day = None
+                if parsed_day is not None and parsed_day.weekday() >= 5:
+                    weekend_total += amount
+                    weekend_days[parsed_day.isoformat()] += amount
+                if parsed_day is not None:
+                    daily_expense_totals[parsed_day.isoformat()] += amount
+
+            if amount < 200.0:
+                small_total += amount
+
+        return {
+            "top_category_totals": top_category_totals,
+            "top_category_children": top_category_children,
+            "tag_totals": tag_totals,
+            "tag_children": tag_children,
+            "waterfall_expense_totals": waterfall_expense_totals,
+            "weekend_total": weekend_total,
+            "weekend_days": weekend_days,
+            "daily_expense_totals": daily_expense_totals,
+            "small_total": small_total,
+            "income_by_root": income_by_root,
+        }
+
+    def _build_waterfall_categories(self, waterfall_expense_totals: dict[str, float]) -> dict[str, Any]:
+        waterfall_category_totals = sorted(
+            ((name, round(amount, 2)) for name, amount in waterfall_expense_totals.items() if amount > 0),
+            key=lambda item: item[1],
+            reverse=True,
+        )
+        inconsistent_waterfall_entry = next(
+            (item for item in waterfall_category_totals if item[0] == self._inconsistent_expense_label),
+            None,
+        )
+        normal_waterfall_categories = [
+            item for item in waterfall_category_totals if item[0] != self._inconsistent_expense_label
+        ]
+        displayed_waterfall_categories = list(normal_waterfall_categories[:_MAX_WATERFALL_EXPENSE_STEPS])
+        remaining_waterfall_categories = normal_waterfall_categories[_MAX_WATERFALL_EXPENSE_STEPS:]
+        if remaining_waterfall_categories:
+            displayed_waterfall_categories.append(
+                (
+                    self._other_expenses_label,
+                    round(sum(amount for _name, amount in remaining_waterfall_categories), 2),
+                )
+            )
+        if inconsistent_waterfall_entry is not None:
+            displayed_waterfall_categories.append(inconsistent_waterfall_entry)
+        return {
+            "waterfall_category_totals": waterfall_category_totals,
+            "inconsistent_waterfall_entry": inconsistent_waterfall_entry,
+            "normal_waterfall_categories": normal_waterfall_categories,
+            "displayed_waterfall_categories": displayed_waterfall_categories,
+            "remaining_waterfall_categories": remaining_waterfall_categories,
+        }
+
+    def _build_stacked_history(self, roots_meta: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+        def _monthly_root_stack(monthly_txs: list[dict[str, Any]], section: str) -> dict[str, float]:
+            acc: dict[str, float] = defaultdict(float)
+            for tx in monthly_txs:
                 tx_type = str(tx.get("type") or "")
-                if cat_id_raw is None:
+                if section == "income" and tx_type != "income":
                     continue
-                cat_id = int(cat_id_raw)
-                amount = float(tx.get("amount") or 0.0)
-                if tx_type == "income":
-                    actual_income_by_cat_id[cat_id] += amount
-                if tx_type == "expense" and not is_savings_transaction(tx, savings_lookup):
-                    actual_expense_by_cat_id[cat_id] += amount
+                if section == "expense" and tx_type != "expense":
+                    continue
+                cat_name = str(tx.get("category") or "").strip()
+                root_meta = roots_meta.get(
+                    cat_name.casefold(), {"root": cat_name or self._uncategorized_label, "is_savings": False}
+                )
+                if section == "expense" and is_savings_transaction(tx, self._savings_lookup):
+                    continue
+                root_name = str(root_meta.get("root") or self._uncategorized_label)
+                acc[root_name] += float(tx.get("amount") or 0.0)
+            return {k: round(v, 2) for k, v in acc.items()}
 
-            if budget_category_rows:
-                missing_income: set[str] = set()
-                missing_expense: set[str] = set()
-                for row in budget_category_rows:
-                    row_type = str(row.get("type") or "")
-                    row_name = str(row.get("name") or "").strip()
-                    row_amount = float(row.get("amount") or 0.0)
-                    row_cat_id = row.get("category_id")
-                    if row_amount <= 0 or not row_name or row_cat_id is None:
-                        continue
-                    cat_id = int(row_cat_id)
-                    if row_type == "income" and actual_income_by_cat_id.get(cat_id, 0.0) <= 0:
-                        missing_income.add(row_name)
-                    if row_type == "expense" and actual_expense_by_cat_id.get(cat_id, 0.0) <= 0:
-                        missing_expense.add(row_name)
-                budget_context["missing_income_categories"] = sorted(missing_income)
-                budget_context["missing_expense_categories"] = sorted(missing_expense)
+        stacked_6: dict[str, list[dict[str, Any]]] = {"income": [], "expense": []}
+        for m_year, m_month, txs in self._inputs.historical_6:
+            period = f"{m_year:04d}-{m_month:02d}"
+            stacked_6["income"].append({"period": period, "segments": _monthly_root_stack(txs, "income")})
+            stacked_6["expense"].append({"period": period, "segments": _monthly_root_stack(txs, "expense")})
+        return stacked_6
 
-    def _compare_value(current: float, base: float | None, section: str) -> _ComparisonValue:
-        variance = None if base is None else round(current - base, 2)
-        pct = pct_change(current, base) if base is not None else None
-        return {"base": base, "variance": variance, "pct": pct, "signal": _trend_signal(section, variance)}
-
-    comparisons: dict[str, dict[str, _ComparisonValue | None]] = {
-        "income": {
-            "vs_previous": _compare_value(current_summary["income"], previous_summary["income"], "income"),
-            "vs_avg_3": _compare_value(current_summary["income"], avg_3["income"], "income"),
-            "vs_avg_6": _compare_value(current_summary["income"], avg_6["income"], "income"),
-            "vs_budget": (
-                _compare_value(current_summary["income"], budget_context["income"], "income")
-                if budget_context["has_budget"]
-                else None
-            ),
-        },
-        "expense_operational": {
-            "vs_previous": _compare_value(
-                current_summary["expense_operational"], previous_summary["expense_operational"], "expense"
-            ),
-            "vs_avg_3": _compare_value(current_summary["expense_operational"], avg_3["expense_operational"], "expense"),
-            "vs_avg_6": _compare_value(current_summary["expense_operational"], avg_6["expense_operational"], "expense"),
-            "vs_budget": (
-                _compare_value(current_summary["expense_operational"], budget_context["expense_operational"], "expense")
-                if budget_context["has_budget"]
-                else None
-            ),
-        },
-        "savings": {
-            "vs_previous": _compare_value(current_summary["savings"], previous_summary["savings"], "savings"),
-            "vs_avg_3": _compare_value(current_summary["savings"], avg_3["savings"], "savings"),
-            "vs_avg_6": _compare_value(current_summary["savings"], avg_6["savings"], "savings"),
-        },
-        "net": {
-            "vs_previous": _compare_value(current_summary["net"], previous_summary["net"], "net"),
-            "vs_avg_3": _compare_value(current_summary["net"], avg_3["net"], "net"),
-            "vs_avg_6": _compare_value(current_summary["net"], avg_6["net"], "net"),
-        },
-    }
-    income_vs_previous = cast(_ComparisonValue, comparisons["income"]["vs_previous"])
-    expense_vs_previous = cast(_ComparisonValue, comparisons["expense_operational"]["vs_previous"])
-    income_vs_budget = comparisons["income"]["vs_budget"]
-    expense_vs_budget = comparisons["expense_operational"]["vs_budget"]
-    lifestyle_inflation_metrics = _build_lifestyle_inflation_metrics(
-        income_vs_previous["pct"],
-        expense_vs_previous["pct"],
-    )
-    savings_efficiency_metrics = _build_savings_efficiency_metrics(
-        net_amount=current_summary["net"],
-        goal_contribution_amount=float(goal_contribution_metrics["amount"]),
-        has_active_goals=bool(active_goals),
-    )
-
-    messages: list[dict[str, Any]] = []
-
-    def add_message(code: str, level: str, text: str, *, always: bool = False, pct: float | None = None) -> None:
-        messages.append({"code": code, "level": level, "text": text, "always": always, "pct": pct})
-
-    income_prev_pct = income_vs_previous["pct"]
-    if income_prev_pct is None:
-        add_message(
-            "income_vs_previous_missing",
-            "warning",
-            _t(
-                "No hay historial suficiente para comparar ingresos con el mes anterior.",
-                "There is not enough history to compare income with the previous month.",
-            ),
-            always=True,
-        )
-    else:
-        trend = _t("mayores", "higher") if income_prev_pct >= 0 else _t("menores", "lower")
-        add_message(
-            "income_vs_previous",
-            "info",
-            _t(
-                "Los ingresos de este mes fueron {pct:.1f}% {trend} en relación al mes pasado.",
-                "Income this month was {pct:.1f}% {trend} than last month.",
-                params={"pct": abs(income_prev_pct), "trend": trend},
-            ),
-            always=True,
-            pct=abs(income_prev_pct),
+    def _build_budget_context(self) -> BudgetContextData:
+        if self._inputs.budget is None or self._inputs.budget_monthly_by_type is None:
+            return BudgetContextData(
+                has_budget=False,
+                budget_id=None,
+                budget_code=None,
+                income=0.0,
+                expense_operational=0.0,
+                is_complete_for_period=False,
+            )
+        income_budget = round(sum(self._inputs.budget_monthly_by_type.get("income", {}).values()), 2)
+        expense_budget = round(sum(self._inputs.budget_monthly_by_type.get("expense", {}).values()), 2)
+        if (income_budget + expense_budget) <= 0.0:
+            return BudgetContextData(
+                has_budget=False,
+                budget_id=None,
+                budget_code=None,
+                income=0.0,
+                expense_operational=0.0,
+                is_complete_for_period=False,
+            )
+        missing_income: list[str] = []
+        missing_expense: list[str] = []
+        actual_income_by_cat_id: dict[int, float] = defaultdict(float)
+        actual_expense_by_cat_id: dict[int, float] = defaultdict(float)
+        for tx in self._inputs.month_transactions:
+            cat_id_raw = tx.get("category_id")
+            tx_type = str(tx.get("type") or "")
+            if cat_id_raw is None:
+                continue
+            cat_id = int(cat_id_raw)
+            amount = float(tx.get("amount") or 0.0)
+            if tx_type == "income":
+                actual_income_by_cat_id[cat_id] += amount
+            if tx_type == "expense" and not is_savings_transaction(tx, self._savings_lookup):
+                actual_expense_by_cat_id[cat_id] += amount
+        if self._inputs.budget_category_rows:
+            mi_set: set[str] = set()
+            me_set: set[str] = set()
+            for row in self._inputs.budget_category_rows:
+                row_type = str(row.get("type") or "")
+                row_name = str(row.get("name") or "").strip()
+                row_amount = float(row.get("amount") or 0.0)
+                row_cat_id = row.get("category_id")
+                if row_amount <= 0 or not row_name or row_cat_id is None:
+                    continue
+                cat_id = int(row_cat_id)
+                if row_type == "income" and actual_income_by_cat_id.get(cat_id, 0.0) <= 0:
+                    mi_set.add(row_name)
+                if row_type == "expense" and actual_expense_by_cat_id.get(cat_id, 0.0) <= 0:
+                    me_set.add(row_name)
+            missing_income = sorted(mi_set)
+            missing_expense = sorted(me_set)
+        return BudgetContextData(
+            has_budget=True,
+            budget_id=int(self._inputs.budget["id"]),
+            budget_code=str(self._inputs.budget.get("code") or ""),
+            income=income_budget,
+            expense_operational=expense_budget,
+            is_complete_for_period=True,
+            missing_income_categories=missing_income,
+            missing_expense_categories=missing_expense,
         )
 
-    expense_prev_pct = expense_vs_previous["pct"]
-    if expense_prev_pct is None:
-        add_message(
-            "expense_vs_previous_missing",
-            "warning",
-            _t(
-                "No hay historial suficiente para comparar gastos con el mes anterior.",
-                "There is not enough history to compare expenses with the previous month.",
-            ),
-            always=True,
+    def compute(self) -> MetricsResult:
+        """Compute all metrics and return a typed MetricsResult."""
+        current_summary = _month_summary(self._inputs.month_transactions, self._savings_lookup)
+        previous_summary = _month_summary(self._inputs.previous_transactions, self._savings_lookup)
+
+        cc_stats = self._compute_credit_card_stats()
+        avg_3, avg_6, historical_6_summaries = self._compute_trailing_data()
+        ytd = self._compute_ytd()
+
+        by_id, roots_meta, root_rollup_meta = self._build_category_metadata()
+        tx_data = self._process_transactions(by_id, roots_meta, root_rollup_meta)
+        wf_data = self._build_waterfall_categories(tx_data["waterfall_expense_totals"])
+        stacked_6 = self._build_stacked_history(roots_meta)
+        budget_context = self._build_budget_context()
+
+        income_total = current_summary.income
+        total_expense = current_summary.expense_operational
+        debt_payment_total = current_summary.debt_payment
+
+        def _compare_value(current: float, base: float | None, section: str) -> ComparisonResult:
+            variance = None if base is None else round(current - base, 2)
+            pct = pct_change(current, base) if base is not None else None
+            return ComparisonResult(base=base, variance=variance, pct=pct, signal=_trend_signal(section, variance))
+
+        income_vs_previous = _compare_value(income_total, previous_summary.income, "income")
+        expense_vs_previous = _compare_value(total_expense, previous_summary.expense_operational, "expense")
+        comparisons: dict[str, dict[str, ComparisonResult | None]] = {
+            "income": {
+                "vs_previous": income_vs_previous,
+                "vs_avg_3": _compare_value(income_total, avg_3.income, "income"),
+                "vs_avg_6": _compare_value(income_total, avg_6.income, "income"),
+                "vs_budget": (
+                    _compare_value(income_total, budget_context.income, "income") if budget_context.has_budget else None
+                ),
+            },
+            "expense_operational": {
+                "vs_previous": expense_vs_previous,
+                "vs_avg_3": _compare_value(total_expense, avg_3.expense_operational, "expense"),
+                "vs_avg_6": _compare_value(total_expense, avg_6.expense_operational, "expense"),
+                "vs_budget": (
+                    _compare_value(total_expense, budget_context.expense_operational, "expense")
+                    if budget_context.has_budget
+                    else None
+                ),
+            },
+            "savings": {
+                "vs_previous": _compare_value(current_summary.savings, previous_summary.savings, "savings"),
+                "vs_avg_3": _compare_value(current_summary.savings, avg_3.savings, "savings"),
+                "vs_avg_6": _compare_value(current_summary.savings, avg_6.savings, "savings"),
+            },
+            "net": {
+                "vs_previous": _compare_value(current_summary.net, previous_summary.net, "net"),
+                "vs_avg_3": _compare_value(current_summary.net, avg_3.net, "net"),
+                "vs_avg_6": _compare_value(current_summary.net, avg_6.net, "net"),
+            },
+        }
+        income_vs_budget = comparisons["income"]["vs_budget"]
+        expense_vs_budget = comparisons["expense_operational"]["vs_budget"]
+
+        goal_contribution_metrics = _build_goal_contribution_metrics(
+            self._inputs.month_transactions, self._inputs.savings_goals
         )
-    else:
-        trend = _t("mayores", "higher") if expense_prev_pct >= 0 else _t("menores", "lower")
-        add_message(
-            "expense_vs_previous",
-            "info",
-            _t(
-                "Los gastos operativos fueron {pct:.1f}% {trend} en relación al mes pasado.",
-                "Operating expenses were {pct:.1f}% {trend} than last month.",
-                params={"pct": abs(expense_prev_pct), "trend": trend},
-            ),
-            always=True,
-            pct=abs(expense_prev_pct),
+        lifestyle_inflation_metrics = _build_lifestyle_inflation_metrics(
+            income_vs_previous.pct,
+            expense_vs_previous.pct,
         )
-        if bool(lifestyle_inflation_metrics["is_alert"]):
-            add_message(
-                "lifestyle_inflation_alert",
+        savings_efficiency_metrics = _build_savings_efficiency_metrics(
+            net_amount=current_summary.net,
+            goal_contribution_amount=goal_contribution_metrics.amount,
+            has_active_goals=bool(self._goal_result.active_goals),
+        )
+        freedom_margin_metrics = _build_freedom_margin_metrics(income_total, total_expense)
+
+        income_series = [s.income for s in historical_6_summaries]
+        expense_series = [s.expense_operational for s in historical_6_summaries]
+        net_series = [s.net for s in historical_6_summaries]
+
+        income_trend_metric = _build_trend_metric(income_total, previous_summary.income)
+        expense_trend_metric = _build_trend_metric(total_expense, previous_summary.expense_operational)
+        gap_trend_metric = _build_trend_metric(current_summary.net, previous_summary.net)
+        financial_balance_metric = _build_financial_balance_metric(income_total, total_expense)
+        cashflow_stability_metric = _build_cashflow_stability_metric(net_series, income_series)
+        spending_efficiency_metric = _build_spending_efficiency_metric(income_total, total_expense)
+        expense_drift_metric = _build_expense_drift_metric(expense_series)
+        cashflow_projection_metric = _build_cashflow_projection_metric(income_series, expense_series)
+        deficit_risk_metric = _build_deficit_risk_metric(
+            current_net=current_summary.net,
+            income_trend=income_trend_metric,
+            expense_trend=expense_trend_metric,
+            projected_net=cast(float | None, cashflow_projection_metric["projected_net"]),
+        )
+        income_fragility_metric = _build_income_fragility_metric(income_series, income_trend_metric)
+        financial_momentum_metric = _build_financial_momentum_metric(
+            gap_trend=gap_trend_metric,
+            income_trend=income_trend_metric,
+            expense_trend=expense_trend_metric,
+        )
+        days_in_month = max(1, calendar.monthrange(self._inputs.year, self._inputs.month)[1])
+        week_spread_metric = _build_week_spread_metric(total_expense, tx_data["daily_expense_totals"])
+        spending_pattern_metric = _build_spending_pattern_metric(
+            total_expense=total_expense,
+            daily_expense_totals=tx_data["daily_expense_totals"],
+            expense_trend=expense_trend_metric,
+        )
+        previous_year, previous_month = shift_month(self._inputs.year, self._inputs.month, -1)
+        previous_days_in_month = max(1, calendar.monthrange(previous_year, previous_month)[1])
+        runway_trend_metric = _build_runway_trend_metric(
+            account_balance_total=self._inputs.account_balance_total,
+            current_expense_total=total_expense,
+            previous_expense_total=previous_summary.expense_operational,
+            current_days=days_in_month,
+            previous_days=previous_days_in_month,
+        )
+        expense_control_metric = _build_expense_control_metric(
+            expense_trend=expense_trend_metric,
+            expense_drift=expense_drift_metric,
+            spending_pattern=spending_pattern_metric,
+        )
+        income_control_metric = _build_income_control_metric(income_fragility_metric)
+        sustainability_score_metric = _build_sustainability_score(
+            financial_balance=financial_balance_metric,
+            cashflow_stability=cashflow_stability_metric,
+            deficit_risk=deficit_risk_metric,
+            income_fragility=income_fragility_metric,
+        )
+        generic_analysis = {
+            "flow": {
+                "income_trend": income_trend_metric,
+                "expense_trend": expense_trend_metric,
+                "gap_trend": gap_trend_metric,
+                "financial_balance": financial_balance_metric,
+                "spending_efficiency": spending_efficiency_metric,
+                "expense_drift": expense_drift_metric,
+                "cashflow_projection": cashflow_projection_metric,
+            },
+            "behavior": {
+                "spending_pattern": spending_pattern_metric,
+                "week_spread": week_spread_metric,
+                "expense_control": expense_control_metric,
+            },
+            "stability": {
+                "cashflow_stability": cashflow_stability_metric,
+                "deficit_risk": deficit_risk_metric,
+                "income_fragility": income_fragility_metric,
+                "financial_momentum": financial_momentum_metric,
+                "sustainability_score": sustainability_score_metric,
+                "runway_trend": runway_trend_metric,
+                "income_control": income_control_metric,
+            },
+        }
+
+        history_hints: list[str] = []
+        if (
+            len(self._inputs.trailing_3) < 3
+            or len([item for _y, _m, item in self._inputs.comparison_trailing_6 if item]) < 6
+        ):
+            history_hints.append(
+                self._t(
+                    "Se requiere un mayor período de transacciones para completar comparativas de 3 y 6 meses.",
+                    "A longer transaction history is required to complete 3-month and 6-month comparisons.",
+                )
+            )
+
+        top_categories = sorted(tx_data["top_category_totals"].items(), key=lambda item: item[1], reverse=True)[:5]
+        top_tags = sorted(tx_data["tag_totals"].items(), key=lambda item: item[1], reverse=True)[:5]
+
+        debt_payment_income_pct = (debt_payment_total / income_total * 100.0) if income_total > 0 else None
+        debt_payment_expense_pct = (debt_payment_total / total_expense * 100.0) if total_expense > 0 else None
+        savings_rate = ((income_total - total_expense) / income_total * 100.0) if income_total > 0 else None
+        expense_income_ratio = safe_ratio(total_expense, income_total)
+        avg_daily_expense = total_expense / days_in_month
+        burn_days = safe_ratio(self._inputs.account_balance_total, avg_daily_expense)
+        daily_living_cost = total_expense / days_in_month
+        goal_completion_index_pct = _build_goal_completion_index(
+            self._goal_result.goal_rows, self._goal_result.active_goals
+        )
+
+        concentration_pct: float | None = None
+        if top_categories and total_expense > 0:
+            top_name, top_amount = top_categories[0]
+            concentration_pct = (top_amount / total_expense) * 100.0
+
+        dependence_pct: float | None = None
+        income_by_root: dict[str, float] = tx_data["income_by_root"]
+        if income_by_root and income_total > 0:
+            _dom_root_name, dom_root_amount = max(income_by_root.items(), key=lambda item: item[1])
+            dependence_pct = (dom_root_amount / income_total) * 100.0
+
+        needs_keywords = {"alquiler", "renta", "comida", "supermercado", "salud", "medicina", "transporte", "servicios"}
+        needs_total = sum(
+            amount
+            for root, amount in tx_data["top_category_totals"].items()
+            if any(k in root.casefold() for k in needs_keywords)
+        )
+        wants_total = max(0.0, total_expense - needs_total)
+        needs_pct = (needs_total / income_total * 100.0) if income_total > 0 else 0.0
+        wants_pct = (wants_total / income_total * 100.0) if income_total > 0 else 0.0
+        savings_pct = (current_summary.savings / income_total * 100.0) if income_total > 0 else 0.0
+        deviation_pct = abs(needs_pct - 50.0) + abs(wants_pct - 30.0) + abs(savings_pct - 20.0)
+
+        net_after_expenses = round(current_summary.net, 2)
+        top_total = round(sum(amount for _name, amount in top_categories), 2)
+
+        return MetricsResult(
+            current_summary=current_summary,
+            previous_summary=previous_summary,
+            avg_3=avg_3,
+            avg_6=avg_6,
+            ytd=ytd,
+            credit_card=cc_stats,
+            top_category_totals=dict(tx_data["top_category_totals"]),
+            top_category_children={k: dict(v) for k, v in tx_data["top_category_children"].items()},
+            tag_totals=dict(tx_data["tag_totals"]),
+            tag_children={k: dict(v) for k, v in tx_data["tag_children"].items()},
+            top_categories=top_categories,
+            top_tags=top_tags,
+            weekend_total=tx_data["weekend_total"],
+            weekend_days=tx_data["weekend_days"],
+            daily_expense_totals=tx_data["daily_expense_totals"],
+            small_total=tx_data["small_total"],
+            income_by_root=dict(income_by_root),
+            waterfall_category_totals=wf_data["waterfall_category_totals"],
+            normal_waterfall_categories=wf_data["normal_waterfall_categories"],
+            displayed_waterfall_categories=wf_data["displayed_waterfall_categories"],
+            remaining_waterfall_categories=wf_data["remaining_waterfall_categories"],
+            inconsistent_waterfall_entry=wf_data["inconsistent_waterfall_entry"],
+            stacked_6=stacked_6,
+            budget_context=budget_context,
+            comparisons=comparisons,
+            income_vs_budget=income_vs_budget,
+            expense_vs_budget=expense_vs_budget,
+            income_vs_previous=income_vs_previous,
+            expense_vs_previous=expense_vs_previous,
+            lifestyle_inflation_metrics=lifestyle_inflation_metrics,
+            savings_efficiency_metrics=savings_efficiency_metrics,
+            freedom_margin_metrics=freedom_margin_metrics,
+            goal_contribution_metrics=goal_contribution_metrics,
+            generic_analysis=generic_analysis,
+            history_hints=history_hints,
+            income_total=income_total,
+            total_expense=total_expense,
+            debt_payment_total=debt_payment_total,
+            debt_payment_income_pct=debt_payment_income_pct,
+            debt_payment_expense_pct=debt_payment_expense_pct,
+            savings_rate=savings_rate,
+            expense_income_ratio=expense_income_ratio,
+            avg_daily_expense=avg_daily_expense,
+            burn_days=burn_days,
+            daily_living_cost=daily_living_cost,
+            goal_completion_index_pct=goal_completion_index_pct,
+            concentration_pct=concentration_pct,
+            dependence_pct=dependence_pct,
+            net_after_expenses=net_after_expenses,
+            top_total=top_total,
+            days_in_month=days_in_month,
+            mira_50_30_20=Mira503020(
+                needs_pct=round(needs_pct, 2),
+                wants_pct=round(wants_pct, 2),
+                savings_pct=round(savings_pct, 2),
+                deviation_pct=round(deviation_pct, 2),
+            ),
+        )
+
+
+class WaterfallChartBuilder:
+    """Constructs the waterfall chart steps and summary for the MIRA master report."""
+
+    def __init__(
+        self,
+        *,
+        income_total: float,
+        net_after_expenses: float,
+        displayed_categories: list[tuple[str, float]],
+        remaining_categories: list[tuple[str, float]],
+        normal_categories: list[tuple[str, float]],
+        inconsistent_entry: tuple[str, float] | None,
+        all_waterfall_category_totals: list[tuple[str, float]],
+        language: str = "en",
+    ) -> None:
+        self._income_total = income_total
+        self._net_after_expenses = net_after_expenses
+        self._displayed_categories = displayed_categories
+        self._remaining_categories = remaining_categories
+        self._normal_categories = normal_categories
+        self._inconsistent_entry = inconsistent_entry
+        self._all_waterfall_category_totals = all_waterfall_category_totals
+        self._language = _normalize_report_language(language)
+
+    def _t(self, es: str, en: str, *, params: dict[str, Any] | None = None) -> str:
+        return _report_text(self._language, es, en, params=params)
+
+    def build(self) -> dict[str, Any]:
+        """Return a dict with 'steps' list and 'summary' dict."""
+        net_after_expenses = self._net_after_expenses
+        waterfall_steps: list[dict[str, Any]] = [
+            {
+                "label": self._t("Ingreso total neto", "Total net income"),
+                "kind": "income_total",
+                "value": round(self._income_total, 2),
+                "start": 0.0,
+                "end": round(self._income_total, 2),
+                "baseline": 0.0,
+            }
+        ]
+
+        running_balance = round(self._income_total, 2)
+        for category_name, amount in self._displayed_categories:
+            next_balance = round(running_balance - amount, 2)
+            is_grouped = category_name == self._t("Otros gastos", "Other expenses") and bool(self._remaining_categories)
+            waterfall_steps.append(
+                {
+                    "label": category_name,
+                    "kind": "expense",
+                    "value": round(-amount, 2),
+                    "start": running_balance,
+                    "end": next_balance,
+                    "is_grouped": is_grouped,
+                }
+            )
+            running_balance = next_balance
+
+        waterfall_status = "balanced"
+        financing_amount = 0.0
+        savings_allocation = 0.0
+        final_balance = 0.0
+        if net_after_expenses < 0:
+            waterfall_status = "deficit"
+            financing_amount = round(abs(net_after_expenses), 2)
+            waterfall_steps.append(
+                {
+                    "label": self._t("Deuda / uso de ahorro", "Debt / prior savings"),
+                    "kind": "financing",
+                    "value": financing_amount,
+                    "start": net_after_expenses,
+                    "end": 0.0,
+                }
+            )
+        elif net_after_expenses > 0:
+            waterfall_status = "surplus"
+            final_balance = net_after_expenses
+
+        if waterfall_status != "deficit":
+            waterfall_steps.append(
+                {
+                    "label": (
+                        self._t("Balance del mes", "Month balance")
+                        if waterfall_status == "surplus"
+                        else self._t("Cierre del flujo mensual", "Monthly flow close")
+                    ),
+                    "kind": "month_balance" if waterfall_status == "surplus" else "final_total",
+                    "value": final_balance,
+                    "start": final_balance,
+                    "end": final_balance,
+                    "baseline": 0.0,
+                }
+            )
+
+        return {
+            "steps": waterfall_steps,
+            "summary": {
+                "status": waterfall_status,
+                "net_after_expenses": net_after_expenses,
+                "financing_amount": financing_amount,
+                "savings_allocation": savings_allocation,
+                "final_balance": final_balance,
+                "expense_categories_count": len(self._all_waterfall_category_totals),
+                "displayed_expense_categories_count": min(len(self._normal_categories), _MAX_WATERFALL_EXPENSE_STEPS),
+                "displayed_expense_steps_count": len(self._displayed_categories),
+                "grouped_other_expenses_count": len(self._remaining_categories),
+                "has_grouped_other_expenses": bool(self._remaining_categories),
+                "inconsistent_bucket_present": self._inconsistent_entry is not None,
+            },
+        }
+
+
+class ReportMessageGenerator:
+    """Generates and filters analysis messages for the MIRA master report chat advisor."""
+
+    def __init__(
+        self,
+        *,
+        metrics: MetricsResult,
+        goal_data: GoalAnalysisResult,
+        savings_goals: list[dict[str, Any]],
+        year: int,
+        month: int,
+        relevance_threshold: float = 0.10,
+        language: str = "en",
+    ) -> None:
+        self._metrics = metrics
+        self._goal_data = goal_data
+        self._savings_goals = savings_goals
+        self._year = year
+        self._month = month
+        self._relevance_threshold = relevance_threshold
+        self._language = _normalize_report_language(language)
+        self._messages: list[dict[str, Any]] = []
+
+    def _t(self, es: str, en: str, *, params: dict[str, Any] | None = None) -> str:
+        return _report_text(self._language, es, en, params=params)
+
+    def _add(self, code: str, level: str, text: str, *, always: bool = False, pct: float | None = None) -> None:
+        self._messages.append({"code": code, "level": level, "text": text, "always": always, "pct": pct})
+
+    def _generate_income_vs_previous(self) -> None:
+        income_vs_previous = self._metrics.income_vs_previous
+        income_prev_pct = income_vs_previous.pct
+        lifestyle_inflation_metrics = self._metrics.lifestyle_inflation_metrics
+        if income_prev_pct is None:
+            self._add(
+                "income_vs_previous_missing",
                 "warning",
-                _t(
-                    "Tus ingresos subieron {income_pct:.1f}%, pero tus gastos operativos subieron {expense_pct:.1f}%. Estas absorbiendo casi todo el aumento y eso apunta a inflacion de estilo de vida.",
-                    "Your income increased {income_pct:.1f}%, but your operating expenses increased {expense_pct:.1f}%. You are absorbing nearly all of the raise, which points to lifestyle inflation.",
-                    params={
-                        "income_pct": float(lifestyle_inflation_metrics["income_growth_pct"] or 0.0),
-                        "expense_pct": float(lifestyle_inflation_metrics["expense_growth_pct"] or 0.0),
-                    },
+                self._t(
+                    "No hay historial suficiente para comparar ingresos con el mes anterior.",
+                    "There is not enough history to compare income with the previous month.",
                 ),
                 always=True,
-                pct=max(
-                    float(lifestyle_inflation_metrics["income_growth_pct"] or 0.0),
-                    float(lifestyle_inflation_metrics["expense_growth_pct"] or 0.0),
+            )
+        else:
+            trend = self._t("mayores", "higher") if income_prev_pct >= 0 else self._t("menores", "lower")
+            self._add(
+                "income_vs_previous",
+                "info",
+                self._t(
+                    "Los ingresos de este mes fueron {pct:.1f}% {trend} en relación al mes pasado.",
+                    "Income this month was {pct:.1f}% {trend} than last month.",
+                    params={"pct": abs(income_prev_pct), "trend": trend},
                 ),
+                always=True,
+                pct=abs(income_prev_pct),
             )
 
-    if budget_context["has_budget"]:
-        income_budget_pct = income_vs_budget["pct"] if income_vs_budget is not None else None
-        expense_budget_pct = expense_vs_budget["pct"] if expense_vs_budget is not None else None
+        expense_vs_previous = self._metrics.expense_vs_previous
+        expense_prev_pct = expense_vs_previous.pct
+        if expense_prev_pct is None:
+            self._add(
+                "expense_vs_previous_missing",
+                "warning",
+                self._t(
+                    "No hay historial suficiente para comparar gastos con el mes anterior.",
+                    "There is not enough history to compare expenses with the previous month.",
+                ),
+                always=True,
+            )
+        else:
+            trend = self._t("mayores", "higher") if expense_prev_pct >= 0 else self._t("menores", "lower")
+            self._add(
+                "expense_vs_previous",
+                "info",
+                self._t(
+                    "Los gastos operativos fueron {pct:.1f}% {trend} en relación al mes pasado.",
+                    "Operating expenses were {pct:.1f}% {trend} than last month.",
+                    params={"pct": abs(expense_prev_pct), "trend": trend},
+                ),
+                always=True,
+                pct=abs(expense_prev_pct),
+            )
+            if bool(lifestyle_inflation_metrics.is_alert):
+                self._add(
+                    "lifestyle_inflation_alert",
+                    "warning",
+                    self._t(
+                        "Tus ingresos subieron {income_pct:.1f}%, pero tus gastos operativos subieron {expense_pct:.1f}%. Estas absorbiendo casi todo el aumento y eso apunta a inflacion de estilo de vida.",
+                        "Your income increased {income_pct:.1f}%, but your operating expenses increased {expense_pct:.1f}%. You are absorbing nearly all of the raise, which points to lifestyle inflation.",
+                        params={
+                            "income_pct": float(lifestyle_inflation_metrics.income_growth_pct or 0.0),
+                            "expense_pct": float(lifestyle_inflation_metrics.expense_growth_pct or 0.0),
+                        },
+                    ),
+                    always=True,
+                    pct=max(
+                        float(lifestyle_inflation_metrics.income_growth_pct or 0.0),
+                        float(lifestyle_inflation_metrics.expense_growth_pct or 0.0),
+                    ),
+                )
+
+    def _generate_budget_messages(self) -> None:
+        budget_context = self._metrics.budget_context
+        income_vs_budget = self._metrics.income_vs_budget
+        expense_vs_budget = self._metrics.expense_vs_budget
+        if not budget_context.has_budget:
+            return
+        income_budget_pct = income_vs_budget.pct if income_vs_budget is not None else None
+        expense_budget_pct = expense_vs_budget.pct if expense_vs_budget is not None else None
         if income_budget_pct is not None:
-            trend = _t("por encima", "above") if income_budget_pct >= 0 else _t("por debajo", "below")
-            add_message(
+            trend = self._t("por encima", "above") if income_budget_pct >= 0 else self._t("por debajo", "below")
+            self._add(
                 "income_vs_budget",
                 "info",
-                _t(
+                self._t(
                     "Tus ingresos quedaron {pct:.1f}% {trend} del presupuesto.",
                     "Your income landed {pct:.1f}% {trend} budget.",
                     params={"pct": abs(income_budget_pct), "trend": trend},
@@ -1174,11 +1827,11 @@ def build_report_payload(
                 pct=abs(income_budget_pct),
             )
         if expense_budget_pct is not None:
-            trend = _t("por encima", "above") if expense_budget_pct >= 0 else _t("por debajo", "below")
-            add_message(
+            trend = self._t("por encima", "above") if expense_budget_pct >= 0 else self._t("por debajo", "below")
+            self._add(
                 "expense_vs_budget",
                 "info",
-                _t(
+                self._t(
                     "Tus gastos operativos quedaron {pct:.1f}% {trend} del presupuesto.",
                     "Your operating expenses landed {pct:.1f}% {trend} budget.",
                     params={"pct": abs(expense_budget_pct), "trend": trend},
@@ -1186,22 +1839,22 @@ def build_report_payload(
                 always=True,
                 pct=abs(expense_budget_pct),
             )
-        for item in budget_context["missing_income_categories"]:
-            add_message(
+        for item in budget_context.missing_income_categories:
+            self._add(
                 "missing_budgeted_income",
                 "warning",
-                _t(
+                self._t(
                     "Ingreso presupuestado no percibido: {item}.",
                     "Budgeted income not received: {item}.",
                     params={"item": item},
                 ),
                 always=True,
             )
-        for item in budget_context["missing_expense_categories"]:
-            add_message(
+        for item in budget_context.missing_expense_categories:
+            self._add(
                 "missing_budgeted_expense",
                 "warning",
-                _t(
+                self._t(
                     "Gasto presupuestado no pagado: {item}.",
                     "Budgeted expense not paid: {item}.",
                     params={"item": item},
@@ -1209,312 +1862,328 @@ def build_report_payload(
                 always=True,
             )
 
-    if current_summary["net"] < 0:
-        add_message(
-            "deficit",
-            "critical",
-            _t(
-                "⚠️ Este mes has gastado más de lo que has ingresado. Estás utilizando {amount:.2f} de tus reservas.",
-                "⚠️ You spent more than you earned this month. You are using {amount:.2f} from your reserves.",
-                params={"amount": abs(current_summary["net"])},
-            ),
-            always=True,
-        )
-    else:
-        add_message(
-            "surplus",
-            "success",
-            _t(
-                "✅ Vas bien: tienes {amount:.2f} disponibles para asignar a nuevas metas.",
-                "✅ You are doing well: you have {amount:.2f} available to assign to new goals.",
-                params={"amount": current_summary["net"]},
-            ),
-            always=True,
-        )
-        if bool(savings_efficiency_metrics["has_surplus_leakage_alert"]):
-            add_message(
-                "surplus_leakage",
-                "warning",
-                _t(
-                    "Cerraste el mes con un excedente de {surplus:.2f}, pero no hubo avance registrado en metas de ahorro. Hay una posible fuga de excedente: sobro en papel, pero no llego a tus metas.",
-                    "You closed the month with a surplus of {surplus:.2f}, but there was no recorded progress toward savings goals. There is a possible surplus leakage: it existed on paper, but it did not reach your goals.",
-                    params={"surplus": float(savings_efficiency_metrics["surplus_amount"])},
-                ),
-                always=True,
-            )
-
-    total_expense = current_summary["expense_operational"]
-    income_total = current_summary["income"]
-    debt_payment_total = current_summary["debt_payment"]
-    debt_payment_income_pct = (debt_payment_total / income_total * 100.0) if income_total > 0 else None
-    debt_payment_expense_pct = (debt_payment_total / total_expense * 100.0) if total_expense > 0 else None
-
-    if debt_payment_total > 0:
-        debt_level = (
-            "warning"
-            if (debt_payment_income_pct or 0.0) >= 20.0 or (debt_payment_expense_pct or 0.0) >= 30.0
-            else "info"
-        )
-        if debt_payment_income_pct is not None and debt_payment_expense_pct is not None:
-            add_message(
-                "credit_debt_load",
-                debt_level,
-                _t(
-                    "Los pagos de tarjetas de crédito y deuda sumaron {amount:.2f}. Equivalen al {income_pct:.1f}% de tus ingresos y al {expense_pct:.1f}% de tus gastos operativos.",
-                    "Credit card and debt payments totaled {amount:.2f}. They equal {income_pct:.1f}% of your income and {expense_pct:.1f}% of your operating expenses.",
-                    params={
-                        "amount": debt_payment_total,
-                        "income_pct": debt_payment_income_pct,
-                        "expense_pct": debt_payment_expense_pct,
-                    },
-                ),
-                always=True,
-                pct=max(debt_payment_income_pct, debt_payment_expense_pct),
-            )
-        else:
-            add_message(
-                "credit_debt_load",
-                "warning",
-                _t(
-                    "Registraste {amount:.2f} en pagos de tarjetas de crédito y deuda, pero no hay ingresos suficientes en el periodo para medir su peso mensual.",
-                    "You recorded {amount:.2f} in credit card and debt payments, but there is not enough income in the period to measure their monthly weight.",
-                    params={"amount": debt_payment_total},
-                ),
-                always=True,
-            )
-
-    if credit_card_expense_count > 0 or credit_card_payment_count > 0:
-        if credit_card_expense_amount > credit_card_payment_amount:
-            add_message(
-                "credit_card_usage_vs_payments",
-                "warning",
-                _t(
-                    "En tarjetas de credito registraste {expense_count} gasto(s) por {expense_amount:.2f} y {payment_count} pago(s) internos por {payment_amount:.2f}. Como los gastos superan los pagos, hay senal de posible endeudamiento por {gap:.2f}.",
-                    "For credit cards you recorded {expense_count} expense(s) totaling {expense_amount:.2f} and {payment_count} internal payment(s) totaling {payment_amount:.2f}. Because spending is higher than payments, there is a possible indebtedness signal of {gap:.2f}.",
-                    params={
-                        "expense_count": credit_card_expense_count,
-                        "expense_amount": credit_card_expense_amount,
-                        "payment_count": credit_card_payment_count,
-                        "payment_amount": credit_card_payment_amount,
-                        "gap": abs(credit_card_gap_amount),
-                    },
+    def _generate_net_messages(self) -> None:
+        current_summary = self._metrics.current_summary
+        savings_efficiency_metrics = self._metrics.savings_efficiency_metrics
+        if current_summary.net < 0:
+            self._add(
+                "deficit",
+                "critical",
+                self._t(
+                    "⚠️ Este mes has gastado más de lo que has ingresado. Estás utilizando {amount:.2f} de tus reservas.",
+                    "⚠️ You spent more than you earned this month. You are using {amount:.2f} from your reserves.",
+                    params={"amount": abs(current_summary.net)},
                 ),
                 always=True,
             )
         else:
-            add_message(
-                "credit_card_usage_vs_payments",
-                "info",
-                _t(
-                    "En tarjetas de credito registraste {expense_count} gasto(s) por {expense_amount:.2f} y {payment_count} pago(s) internos por {payment_amount:.2f}. Los pagos van al dia frente al gasto asociado del periodo.",
-                    "For credit cards you recorded {expense_count} expense(s) totaling {expense_amount:.2f} and {payment_count} internal payment(s) totaling {payment_amount:.2f}. Payments are keeping up with the card spending recorded in the period.",
-                    params={
-                        "expense_count": credit_card_expense_count,
-                        "expense_amount": credit_card_expense_amount,
-                        "payment_count": credit_card_payment_count,
-                        "payment_amount": credit_card_payment_amount,
-                    },
+            self._add(
+                "surplus",
+                "success",
+                self._t(
+                    "✅ Vas bien: tienes {amount:.2f} disponibles para asignar a nuevas metas.",
+                    "✅ You are doing well: you have {amount:.2f} available to assign to new goals.",
+                    params={"amount": current_summary.net},
                 ),
                 always=True,
             )
+            if bool(savings_efficiency_metrics.has_surplus_leakage_alert):
+                self._add(
+                    "surplus_leakage",
+                    "warning",
+                    self._t(
+                        "Cerraste el mes con un excedente de {surplus:.2f}, pero no hubo avance registrado en metas de ahorro. Hay una posible fuga de excedente: sobro en papel, pero no llego a tus metas.",
+                        "You closed the month with a surplus of {surplus:.2f}, but there was no recorded progress toward savings goals. There is a possible surplus leakage: it existed on paper, but it did not reach your goals.",
+                        params={"surplus": float(savings_efficiency_metrics.surplus_amount)},
+                    ),
+                    always=True,
+                )
 
-    weekend_pct = (weekend_total / total_expense * 100.0) if total_expense > 0 else 0.0
-    weekend_avg = (weekend_total / len(weekend_days)) if weekend_days else 0.0
-    add_message(
-        "weekend_behavior",
-        "info",
-        _t(
-            "El {pct:.1f}% de tus gastos ocurre en fines de semana. Tu costo promedio por sábado/domingo es {avg:.2f}.",
-            "{pct:.1f}% of your spending happens on weekends. Your average cost per Saturday/Sunday is {avg:.2f}.",
-            params={"pct": weekend_pct, "avg": weekend_avg},
-        ),
-        pct=weekend_pct,
-    )
-
-    small_pct = (small_total / total_expense * 100.0) if total_expense > 0 else 0.0
-    add_message(
-        "small_expenses",
-        "info",
-        _t(
-            "Tus transacciones menores a 200 suman {amount:.2f}. Esto representa el {pct:.1f}% de tu gasto total.",
-            "Transactions under 200 add up to {amount:.2f}. That represents {pct:.1f}% of your total spending.",
-            params={"amount": small_total, "pct": small_pct},
-        ),
-        pct=small_pct,
-    )
-
-    if top_tags and current_summary["income"] > 0:
-        top_tag_name, top_tag_amount = top_tags[0]
-        tag_income_pct = (top_tag_amount / current_summary["income"]) * 100.0
-        add_message(
-            "tag_impact",
-            "info",
-            _t(
-                "La etiqueta #{tag} ha consumido el {pct:.1f}% de tus ingresos.",
-                "The #{tag} tag has consumed {pct:.1f}% of your income.",
-                params={"tag": top_tag_name, "pct": tag_income_pct},
-            ),
-            pct=tag_income_pct,
-        )
-
-    if current_summary["income"] <= 0:
-        add_message(
-            "zero_income",
-            "warning",
-            _t(
-                "No hay ingresos registrados para el periodo; algunos ratios porcentuales no aplican.",
-                "No income is recorded for the period; some percentage ratios do not apply.",
-            ),
-            always=True,
-        )
-
-    avg_daily_expense = total_expense / max(1, calendar.monthrange(year, month)[1])
-    burn_days = safe_ratio(account_balance_total, avg_daily_expense)
-    if burn_days is not None:
-        add_message(
-            "burn_rate",
-            "info",
-            _t(
-                "Basado en tu gasto promedio diario, tu saldo actual cubre {days:.1f} días sin ingresos nuevos.",
-                "Based on your average daily spending, your current balance covers {days:.1f} days without new income.",
-                params={"days": burn_days},
-            ),
-        )
-
-    monthly_savings_avg = avg_3["savings"] or current_summary["savings"]
-    if completed_goals:
-        latest_completed_goal = completed_goals[0]
-        add_message(
-            "goals_completed",
-            "success",
-            _t(
-                "Ya cumpliste {count} meta(s) de ahorro. La mas reciente es '{goal_name}'.",
-                "You already achieved {count} savings goal(s). The most recent one is '{goal_name}'.",
-                params={"count": len(completed_goals), "goal_name": latest_completed_goal["name"]},
-            ),
-            always=True,
-        )
-
-    if active_goals:
-        focus_goal = active_goals[0]
-        focus_target_date = cast(date | None, focus_goal["parsed_target_date"])
-        focus_currency = str(focus_goal["currency"] or "").strip()
-        if focus_target_date is not None and focus_target_date < report_period_end:
-            add_message(
-                "goal_overdue",
-                "warning",
-                _t(
-                    "La meta '{goal_name}' esta vencida y aun faltan {remaining:.2f} {currency}.",
-                    "The '{goal_name}' goal is overdue and still needs {remaining:.2f} {currency}.",
-                    params={
-                        "goal_name": focus_goal["name"],
-                        "remaining": float(focus_goal["remaining_amount"]),
-                        "currency": focus_currency,
-                    },
-                ),
-                always=True,
+    def _generate_debt_messages(self) -> None:
+        debt_payment_total = self._metrics.debt_payment_total
+        debt_payment_income_pct = self._metrics.debt_payment_income_pct
+        debt_payment_expense_pct = self._metrics.debt_payment_expense_pct
+        cc = self._metrics.credit_card
+        if debt_payment_total > 0:
+            debt_level = (
+                "warning"
+                if (debt_payment_income_pct or 0.0) >= 20.0 or (debt_payment_expense_pct or 0.0) >= 30.0
+                else "info"
             )
-        elif focus_target_date is not None:
-            months_remaining = max(1, ((focus_target_date.year - year) * 12) + (focus_target_date.month - month) + 1)
-            required_monthly_savings = float(focus_goal["remaining_amount"]) / months_remaining
-            if monthly_savings_avg and monthly_savings_avg >= required_monthly_savings:
-                add_message(
-                    "goal_on_track",
-                    "success",
-                    _t(
-                        "La meta '{goal_name}' va encaminada: llevas {progress:.1f}% y necesitas {required:.2f} {currency} por mes para llegar a {target_date}.",
-                        "The '{goal_name}' goal is on track: you are at {progress:.1f}% and need {required:.2f} {currency} per month to reach {target_date}.",
+            if debt_payment_income_pct is not None and debt_payment_expense_pct is not None:
+                self._add(
+                    "credit_debt_load",
+                    debt_level,
+                    self._t(
+                        "Los pagos de tarjetas de crédito y deuda sumaron {amount:.2f}. Equivalen al {income_pct:.1f}% de tus ingresos y al {expense_pct:.1f}% de tus gastos operativos.",
+                        "Credit card and debt payments totaled {amount:.2f}. They equal {income_pct:.1f}% of your income and {expense_pct:.1f}% of your operating expenses.",
                         params={
-                            "goal_name": focus_goal["name"],
-                            "progress": float(focus_goal["progress_pct"]),
-                            "required": required_monthly_savings,
-                            "currency": focus_currency,
-                            "target_date": focus_goal["target_date"],
+                            "amount": debt_payment_total,
+                            "income_pct": debt_payment_income_pct,
+                            "expense_pct": debt_payment_expense_pct,
+                        },
+                    ),
+                    always=True,
+                    pct=max(debt_payment_income_pct, debt_payment_expense_pct),
+                )
+            else:
+                self._add(
+                    "credit_debt_load",
+                    "warning",
+                    self._t(
+                        "Registraste {amount:.2f} en pagos de tarjetas de crédito y deuda, pero no hay ingresos suficientes en el periodo para medir su peso mensual.",
+                        "You recorded {amount:.2f} in credit card and debt payments, but there is not enough income in the period to measure their monthly weight.",
+                        params={"amount": debt_payment_total},
+                    ),
+                    always=True,
+                )
+
+        if cc.expense_count > 0 or cc.payment_count > 0:
+            if cc.expense_amount > cc.payment_amount:
+                self._add(
+                    "credit_card_usage_vs_payments",
+                    "warning",
+                    self._t(
+                        "En tarjetas de crédito registraste {expense_count} gasto(s) por {expense_amount:.2f} y {payment_count} pago(s) internos por {payment_amount:.2f}. Como los gastos superan los pagos, hay señal de posible endeudamiento por {gap:.2f}.",
+                        "For credit cards you recorded {expense_count} expense(s) totaling {expense_amount:.2f} and {payment_count} internal payment(s) totaling {payment_amount:.2f}. Because spending is higher than payments, there is a possible indebtedness signal of {gap:.2f}.",
+                        params={
+                            "expense_count": cc.expense_count,
+                            "expense_amount": cc.expense_amount,
+                            "payment_count": cc.payment_count,
+                            "payment_amount": cc.payment_amount,
+                            "gap": abs(cc.gap_amount),
                         },
                     ),
                     always=True,
                 )
             else:
-                add_message(
-                    "goal_off_track",
-                    "warning",
-                    _t(
-                        "La meta '{goal_name}' requiere {required:.2f} {currency} por mes para llegar a {target_date}, pero tu ahorro reciente promedia {actual:.2f} {currency}.",
-                        "The '{goal_name}' goal needs {required:.2f} {currency} per month to reach {target_date}, but your recent savings average is {actual:.2f} {currency}.",
+                self._add(
+                    "credit_card_usage_vs_payments",
+                    "info",
+                    self._t(
+                        "En tarjetas de crédito registraste {expense_count} gasto(s) por {expense_amount:.2f} y {payment_count} pago(s) internos por {payment_amount:.2f}. Los pagos van al dia frente al gasto asociado del periodo.",
+                        "For credit cards you recorded {expense_count} expense(s) totaling {expense_amount:.2f} and {payment_count} internal payment(s) totaling {payment_amount:.2f}. Payments are keeping up with the card spending recorded in the period.",
                         params={
-                            "goal_name": focus_goal["name"],
-                            "required": required_monthly_savings,
-                            "currency": focus_currency,
-                            "target_date": focus_goal["target_date"],
-                            "actual": float(monthly_savings_avg or 0.0),
+                            "expense_count": cc.expense_count,
+                            "expense_amount": cc.expense_amount,
+                            "payment_count": cc.payment_count,
+                            "payment_amount": cc.payment_amount,
                         },
                     ),
                     always=True,
                 )
-        else:
-            add_message(
-                "goal_progress",
+
+    def _generate_spending_pattern_messages(self) -> None:
+        total_expense = self._metrics.total_expense
+        weekend_total = self._metrics.weekend_total
+        weekend_days = self._metrics.weekend_days
+        small_total = self._metrics.small_total
+        top_tags = self._metrics.top_tags
+        current_summary = self._metrics.current_summary
+
+        weekend_pct = (weekend_total / total_expense * 100.0) if total_expense > 0 else 0.0
+        weekend_avg = (weekend_total / len(weekend_days)) if weekend_days else 0.0
+        self._add(
+            "weekend_behavior",
+            "info",
+            self._t(
+                "El {pct:.1f}% de tus gastos ocurre en fines de semana. Tu costo promedio por sábado/domingo es {avg:.2f}.",
+                "{pct:.1f}% of your spending happens on weekends. Your average cost per Saturday/Sunday is {avg:.2f}.",
+                params={"pct": weekend_pct, "avg": weekend_avg},
+            ),
+            pct=weekend_pct,
+        )
+
+        small_pct = (small_total / total_expense * 100.0) if total_expense > 0 else 0.0
+        self._add(
+            "small_expenses",
+            "info",
+            self._t(
+                "Tus transacciones menores a 200 suman {amount:.2f}. Esto representa el {pct:.1f}% de tu gasto total.",
+                "Transactions under 200 add up to {amount:.2f}. That represents {pct:.1f}% of your total spending.",
+                params={"amount": small_total, "pct": small_pct},
+            ),
+            pct=small_pct,
+        )
+
+        if top_tags and current_summary.income > 0:
+            top_tag_name, top_tag_amount = top_tags[0]
+            tag_income_pct = (top_tag_amount / current_summary.income) * 100.0
+            self._add(
+                "tag_impact",
                 "info",
-                _t(
-                    "La meta '{goal_name}' va al {progress:.1f}% y faltan {remaining:.2f} {currency}.",
-                    "The '{goal_name}' goal is {progress:.1f}% complete and still needs {remaining:.2f} {currency}.",
-                    params={
-                        "goal_name": focus_goal["name"],
-                        "progress": float(focus_goal["progress_pct"]),
-                        "remaining": float(focus_goal["remaining_amount"]),
-                        "currency": focus_currency,
-                    },
+                self._t(
+                    "La etiqueta #{tag} ha consumido el {pct:.1f}% de tus ingresos.",
+                    "The #{tag} tag has consumed {pct:.1f}% of your income.",
+                    params={"tag": top_tag_name, "pct": tag_income_pct},
+                ),
+                pct=tag_income_pct,
+            )
+
+        if current_summary.income <= 0:
+            self._add(
+                "zero_income",
+                "warning",
+                self._t(
+                    "No hay ingresos registrados para el periodo; algunos ratios porcentuales no aplican.",
+                    "No income is recorded for the period; some percentage ratios do not apply.",
                 ),
                 always=True,
             )
 
-    if monthly_savings_avg and monthly_savings_avg > 0:
-        for goal in savings_goals[:1]:
-            goal_name = str(goal.get("name") or default_goal_name)
-            remaining = float(goal.get("remaining_amount") or 0.0)
-            if remaining <= 0:
-                continue
-            months_to_goal = remaining / monthly_savings_avg
-            eta_year, eta_month = shift_month(year, month, int(round(months_to_goal)))
-            add_message(
-                "goal_projection",
+    def _generate_burn_rate_message(self) -> None:
+        burn_days = self._metrics.burn_days
+        if burn_days is not None:
+            self._add(
+                "burn_rate",
                 "info",
-                _t(
-                    "A este ritmo de ahorro, completarás tu meta '{goal_name}' en {eta_year:04d}-{eta_month:02d}.",
-                    "At this savings pace, you will complete your '{goal_name}' goal in {eta_year:04d}-{eta_month:02d}.",
-                    params={"goal_name": goal_name, "eta_year": eta_year, "eta_month": eta_month},
+                self._t(
+                    "Basado en tu gasto promedio diario, tu saldo actual cubre {days:.1f} días sin ingresos nuevos.",
+                    "Based on your average daily spending, your current balance covers {days:.1f} days without new income.",
+                    params={"days": burn_days},
                 ),
             )
-            break
 
-    needs_keywords = {"alquiler", "renta", "comida", "supermercado", "salud", "medicina", "transporte", "servicios"}
-    needs_total = sum(
-        amount for root, amount in top_category_totals.items() if any(k in root.casefold() for k in needs_keywords)
-    )
-    wants_total = max(0.0, total_expense - needs_total)
-    needs_pct = (needs_total / income_total * 100.0) if income_total > 0 else 0.0
-    wants_pct = (wants_total / income_total * 100.0) if income_total > 0 else 0.0
-    savings_pct = (current_summary["savings"] / income_total * 100.0) if income_total > 0 else 0.0
-    deviation_pct = abs(needs_pct - 50.0) + abs(wants_pct - 30.0) + abs(savings_pct - 20.0)
-    add_message(
-        "mira_50_30_20",
-        "info",
-        _t(
-            "Tu distribución es {needs:.1f}% Necesidades / {wants:.1f}% Deseos / {savings:.1f}% Ahorro. Desviación total {deviation:.1f}%.",
-            "Your mix is {needs:.1f}% Needs / {wants:.1f}% Wants / {savings:.1f}% Savings. Total deviation {deviation:.1f}%.",
-            params={
-                "needs": needs_pct,
-                "wants": wants_pct,
-                "savings": savings_pct,
-                "deviation": deviation_pct,
-            },
-        ),
-    )
+    def _generate_goal_messages(self) -> None:
+        avg_3 = self._metrics.avg_3
+        current_summary = self._metrics.current_summary
+        completed_goals = self._goal_data.completed_goals
+        active_goals = self._goal_data.active_goals
+        report_period_end = self._goal_data.report_period_end
+        default_goal_name = self._t("Meta", "Goal")
 
-    freedom_margin_metrics = _build_freedom_margin_metrics(income_total, total_expense)
-    freedom_margin_pct = cast(float | None, freedom_margin_metrics["pct"])
-    if freedom_margin_pct is not None:
-        freedom_zone = str(freedom_margin_metrics["zone"] or "")
+        monthly_savings_avg = avg_3.savings or current_summary.savings
+
+        if completed_goals:
+            latest_completed_goal = completed_goals[0]
+            self._add(
+                "goals_completed",
+                "success",
+                self._t(
+                    "Ya cumpliste {count} meta(s) de ahorro. La mas reciente es '{goal_name}'.",
+                    "You already achieved {count} savings goal(s). The most recent one is '{goal_name}'.",
+                    params={"count": len(completed_goals), "goal_name": latest_completed_goal.name},
+                ),
+                always=True,
+            )
+
+        if active_goals:
+            focus_goal = active_goals[0]
+            focus_target_date = cast(date | None, focus_goal.parsed_target_date)
+            focus_currency = str(focus_goal.currency or "").strip()
+            if focus_target_date is not None and focus_target_date < report_period_end:
+                self._add(
+                    "goal_overdue",
+                    "warning",
+                    self._t(
+                        "La meta '{goal_name}' esta vencida y aun faltan {remaining:.2f} {currency}.",
+                        "The '{goal_name}' goal is overdue and still needs {remaining:.2f} {currency}.",
+                        params={
+                            "goal_name": focus_goal.name,
+                            "remaining": float(focus_goal.remaining_amount),
+                            "currency": focus_currency,
+                        },
+                    ),
+                    always=True,
+                )
+            elif focus_target_date is not None:
+                months_remaining = max(
+                    1, ((focus_target_date.year - self._year) * 12) + (focus_target_date.month - self._month) + 1
+                )
+                required_monthly_savings = float(focus_goal.remaining_amount) / months_remaining
+                if monthly_savings_avg and monthly_savings_avg >= required_monthly_savings:
+                    self._add(
+                        "goal_on_track",
+                        "success",
+                        self._t(
+                            "La meta '{goal_name}' va encaminada: llevas {progress:.1f}% y necesitas {required:.2f} {currency} por mes para llegar a {target_date}.",
+                            "The '{goal_name}' goal is on track: you are at {progress:.1f}% and need {required:.2f} {currency} per month to reach {target_date}.",
+                            params={
+                                "goal_name": focus_goal.name,
+                                "progress": float(focus_goal.progress_pct),
+                                "required": required_monthly_savings,
+                                "currency": focus_currency,
+                                "target_date": focus_goal.target_date,
+                            },
+                        ),
+                        always=True,
+                    )
+                else:
+                    self._add(
+                        "goal_off_track",
+                        "warning",
+                        self._t(
+                            "La meta '{goal_name}' requiere {required:.2f} {currency} por mes para llegar a {target_date}, pero tu ahorro reciente promedia {actual:.2f} {currency}.",
+                            "The '{goal_name}' goal needs {required:.2f} {currency} per month to reach {target_date}, but your recent savings average is {actual:.2f} {currency}.",
+                            params={
+                                "goal_name": focus_goal.name,
+                                "required": required_monthly_savings,
+                                "currency": focus_currency,
+                                "target_date": focus_goal.target_date,
+                                "actual": float(monthly_savings_avg or 0.0),
+                            },
+                        ),
+                        always=True,
+                    )
+            else:
+                self._add(
+                    "goal_progress",
+                    "info",
+                    self._t(
+                        "La meta '{goal_name}' va al {progress:.1f}% y faltan {remaining:.2f} {currency}.",
+                        "The '{goal_name}' goal is {progress:.1f}% complete and still needs {remaining:.2f} {currency}.",
+                        params={
+                            "goal_name": focus_goal.name,
+                            "progress": float(focus_goal.progress_pct),
+                            "remaining": float(focus_goal.remaining_amount),
+                            "currency": focus_currency,
+                        },
+                    ),
+                    always=True,
+                )
+
+        if monthly_savings_avg and monthly_savings_avg > 0:
+            for goal in self._savings_goals[:1]:
+                goal_name = str(goal.get("name") or default_goal_name)
+                remaining = float(goal.get("remaining_amount") or 0.0)
+                if remaining <= 0:
+                    break
+                months_to_goal = remaining / monthly_savings_avg
+                eta_year, eta_month = shift_month(self._year, self._month, int(round(months_to_goal)))
+                self._add(
+                    "goal_projection",
+                    "info",
+                    self._t(
+                        "A este ritmo de ahorro, completarás tu meta '{goal_name}' en {eta_year:04d}-{eta_month:02d}.",
+                        "At this savings pace, you will complete your '{goal_name}' goal in {eta_year:04d}-{eta_month:02d}.",
+                        params={"goal_name": goal_name, "eta_year": eta_year, "eta_month": eta_month},
+                    ),
+                )
+                break
+
+    def _generate_50_30_20_message(self) -> None:
+        mira_50_30_20 = self._metrics.mira_50_30_20
+        self._add(
+            "mira_50_30_20",
+            "info",
+            self._t(
+                "Tu distribución es {needs:.1f}% Necesidades / {wants:.1f}% Deseos / {savings:.1f}% Ahorro. Desviación total {deviation:.1f}%.",
+                "Your mix is {needs:.1f}% Needs / {wants:.1f}% Wants / {savings:.1f}% Savings. Total deviation {deviation:.1f}%.",
+                params={
+                    "needs": mira_50_30_20.needs_pct,
+                    "wants": mira_50_30_20.wants_pct,
+                    "savings": mira_50_30_20.savings_pct,
+                    "deviation": mira_50_30_20.deviation_pct,
+                },
+            ),
+        )
+
+    def _generate_freedom_margin_message(self) -> None:
+        freedom_margin_metrics = self._metrics.freedom_margin_metrics
+        freedom_margin_pct = cast(float | None, freedom_margin_metrics.pct)
+        if freedom_margin_pct is None:
+            return
+        freedom_zone = str(freedom_margin_metrics.zone or "")
         freedom_zone_text_es = {
             "fast_track": "Via Rapida",
             "construction_zone": "Zona de Construccion",
@@ -1548,258 +2217,179 @@ def build_report_payload(
                 else "info" if freedom_zone == "construction_zone" else "success"
             )
         )
-        add_message(
+        self._add(
             "freedom_margin",
             freedom_level,
-            _t(
+            self._t(
                 "Tu Margen de Libertad es {pct:.1f}%. Zona: {zone}. {tone}",
                 "Your Freedom Margin is {pct:.1f}%. Zone: {zone}. {tone}",
                 params={
                     "pct": freedom_margin_pct,
-                    "zone": freedom_zone_text_es if report_language == "es" else freedom_zone_text_en,
-                    "tone": freedom_tone_es if report_language == "es" else freedom_tone_en,
+                    "zone": freedom_zone_text_es if self._language == "es" else freedom_zone_text_en,
+                    "tone": freedom_tone_es if self._language == "es" else freedom_tone_en,
                 },
             ),
             always=True,
         )
 
-    savings_rate = ((income_total - total_expense) / income_total * 100.0) if income_total > 0 else None
-    if savings_rate is not None:
-        tone = (
-            _t("¡Vas por excelente camino!", "You are on an excellent path!")
-            if savings_rate > 20
-            else (
-                _t("Estás tirando de ahorros o deuda.", "You are drawing on savings or debt.")
-                if savings_rate < 0
-                else _t("Continúa monitoreando tu ritmo.", "Keep monitoring your pace.")
+    def _generate_ratios_messages(self) -> None:
+        income_total = self._metrics.income_total
+        savings_rate = self._metrics.savings_rate
+        expense_income_ratio = self._metrics.expense_income_ratio
+        top_categories = self._metrics.top_categories
+        income_by_root = self._metrics.income_by_root
+        concentration_pct = self._metrics.concentration_pct
+        dependence_pct = self._metrics.dependence_pct
+
+        if savings_rate is not None:
+            tone = (
+                self._t("¡Vas por excelente camino!", "You are on an excellent path!")
+                if savings_rate > 20
+                else (
+                    self._t("Estás tirando de ahorros o deuda.", "You are drawing on savings or debt.")
+                    if savings_rate < 0
+                    else self._t("Continúa monitoreando tu ritmo.", "Keep monitoring your pace.")
+                )
             )
-        )
-        add_message(
-            "savings_rate",
-            "info",
-            _t(
-                "Tu tasa de ahorro real es {pct:.1f}%. {tone}",
-                "Your real savings rate is {pct:.1f}%. {tone}",
-                params={"pct": savings_rate, "tone": tone},
-            ),
-        )
-
-    expense_income_ratio = safe_ratio(total_expense, income_total)
-    if expense_income_ratio is not None:
-        add_message(
-            "expense_income_ratio",
-            "info",
-            _t(
-                "Tu ratio gasto/ingreso es {ratio:.2f}.",
-                "Your expense-to-income ratio is {ratio:.2f}.",
-                params={"ratio": expense_income_ratio},
-            ),
-        )
-
-    if top_categories and total_expense > 0:
-        top_name, top_amount = top_categories[0]
-        concentration_pct = (top_amount / total_expense) * 100.0
-        add_message(
-            "expense_concentration",
-            "info",
-            _t(
-                "El {pct:.1f}% de tu gasto está en la categoría '{name}'.",
-                "{pct:.1f}% of your spending is in the '{name}' category.",
-                params={"pct": concentration_pct, "name": top_name},
-            ),
-        )
-    else:
-        concentration_pct = None
-
-    if income_by_root and income_total > 0:
-        root_name, root_amount = max(income_by_root.items(), key=lambda item: item[1])
-        dependence_pct = (root_amount / income_total) * 100.0
-        add_message(
-            "income_dependence",
-            "info",
-            _t(
-                "El {pct:.1f}% de tus ingresos proviene de '{name}'.",
-                "{pct:.1f}% of your income comes from '{name}'.",
-                params={"pct": dependence_pct, "name": root_name},
-            ),
-        )
-    else:
-        dependence_pct = None
-
-    filtered_messages = [
-        msg for msg in messages if msg["always"] or msg.get("pct") is None or float(msg["pct"]) >= threshold_pct
-    ]
-    filtered_messages.sort(key=lambda msg: (_message_level_priority(str(msg["level"])), str(msg["code"])))
-
-    days_in_month = max(1, calendar.monthrange(year, month)[1])
-    daily_living_cost = total_expense / days_in_month
-    goal_completion_index_pct = _build_goal_completion_index(goal_rows, active_goals)
-    previous_year, previous_month = shift_month(year, month, -1)
-    previous_days_in_month = max(1, calendar.monthrange(previous_year, previous_month)[1])
-
-    income_series = [float(summary["income"]) for summary in historical_6_summaries]
-    expense_series = [float(summary["expense_operational"]) for summary in historical_6_summaries]
-    net_series = [float(summary["net"]) for summary in historical_6_summaries]
-
-    income_trend_metric = _build_trend_metric(current_summary["income"], previous_summary["income"])
-    expense_trend_metric = _build_trend_metric(
-        current_summary["expense_operational"], previous_summary["expense_operational"]
-    )
-    gap_trend_metric = _build_trend_metric(current_summary["net"], previous_summary["net"])
-    financial_balance_metric = _build_financial_balance_metric(income_total, total_expense)
-    cashflow_stability_metric = _build_cashflow_stability_metric(net_series, income_series)
-    spending_efficiency_metric = _build_spending_efficiency_metric(income_total, total_expense)
-    expense_drift_metric = _build_expense_drift_metric(expense_series)
-    cashflow_projection_metric = _build_cashflow_projection_metric(income_series, expense_series)
-    deficit_risk_metric = _build_deficit_risk_metric(
-        current_net=current_summary["net"],
-        income_trend=income_trend_metric,
-        expense_trend=expense_trend_metric,
-        projected_net=cast(float | None, cashflow_projection_metric["projected_net"]),
-    )
-    income_fragility_metric = _build_income_fragility_metric(income_series, income_trend_metric)
-    financial_momentum_metric = _build_financial_momentum_metric(
-        gap_trend=gap_trend_metric,
-        income_trend=income_trend_metric,
-        expense_trend=expense_trend_metric,
-    )
-    week_spread_metric = _build_week_spread_metric(total_expense, daily_expense_totals)
-    spending_pattern_metric = _build_spending_pattern_metric(
-        total_expense=total_expense,
-        daily_expense_totals=daily_expense_totals,
-        expense_trend=expense_trend_metric,
-    )
-    runway_trend_metric = _build_runway_trend_metric(
-        account_balance_total=account_balance_total,
-        current_expense_total=total_expense,
-        previous_expense_total=previous_summary["expense_operational"],
-        current_days=days_in_month,
-        previous_days=previous_days_in_month,
-    )
-    expense_control_metric = _build_expense_control_metric(
-        expense_trend=expense_trend_metric,
-        expense_drift=expense_drift_metric,
-        spending_pattern=spending_pattern_metric,
-    )
-    income_control_metric = _build_income_control_metric(income_fragility_metric)
-    sustainability_score_metric = _build_sustainability_score(
-        financial_balance=financial_balance_metric,
-        cashflow_stability=cashflow_stability_metric,
-        deficit_risk=deficit_risk_metric,
-        income_fragility=income_fragility_metric,
-    )
-    generic_analysis = {
-        "flow": {
-            "income_trend": income_trend_metric,
-            "expense_trend": expense_trend_metric,
-            "gap_trend": gap_trend_metric,
-            "financial_balance": financial_balance_metric,
-            "spending_efficiency": spending_efficiency_metric,
-            "expense_drift": expense_drift_metric,
-            "cashflow_projection": cashflow_projection_metric,
-        },
-        "behavior": {
-            "spending_pattern": spending_pattern_metric,
-            "week_spread": week_spread_metric,
-            "expense_control": expense_control_metric,
-        },
-        "stability": {
-            "cashflow_stability": cashflow_stability_metric,
-            "deficit_risk": deficit_risk_metric,
-            "income_fragility": income_fragility_metric,
-            "financial_momentum": financial_momentum_metric,
-            "sustainability_score": sustainability_score_metric,
-            "runway_trend": runway_trend_metric,
-            "income_control": income_control_metric,
-        },
-    }
-
-    history_hints = []
-    if len(trailing_3) < 3 or len([item for _y, _m, item in comparison_trailing_6 if item]) < 6:
-        history_hints.append(
-            _t(
-                "Se requiere un mayor período de transacciones para completar comparativas de 3 y 6 meses.",
-                "A longer transaction history is required to complete 3-month and 6-month comparisons.",
-            )
-        )
-
-    top_total = round(sum(amount for _name, amount in top_categories), 2)
-    net_after_expenses = round(current_summary["net"], 2)
-    waterfall_steps: list[dict[str, Any]] = [
-        {
-            "label": _t("Ingreso total neto", "Total net income"),
-            "kind": "income_total",
-            "value": round(current_summary["income"], 2),
-            "start": 0.0,
-            "end": round(current_summary["income"], 2),
-            "baseline": 0.0,
-        }
-    ]
-
-    running_balance = round(current_summary["income"], 2)
-    for category_name, amount in displayed_waterfall_categories:
-        next_balance = round(running_balance - amount, 2)
-        is_grouped = category_name == other_expenses_label and bool(remaining_waterfall_categories)
-        waterfall_steps.append(
-            {
-                "label": category_name,
-                "kind": "expense",
-                "value": round(-amount, 2),
-                "start": running_balance,
-                "end": next_balance,
-                "is_grouped": is_grouped,
-            }
-        )
-        running_balance = next_balance
-
-    waterfall_status = "balanced"
-    financing_amount = 0.0
-    savings_allocation = 0.0
-    final_balance = 0.0
-    if net_after_expenses < 0:
-        waterfall_status = "deficit"
-        financing_amount = round(abs(net_after_expenses), 2)
-        waterfall_steps.append(
-            {
-                "label": _t("Deuda / uso de ahorro", "Debt / prior savings"),
-                "kind": "financing",
-                "value": financing_amount,
-                "start": net_after_expenses,
-                "end": 0.0,
-            }
-        )
-    elif net_after_expenses > 0:
-        waterfall_status = "surplus"
-        final_balance = net_after_expenses
-
-    if waterfall_status != "deficit":
-        waterfall_steps.append(
-            {
-                "label": (
-                    _t("Balance del mes", "Month balance")
-                    if waterfall_status == "surplus"
-                    else _t("Cierre del flujo mensual", "Monthly flow close")
+            self._add(
+                "savings_rate",
+                "info",
+                self._t(
+                    "Tu tasa de ahorro real es {pct:.1f}%. {tone}",
+                    "Your real savings rate is {pct:.1f}%. {tone}",
+                    params={"pct": savings_rate, "tone": tone},
                 ),
-                "kind": "month_balance" if waterfall_status == "surplus" else "final_total",
-                "value": final_balance,
-                "start": final_balance,
-                "end": final_balance,
-                "baseline": 0.0,
-            }
-        )
+            )
 
+        if expense_income_ratio is not None:
+            self._add(
+                "expense_income_ratio",
+                "info",
+                self._t(
+                    "Tu ratio gasto/ingreso es {ratio:.2f}.",
+                    "Your expense-to-income ratio is {ratio:.2f}.",
+                    params={"ratio": expense_income_ratio},
+                ),
+            )
+
+        if concentration_pct is not None and top_categories:
+            top_name, _top_amount = top_categories[0]
+            self._add(
+                "expense_concentration",
+                "info",
+                self._t(
+                    "El {pct:.1f}% de tu gasto está en la categoría '{name}'.",
+                    "{pct:.1f}% of your spending is in the '{name}' category.",
+                    params={"pct": concentration_pct, "name": top_name},
+                ),
+            )
+
+        if dependence_pct is not None and income_by_root and income_total > 0:
+            root_name, _root_amount = max(income_by_root.items(), key=lambda item: item[1])
+            self._add(
+                "income_dependence",
+                "info",
+                self._t(
+                    "El {pct:.1f}% de tus ingresos proviene de '{name}'.",
+                    "{pct:.1f}% of your income comes from '{name}'.",
+                    params={"pct": dependence_pct, "name": root_name},
+                ),
+            )
+
+    def generate(self) -> list[dict[str, Any]]:
+        """Generate all messages, filter by threshold, and return sorted list."""
+        self._messages = []
+        self._generate_income_vs_previous()
+        self._generate_budget_messages()
+        self._generate_net_messages()
+        self._generate_debt_messages()
+        self._generate_spending_pattern_messages()
+        self._generate_burn_rate_message()
+        self._generate_goal_messages()
+        self._generate_50_30_20_message()
+        self._generate_freedom_margin_message()
+        self._generate_ratios_messages()
+
+        threshold_pct = self._relevance_threshold * 100.0
+        filtered = [
+            msg
+            for msg in self._messages
+            if msg["always"] or msg.get("pct") is None or float(msg["pct"]) >= threshold_pct
+        ]
+        filtered.sort(key=lambda msg: (_message_level_priority(str(msg["level"])), str(msg["code"])))
+        return filtered
+
+
+def _comparison_to_dict(v: ComparisonResult | None) -> dict[str, Any] | None:
+    """Convert a :class:`ComparisonResult` to a plain dict for the JSON payload."""
+    if v is None:
+        return None
+    return {"base": v.base, "variance": v.variance, "pct": v.pct, "signal": v.signal}
+
+
+def build_report_payload(inputs: ReportInputs) -> dict[str, Any]:
+    """Orchestrate the four specialised components and assemble the report payload."""
+    report_language = _normalize_report_language(inputs.language)
+
+    goal_data = GoalProgressAnalyzer(
+        inputs.savings_goals, inputs.year, inputs.month, language=report_language
+    ).analyze()
+
+    metrics = ReportMetricsCalculator(inputs, goal_data).compute()
+
+    waterfall = WaterfallChartBuilder(
+        income_total=metrics.income_total,
+        net_after_expenses=metrics.net_after_expenses,
+        displayed_categories=metrics.displayed_waterfall_categories,
+        remaining_categories=metrics.remaining_waterfall_categories,
+        normal_categories=metrics.normal_waterfall_categories,
+        inconsistent_entry=metrics.inconsistent_waterfall_entry,
+        all_waterfall_category_totals=metrics.waterfall_category_totals,
+        language=report_language,
+    ).build()
+
+    advisor_messages = ReportMessageGenerator(
+        metrics=metrics,
+        goal_data=goal_data,
+        savings_goals=inputs.savings_goals,
+        year=inputs.year,
+        month=inputs.month,
+        relevance_threshold=inputs.relevance_threshold,
+        language=report_language,
+    ).generate()
+
+    cc = metrics.credit_card
     return {
-        "period": {"year": year, "month": month},
-        "kpis": current_summary,
-        "comparisons": comparisons,
-        "budget": budget_context,
-        "history_hints": history_hints,
-        "consistency": {
-            "operational_expense_total": total_expense,
-            "top5_total": top_total,
-            "top5_le_total": top_total <= total_expense + 1e-9,
+        "period": {"year": inputs.year, "month": inputs.month},
+        "kpis": {
+            "income": metrics.current_summary.income,
+            "expense_operational": metrics.current_summary.expense_operational,
+            "savings": metrics.current_summary.savings,
+            "net": metrics.current_summary.net,
+            "debt_payment": metrics.current_summary.debt_payment,
+            "refunds": metrics.current_summary.refunds,
         },
-        "ytd": ytd,
+        "comparisons": {
+            section: {k: _comparison_to_dict(v) for k, v in vals.items()}
+            for section, vals in metrics.comparisons.items()
+        },
+        "budget": {
+            "has_budget": metrics.budget_context.has_budget,
+            "budget_id": metrics.budget_context.budget_id,
+            "budget_code": metrics.budget_context.budget_code,
+            "income": metrics.budget_context.income,
+            "expense_operational": metrics.budget_context.expense_operational,
+            "is_complete_for_period": metrics.budget_context.is_complete_for_period,
+            "missing_income_categories": metrics.budget_context.missing_income_categories,
+            "missing_expense_categories": metrics.budget_context.missing_expense_categories,
+        },
+        "history_hints": metrics.history_hints,
+        "consistency": {
+            "operational_expense_total": metrics.total_expense,
+            "top5_total": metrics.top_total,
+            "top5_le_total": metrics.top_total <= metrics.total_expense + 1e-9,
+        },
+        "ytd": metrics.ytd,
         "allocation": {
             "top_expense_categories": [
                 {
@@ -1807,11 +2397,14 @@ def build_report_payload(
                     "amount": round(amount, 2),
                     "children": [
                         {"name": child, "amount": round(child_amount, 2)}
-                        for child, child_amount in sorted(children.items(), key=lambda item: item[1], reverse=True)
+                        for child, child_amount in sorted(
+                            metrics.top_category_children.get(name, {}).items(),
+                            key=lambda item: item[1],
+                            reverse=True,
+                        )
                     ],
                 }
-                for name, amount in top_categories
-                for children in [top_category_children[name]]
+                for name, amount in metrics.top_categories
             ],
             "top_tags": [
                 {
@@ -1819,63 +2412,74 @@ def build_report_payload(
                     "amount": round(amount, 2),
                     "children": [
                         {"name": child, "amount": round(child_amount, 2)}
-                        for child, child_amount in sorted(children.items(), key=lambda item: item[1], reverse=True)
+                        for child, child_amount in sorted(
+                            metrics.tag_children.get(name, {}).items(),
+                            key=lambda item: item[1],
+                            reverse=True,
+                        )
                     ],
                 }
-                for name, amount in top_tags
-                for children in [tag_children[name]]
+                for name, amount in metrics.top_tags
             ],
         },
-        "waterfall": {
-            "steps": waterfall_steps,
-            "summary": {
-                "status": waterfall_status,
-                "net_after_expenses": net_after_expenses,
-                "financing_amount": financing_amount,
-                "savings_allocation": savings_allocation,
-                "final_balance": final_balance,
-                "expense_categories_count": len(waterfall_category_totals),
-                "displayed_expense_categories_count": min(
-                    len(normal_waterfall_categories), _MAX_WATERFALL_EXPENSE_STEPS
-                ),
-                "displayed_expense_steps_count": len(displayed_waterfall_categories),
-                "grouped_other_expenses_count": len(remaining_waterfall_categories),
-                "has_grouped_other_expenses": bool(remaining_waterfall_categories),
-                "inconsistent_bucket_present": inconsistent_waterfall_entry is not None,
-            },
-        },
-        "historical_stacked": stacked_6,
-        "advisor": {"threshold": relevance_threshold, "messages": filtered_messages},
-        "goals_summary": goals_summary,
+        "waterfall": waterfall,
+        "historical_stacked": metrics.stacked_6,
+        "advisor": {"threshold": inputs.relevance_threshold, "messages": advisor_messages},
+        "goals_summary": goal_data.goals_summary,
         "metrics": {
-            "burn_rate_days": round(burn_days, 2) if burn_days is not None else None,
-            "daily_living_cost": round(daily_living_cost, 2),
-            "goal_completion_index_pct": goal_completion_index_pct,
-            "savings_rate_pct": round(savings_rate, 2) if savings_rate is not None else None,
+            "burn_rate_days": round(metrics.burn_days, 2) if metrics.burn_days is not None else None,
+            "daily_living_cost": round(metrics.daily_living_cost, 2),
+            "goal_completion_index_pct": metrics.goal_completion_index_pct,
+            "savings_rate_pct": round(metrics.savings_rate, 2) if metrics.savings_rate is not None else None,
             "debt_payment_income_pct": (
-                round(debt_payment_income_pct, 2) if debt_payment_income_pct is not None else None
+                round(metrics.debt_payment_income_pct, 2) if metrics.debt_payment_income_pct is not None else None
             ),
             "debt_payment_expense_pct": (
-                round(debt_payment_expense_pct, 2) if debt_payment_expense_pct is not None else None
+                round(metrics.debt_payment_expense_pct, 2) if metrics.debt_payment_expense_pct is not None else None
             ),
-            "credit_card_expense_count": credit_card_expense_count,
-            "credit_card_expense_amount": round(credit_card_expense_amount, 2),
-            "credit_card_payment_count": credit_card_payment_count,
-            "credit_card_payment_amount": round(credit_card_payment_amount, 2),
-            "credit_card_gap_amount": credit_card_gap_amount,
-            "expense_income_ratio": round(expense_income_ratio, 2) if expense_income_ratio is not None else None,
-            "expense_concentration_pct": round(concentration_pct, 2) if concentration_pct is not None else None,
-            "income_dependence_pct": round(dependence_pct, 2) if dependence_pct is not None else None,
-            "freedom_margin": freedom_margin_metrics,
-            "lifestyle_inflation": lifestyle_inflation_metrics,
-            "savings_efficiency": savings_efficiency_metrics,
-            "goal_contributions": goal_contribution_metrics,
-            "generic_analysis": generic_analysis,
+            "credit_card_expense_count": cc.expense_count,
+            "credit_card_expense_amount": cc.expense_amount,
+            "credit_card_payment_count": cc.payment_count,
+            "credit_card_payment_amount": cc.payment_amount,
+            "credit_card_gap_amount": cc.gap_amount,
+            "expense_income_ratio": (
+                round(metrics.expense_income_ratio, 2) if metrics.expense_income_ratio is not None else None
+            ),
+            "expense_concentration_pct": (
+                round(metrics.concentration_pct, 2) if metrics.concentration_pct is not None else None
+            ),
+            "income_dependence_pct": (round(metrics.dependence_pct, 2) if metrics.dependence_pct is not None else None),
+            "freedom_margin": {
+                "pct": metrics.freedom_margin_metrics.pct,
+                "zone": metrics.freedom_margin_metrics.zone,
+                "label": metrics.freedom_margin_metrics.label,
+                "is_red_alert": metrics.freedom_margin_metrics.is_red_alert,
+            },
+            "lifestyle_inflation": {
+                "income_growth_pct": metrics.lifestyle_inflation_metrics.income_growth_pct,
+                "expense_growth_pct": metrics.lifestyle_inflation_metrics.expense_growth_pct,
+                "expense_to_income_growth_ratio": metrics.lifestyle_inflation_metrics.expense_to_income_growth_ratio,
+                "is_applicable": metrics.lifestyle_inflation_metrics.is_applicable,
+                "is_alert": metrics.lifestyle_inflation_metrics.is_alert,
+            },
+            "savings_efficiency": {
+                "surplus_amount": metrics.savings_efficiency_metrics.surplus_amount,
+                "goal_funding_amount": metrics.savings_efficiency_metrics.goal_funding_amount,
+                "goal_funding_efficiency_pct": metrics.savings_efficiency_metrics.goal_funding_efficiency_pct,
+                "surplus_leakage_amount": metrics.savings_efficiency_metrics.surplus_leakage_amount,
+                "has_surplus_leakage_alert": metrics.savings_efficiency_metrics.has_surplus_leakage_alert,
+            },
+            "goal_contributions": {
+                "count": metrics.goal_contribution_metrics.count,
+                "amount": metrics.goal_contribution_metrics.amount,
+                "by_goal": metrics.goal_contribution_metrics.by_goal,
+            },
+            "generic_analysis": metrics.generic_analysis,
             "mira_50_30_20": {
-                "needs_pct": round(needs_pct, 2),
-                "wants_pct": round(wants_pct, 2),
-                "savings_pct": round(savings_pct, 2),
-                "deviation_pct": round(deviation_pct, 2),
+                "needs_pct": metrics.mira_50_30_20.needs_pct,
+                "wants_pct": metrics.mira_50_30_20.wants_pct,
+                "savings_pct": metrics.mira_50_30_20.savings_pct,
+                "deviation_pct": metrics.mira_50_30_20.deviation_pct,
             },
         },
     }
