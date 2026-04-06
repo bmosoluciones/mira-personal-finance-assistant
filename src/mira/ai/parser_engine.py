@@ -95,6 +95,10 @@ _COP_HINT_PATTERN = re.compile(
 _ENGLISH_HINT_PATTERN = re.compile(
     r"\b(?:i|my|for|the|with|from|got|paid|spent|income|expense|tax|refund|salary)\b", re.IGNORECASE
 )
+# Unambiguous USD references: ISO code or "US$" only.  Used when USD is *not* the
+# default currency so that broad slang ("$", "bucks", "verdes") is not misread as
+# USD – those tokens are far more likely to refer to the user's local currency.
+_USD_EXPLICIT_PATTERN = re.compile(r"\b(?:usd|us\$)\b", re.IGNORECASE)
 
 # ---------------------------------------------------------------------------
 # Category / account helpers
@@ -295,10 +299,37 @@ def _extract_amount(text: str) -> float | None:
     return amount
 
 
-def _extract_currency(text: str) -> str | None:
-    lower = text.lower()
+def _extract_currency(text: str, default_currency: str | None = None) -> str | None:
+    """Detect the currency mentioned in *text*.
 
-    # Nationality-qualified pesos should win over local slang hints.
+    Priority rules
+    --------------
+    1. Nationality-qualified peso phrases win over all other hints.
+    2. Explicit currency patterns are scanned in order.  When *default_currency*
+       is **not** USD the broad USD slang tokens (``$``, "bucks", "dollars", …)
+       are suppressed: only the unambiguous ISO code ``USD`` / ``US$`` will
+       still match.  This prevents misclassifying local-currency amounts that
+       use the ``$`` sign (common in NIO, ARS, MXN, COP, etc.) as US dollars.
+    3. Country-specific ARS heuristics.
+    4. Bare "peso" with no country qualifier falls back to MXN.
+    5. USD heuristic phrases (``_USD_DEFAULT_PATTERN``) are **only** applied
+       when USD is the default currency – they are US-centric and would produce
+       false positives for users whose default is a different currency.
+    6. Returns ``None`` (→ caller uses *default_currency* as fallback).
+
+    Parameters
+    ----------
+    text:
+        Raw user input.
+    default_currency:
+        ISO-4217 code of the user's default currency as stored in the
+        database (``setting.get_default_currency()``).  When ``None`` the
+        behaviour is identical to the previous implementation (USD assumed).
+    """
+    lower = text.lower()
+    usd_is_default = (default_currency or "USD").upper() == "USD"
+
+    # 1. Nationality-qualified pesos should win over local slang hints.
     if "peso" in lower:
         if _COP_HINT_PATTERN.search(text):
             return "COP"
@@ -313,11 +344,19 @@ def _extract_currency(text: str) -> str | None:
         if re.search(r"\bargentin(?:a|o|os|e)\b", text, re.IGNORECASE):
             return "ARS"
 
+    # 2. Explicit currency patterns.
     for pattern, currency in _CURRENCY_PATTERNS:
+        if currency == "USD" and not usd_is_default:
+            # When USD is not the default only match the unambiguous ISO code
+            # so that "$", "dollars", "bucks", etc. do not override the user's
+            # local currency.
+            if _USD_EXPLICIT_PATTERN.search(text):
+                return "USD"
+            continue
         if pattern.search(text):
             return currency
 
-    # Explicit heuristic buckets for phrases that imply ARS without naming it.
+    # 3. Explicit heuristic buckets for phrases that imply ARS without naming it.
     if re.search(
         r"\b(?:transfer[ií]\s+\d+\s+para\s+el\s+alquiler|de\s+\d+\s+de\s+expensas|me\s+transfirieron\s+\d+|pague\s+\d+\s+de\s+la\s+luz|gaste\s+\d+\s+en\s+la\s+farmacia|mercado\s+pago\s+me\s+cobro|targeta\s+de\s+credito|sueldo\s+60\s*k|\bpage\s+\d+\s+de\s+la\s+lus|\bpague\s+el\s+gas\s+\d+|\bpage\s+el\s+gas\s+\d+|\bma[ñn]ana\s+tengo\s+que\s+pagar\s+\d+\s+de\s+la\s+luz|\bhoy\s+cobre\s+\d+\s+de\s+un\s+trabajo|\bel\s+finde\s+me\s+patine\s+\d+\s+en\s+ropa|\bgazte\s+\d+\s+en\s+la\s+farma(?:cia|sia))\b",
         text,
@@ -325,6 +364,7 @@ def _extract_currency(text: str) -> str | None:
     ):
         return "ARS"
 
+    # 4. Bare "peso" with no country qualifier – fall back to MXN.
     if "peso" in lower:
         if _COP_HINT_PATTERN.search(text):
             return "COP"
@@ -342,17 +382,21 @@ def _extract_currency(text: str) -> str | None:
             return "MXN"
         return "MXN"
 
-    if _USD_DEFAULT_PATTERN.search(text):
-        if re.search(r"\bgot\s+paid\s+\d+\s+by\s+a\s+client\b", text, re.IGNORECASE):
-            return None
-        return "USD"
+    # 5. USD heuristic phrases – only when USD is the user's default currency.
+    #    Applying these for non-USD users would silently assign USD to phrases
+    #    that are simply expressed in English.
+    if usd_is_default:
+        if _USD_DEFAULT_PATTERN.search(text):
+            if re.search(r"\bgot\s+paid\s+\d+\s+by\s+a\s+client\b", text, re.IGNORECASE):
+                return None
+            return "USD"
 
-    if re.search(
-        r"\b(?:i\s+paid\s+\d+\s+with\s+my\s+amex|i\s+withdrew\s+\d+\s+from\s+the\s+wells\s+fargo|i\s+transferred\s+\d+\s+to\s+my\s+savings|i\s+dumbed\s+\d+\s+into\s+my\s+robinhood\s+account)\b",
-        text,
-        re.IGNORECASE,
-    ):
-        return "USD"
+        if re.search(
+            r"\b(?:i\s+paid\s+\d+\s+with\s+my\s+amex|i\s+withdrew\s+\d+\s+from\s+the\s+wells\s+fargo|i\s+transferred\s+\d+\s+to\s+my\s+savings|i\s+dumbed\s+\d+\s+into\s+my\s+robinhood\s+account)\b",
+            text,
+            re.IGNORECASE,
+        ):
+            return "USD"
 
     if _ARS_HINT_PATTERN.search(text):
         return "ARS"
@@ -440,7 +484,7 @@ def _build_filters(category: str | None) -> dict[str, Any] | None:
     }
 
 
-def _build_result(signals: ParseSignals, intent: str) -> dict[str, Any]:
+def _build_result(signals: ParseSignals, intent: str, default_currency: str | None = None) -> dict[str, Any]:
     """Convert an intent + signals into the final action dict using ``match/case``."""
     result: dict[str, Any] = dict(_ACTION_TEMPLATE)
 
@@ -479,7 +523,7 @@ def _build_result(signals: ParseSignals, intent: str) -> dict[str, Any]:
             result["description"] = signals.raw_text.strip()
             result["category"] = signals.category or freeform_category or "expense"
             result["account"] = signals.account
-            result["base_currency"] = _extract_currency(signals.raw_text)
+            result["base_currency"] = _extract_currency(signals.raw_text, default_currency)
             result["exchange_rate"] = 1.0
             result["converted_amount"] = amount
 
@@ -490,7 +534,7 @@ def _build_result(signals: ParseSignals, intent: str) -> dict[str, Any]:
             result["description"] = signals.raw_text.strip()
             result["category"] = signals.category or freeform_category or "income"
             result["account"] = signals.account
-            result["base_currency"] = _extract_currency(signals.raw_text)
+            result["base_currency"] = _extract_currency(signals.raw_text, default_currency)
             result["exchange_rate"] = 1.0
             result["converted_amount"] = amount
 
@@ -516,8 +560,18 @@ def _build_result(signals: ParseSignals, intent: str) -> dict[str, Any]:
 class TransactionParserEngine(BaseEngine):
     """Deterministic rule-based engine for assistant mode."""
 
-    def __init__(self, prompts: PromptAssets | None = None) -> None:
+    def __init__(
+        self,
+        prompts: PromptAssets | None = None,
+        default_currency: str | None = None,
+    ) -> None:
         self._prompts = prompts or PromptAssets()
+        # ISO-4217 code of the user's default currency from the database.
+        # When set it drives the priority logic in _extract_currency:
+        # - USD default  → full USD detection including heuristic phrases.
+        # - non-USD default → only explicit "USD"/"US$" codes are matched;
+        #   all USD heuristic patterns are suppressed to avoid false positives.
+        self._default_currency: str | None = default_currency
 
     def parse(self, user_input: str) -> dict[str, Any]:
         # Fast path: exact-action lookup.
@@ -527,7 +581,7 @@ class TransactionParserEngine(BaseEngine):
 
         # Stage 1 — extract scalar values.
         amount = _extract_amount(user_input)
-        currency = _extract_currency(user_input)
+        currency = _extract_currency(user_input, self._default_currency)
         category = _extract_category(user_input)
         account = _extract_account(user_input)
 
@@ -538,7 +592,7 @@ class TransactionParserEngine(BaseEngine):
         intent = resolve_intent(signals)
 
         # Stage 4 — build result.
-        return _build_result(signals, intent)
+        return _build_result(signals, intent, self._default_currency)
 
     def chat(self, user_input: str) -> str:
         return (

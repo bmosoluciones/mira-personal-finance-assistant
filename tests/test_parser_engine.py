@@ -275,3 +275,97 @@ class TestFallbackPortuguese:
         r = TransactionParserEngine().parse("comprei roupa 80")
         assert r["action"] == "add_expense"
         assert r["amount"] == 80.0
+
+
+class TestDefaultCurrencyPriority:
+    """Tests for the default_currency priority logic in TransactionParserEngine.
+
+    Rules under test
+    ----------------
+    * When USD is the default currency: broad USD patterns ("$", "dollars",
+      "bucks", heuristic phrases) are applied; fallback is None (→ USD).
+    * When a non-USD currency is the default: only the explicit ISO code "USD"
+      / "US$" triggers USD detection; all USD heuristic phrases are suppressed
+      so that ambiguous tokens (e.g. "$") are not misread as USD.
+    """
+
+    # ------------------------------------------------------------------
+    # USD-default behaviour (unchanged from original)
+    # ------------------------------------------------------------------
+
+    def test_dollar_sign_detected_as_usd_when_usd_is_default(self):
+        r = TransactionParserEngine(default_currency="USD").parse("spent $50 on food")
+        assert r["action"] == "add_expense"
+        assert r["base_currency"] == "USD"
+
+    def test_dollars_word_detected_when_usd_is_default(self):
+        r = TransactionParserEngine(default_currency="USD").parse("received 300 dollars")
+        assert r["action"] == "add_income"
+        assert r["base_currency"] == "USD"
+
+    def test_usd_heuristic_phrase_returns_usd_when_default_is_usd(self):
+        r = TransactionParserEngine(default_currency="USD").parse("I got paid 1000 from my job")
+        assert r["action"] == "add_income"
+        assert r["base_currency"] == "USD"
+
+    # ------------------------------------------------------------------
+    # Non-USD default: broad USD slang suppressed
+    # ------------------------------------------------------------------
+
+    def test_dollar_sign_not_usd_when_nio_is_default(self):
+        """'$' is used for córdobas in Nicaragua – should not be mapped to USD."""
+        r = TransactionParserEngine(default_currency="NIO").parse("gasté $200 en comida")
+        assert r["action"] == "add_expense"
+        assert r["base_currency"] != "USD"
+
+    def test_dollars_word_not_matched_when_nio_is_default(self):
+        """Generic 'dollars'/'dólares' slang should not override a non-USD default."""
+        r = TransactionParserEngine(default_currency="NIO").parse("gasté 200 dólares en comida")
+        assert r["action"] == "add_expense"
+        assert r["base_currency"] != "USD"
+
+    def test_usd_heuristic_phrase_suppressed_when_default_is_nio(self):
+        """English heuristic USD phrase must not produce USD for a NIO-default user."""
+        r = TransactionParserEngine(default_currency="NIO").parse("I got paid 500 from my job")
+        assert r["action"] == "add_income"
+        assert r["base_currency"] != "USD"
+
+    def test_explicit_usd_code_still_detected_when_nio_is_default(self):
+        """If the user writes 'USD' explicitly we should still detect it."""
+        r = TransactionParserEngine(default_currency="NIO").parse("received 100 USD")
+        assert r["action"] == "add_income"
+        assert r["base_currency"] == "USD"
+
+    def test_no_default_currency_keeps_legacy_usd_behaviour(self):
+        """Omitting default_currency must preserve the original behaviour."""
+        r = TransactionParserEngine().parse("spent $50 on food")
+        assert r["action"] == "add_expense"
+        assert r["base_currency"] == "USD"
+
+    def test_explicit_non_usd_currency_always_wins(self):
+        """Explicit currency code overrides regardless of default."""
+        r = TransactionParserEngine(default_currency="USD").parse("gasté 50 córdobas en comida")
+        assert r["action"] == "add_expense"
+        assert r["base_currency"] == "NIO"
+
+    def test_cop_detected_when_default_is_cop(self):
+        r = TransactionParserEngine(default_currency="COP").parse("gasté 20000 en el supermercado")
+        assert r["action"] == "add_expense"
+        assert r["base_currency"] != "USD"
+
+    def test_mxn_detected_when_default_is_mxn(self):
+        r = TransactionParserEngine(default_currency="MXN").parse("pagué 500 pesos")
+        assert r["action"] == "add_expense"
+        assert r["base_currency"] == "MXN"
+
+    def test_peso_with_cop_default_detects_cop_via_hint(self):
+        """When 'pesos colombianos' is said and default is COP, COP must be detected."""
+        r = TransactionParserEngine(default_currency="COP").parse("gasté 50000 pesos colombianos")
+        assert r["action"] == "add_expense"
+        assert r["base_currency"] == "COP"
+
+    def test_bare_peso_still_returns_mxn_regardless_of_default(self):
+        """'pesos' with no country qualifier falls back to MXN (existing behaviour)."""
+        r = TransactionParserEngine(default_currency="COP").parse("pagué 100 pesos")
+        assert r["action"] == "add_expense"
+        assert r["base_currency"] == "MXN"

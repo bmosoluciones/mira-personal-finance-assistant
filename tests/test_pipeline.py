@@ -463,3 +463,22 @@ def test_pipeline_process_chat_uses_local_chat_engine_when_available(monkeypatch
     assert result.success is True
     assert result.action == "chat"
     assert result.message == "chat-ok"
+
+
+def test_pipeline_passes_default_currency_to_engine(tmp_path):
+    """Pipeline auto-wires the DB default currency into TransactionParserEngine."""
+    db = Database(path=tmp_path / "currency_test.db")
+    db.connect()
+    db.setting.set("default_currency", "NIO")
+
+    pipeline = Pipeline(db=db)
+
+    # "$" is used colloquially for córdobas in Nicaragua.  With NIO as the
+    # default currency the broad USD "$" pattern must not trigger USD.
+    # We test via the engine's parse() directly to inspect base_currency.
+    parsed = pipeline.engine.parse("gasté $200 en comida")
+    db.close()
+
+    assert parsed["action"] == "add_expense"
+    # base_currency should not be USD when default is NIO
+    assert parsed.get("base_currency") != "USD"

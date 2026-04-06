@@ -96,7 +96,9 @@ class Pipeline:
         model_path: str | None = None,
     ) -> None:
         self._db = db
-        self._parser: BaseEngine = engine or TransactionParserEngine()
+        self._parser: BaseEngine = engine or TransactionParserEngine(
+            default_currency=db.setting.get_default_currency(),
+        )
         self._chat_engine: BaseEngine | None = get_chat_engine(model_path, language=self._chat_language())
         self._executor = Executor(db)
         self._model_path = model_path
