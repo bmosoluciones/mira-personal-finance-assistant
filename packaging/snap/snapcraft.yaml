@@ -33,6 +33,19 @@ apps:
       MIRA_MODELS_DIR: $SNAP_USER_COMMON/.mira/models
       PYTHONPATH: $SNAP/local/lib/python3.12/dist-packages:$SNAP/usr/lib/python3/dist-packages${PYTHONPATH:+:$PYTHONPATH}
       XDG_DATA_HOME: $SNAP_USER_COMMON/.local/share
+  mira-cli:
+    command: local/bin/mira-cli
+    extensions:
+      - kde-neon-6
+    common-id: solutions.bmogroup.mira.desktop
+    desktop: usr/share/applications/solutions.bmogroup.mira.desktop
+    plugs:
+      - home
+      - opengl
+    environment:
+      MIRA_MODELS_DIR: $SNAP_USER_COMMON/.mira/models
+      PYTHONPATH: $SNAP/local/lib/python3.12/dist-packages:$SNAP/usr/lib/python3/dist-packages${PYTHONPATH:+:$PYTHONPATH}
+      XDG_DATA_HOME: $SNAP_USER_COMMON/.local/share      
 
 parts:
   metadata:
