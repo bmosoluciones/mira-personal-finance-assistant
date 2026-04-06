@@ -29,3 +29,8 @@ jobs:
         uses: snapcore/action-build@v1
         with:
           path: packaging/snap
+
+      - name: Check Snap
+        run: |
+          sudo snap install --dangerous "${{ steps.snapcraft.outputs.snap }}"
+          snap run mira-personal-finance-assistant.mira-cli --check
