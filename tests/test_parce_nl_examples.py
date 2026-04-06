@@ -146,6 +146,7 @@ def _monetary_example_chunk(chunk_name: str) -> list[dict[str, Any]]:
     raise ValueError(f"Unsupported chunk: {chunk_name}")
 
 
+@pytest.mark.full
 def test_parce_nl_examples_business_fields_regression() -> None:
     parser = TransactionParserEngine()
 
