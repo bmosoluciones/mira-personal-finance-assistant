@@ -880,18 +880,11 @@ class InitialSetupDialog(QWizard):
         lang = normalize_language(language)
         self._wizard_language = lang
 
-        if lang == "es":
-            self.setWindowTitle("MIRA - Configuracion inicial")
-            self.setButtonText(QWizard.WizardButton.NextButton, "Siguiente ->")
-            self.setButtonText(QWizard.WizardButton.BackButton, "<- Anterior")
-            self.setButtonText(QWizard.WizardButton.FinishButton, "Comenzar")
-            self.setButtonText(QWizard.WizardButton.CancelButton, "Cancelar")
-        else:
-            self.setWindowTitle("MIRA - Initial setup")
-            self.setButtonText(QWizard.WizardButton.NextButton, "Next ->")
-            self.setButtonText(QWizard.WizardButton.BackButton, "<- Back")
-            self.setButtonText(QWizard.WizardButton.FinishButton, "Start")
-            self.setButtonText(QWizard.WizardButton.CancelButton, "Cancel")
+        self.setWindowTitle(tr("setup.wizard.title", lang))
+        self.setButtonText(QWizard.WizardButton.NextButton, tr("setup.wizard.btn.next", lang))
+        self.setButtonText(QWizard.WizardButton.BackButton, tr("setup.wizard.btn.back", lang))
+        self.setButtonText(QWizard.WizardButton.FinishButton, tr("setup.wizard.btn.finish", lang))
+        self.setButtonText(QWizard.WizardButton.CancelButton, tr("setup.wizard.btn.cancel", lang))
 
         self._page_welcome.apply_language(lang)
         self._page_profile.apply_language(lang)
@@ -1027,38 +1020,16 @@ class _WelcomePage(QWizardPage):
         self.apply_language("en")
 
     def apply_language(self, lang: str) -> None:
-        if lang == "es":
-            self._tagline_lbl.setText("Asistente de Finanzas Personales")
-            self._welcome_text_lbl.setText(
-                "Bienvenido a MIRA.\n\n"
-                "Este asistente te guiara por la configuracion inicial "
-                "para que tengas la mejor experiencia desde el primer momento.\n\n"
-                "Haz clic en Siguiente para comenzar."
-            )
-            self._features_box.setTitle("Lo que configuraremos juntos")
-            items = [
-                "Idioma y tema visual",
-                "Moneda y formato de numeros",
-                "Categorias predeterminadas",
-                "Tus cuentas financieras",
-            ]
-            self._note_lbl.setText("100% offline - tus datos nunca salen de tu dispositivo.")
-        else:
-            self._tagline_lbl.setText("Personal Finance Assistant")
-            self._welcome_text_lbl.setText(
-                "Welcome to MIRA.\n\n"
-                "This assistant will guide you through the initial setup "
-                "so you get the best experience from day one.\n\n"
-                "Click Next to begin."
-            )
-            self._features_box.setTitle("What we will configure together")
-            items = [
-                "Language and visual theme",
-                "Currency and number format",
-                "Default categories",
-                "Your financial accounts",
-            ]
-            self._note_lbl.setText("100% offline - your data never leaves your device.")
+        self._tagline_lbl.setText(tr("setup.page.welcome.tagline", lang))
+        self._welcome_text_lbl.setText(tr("setup.page.welcome.text", lang))
+        self._features_box.setTitle(tr("setup.page.welcome.features_title", lang))
+        items = [
+            tr("setup.page.welcome.feature.language", lang),
+            tr("setup.page.welcome.feature.currency", lang),
+            tr("setup.page.welcome.feature.categories", lang),
+            tr("setup.page.welcome.feature.accounts", lang),
+        ]
+        self._note_lbl.setText(tr("setup.page.welcome.note", lang))
 
         for lbl, text in zip(self._feature_labels, items):
             lbl.setText(text)
@@ -1111,38 +1082,24 @@ class _ProfilePage(QWizardPage):
         self.apply_language("en")
 
     def apply_language(self, lang: str) -> None:
-        if lang == "es":
-            self.setTitle("Tu nombre")
-            self.setSubTitle("Dile a MIRA como quieres que te llame durante la configuracion y en sus mensajes.")
-            self._name_label.setText("Nombre:")
-            self._name_edit.setPlaceholderText("Como quieres que MIRA te llame?")
-            self._hint_label.setText("Puedes cambiarlo despues en Ajustes si prefieres otro nombre o apodo.")
-        else:
-            self.setTitle("Your name")
-            self.setSubTitle("Tell MIRA how you want to be addressed during setup and in messages.")
-            self._name_label.setText("Name:")
-            self._name_edit.setPlaceholderText("How should MIRA call you?")
-            self._hint_label.setText("You can change this later from Settings if you prefer another name or nickname.")
+        self.setTitle(tr("setup.page.profile.title", lang))
+        self.setSubTitle(tr("setup.page.profile.subtitle", lang))
+        self._name_label.setText(tr("setup.page.profile.name_label", lang))
+        self._name_edit.setPlaceholderText(tr("setup.page.profile.name_placeholder", lang))
+        self._hint_label.setText(tr("setup.page.profile.hint", lang))
 
     def validatePage(self) -> bool:  # noqa: N802 – Qt method name convention
         if not self._name_edit.text().strip():
             from mira.ui.views._shared import _notify_warning
 
             lang = self.wizard()._wizard_language if self.wizard() else "en"
-            if lang == "es":
-                msg = "El nombre de usuario es requerido. Por favor ingresa un nombre."
-            else:
-                msg = "A username is required. Please enter a name."
+            msg = tr("setup.page.profile.validation.required", lang)
             _notify_warning(self, "Validation", msg)
             return False
         return True
 
     def get_username(self, language: str) -> str:
-        return self._name_edit.text().strip() or tr(
-            "settings.saved_default_user",
-            language,
-            default="Usuario" if normalize_language(language) == "es" else "User",
-        )
+        return self._name_edit.text().strip() or tr("settings.saved_default_user", language)
 
 
 # ---------------------------------------------------------------------------
@@ -1208,16 +1165,10 @@ class _LanguageThemePage(QWizardPage):
         self.language_changed.emit(lang)
 
     def apply_language(self, lang: str) -> None:
-        if lang == "es":
-            self.setTitle("Idioma y tema")
-            self.setSubTitle("Elige el idioma de la interfaz y el tema visual que prefieras.")
-            self._language_label.setText("Idioma:")
-            self._theme_label.setText("Tema:")
-        else:
-            self.setTitle("Language and theme")
-            self.setSubTitle("Choose the interface language and your preferred visual theme.")
-            self._language_label.setText("Language:")
-            self._theme_label.setText("Theme:")
+        self.setTitle(tr("setup.page.language.title", lang))
+        self.setSubTitle(tr("setup.page.language.subtitle", lang))
+        self._language_label.setText(tr("setup.page.language.language_label", lang))
+        self._theme_label.setText(tr("setup.page.language.theme_label", lang))
 
     def get_language(self) -> str:
         return self._language_combo.currentData() or "en"
@@ -1302,26 +1253,12 @@ class _CurrencyFormatPage(QWizardPage):
 
     def apply_language(self, lang: str) -> None:
         self._language = normalize_language(lang)
-        if lang == "es":
-            self.setTitle("Moneda y formato de numeros")
-            self.setSubTitle("Selecciona la moneda principal y como se mostraran los numeros.")
-            self._currency_label.setText("Moneda predeterminada:")
-            self._thousands_label.setText("Separador de miles:")
-            self._decimal_label.setText("Separador decimal:")
-            self._hint_label.setText(
-                "Ejemplo: con separador de miles ',' y decimal '.' -> 1,234.56\n"
-                "         con separador de miles '.' y decimal ',' -> 1.234,56"
-            )
-        else:
-            self.setTitle("Currency and number format")
-            self.setSubTitle("Select the main currency and how numbers should be displayed.")
-            self._currency_label.setText("Default currency:")
-            self._thousands_label.setText("Thousands separator:")
-            self._decimal_label.setText("Decimal separator:")
-            self._hint_label.setText(
-                "Example: thousands ',' and decimal '.' -> 1,234.56\n"
-                "         thousands '.' and decimal ',' -> 1.234,56"
-            )
+        self.setTitle(tr("setup.page.currency.title", lang))
+        self.setSubTitle(tr("setup.page.currency.subtitle", lang))
+        self._currency_label.setText(tr("setup.page.currency.currency_label", lang))
+        self._thousands_label.setText(tr("setup.page.currency.thousands_label", lang))
+        self._decimal_label.setText(tr("setup.page.currency.decimal_label", lang))
+        self._hint_label.setText(tr("setup.page.currency.hint", lang))
 
     def get_currency(self) -> str:
         return self._currency_combo.currentData() or "USD"
@@ -1428,14 +1365,14 @@ class _AccountsPage(QWizardPage):
         form.setSpacing(8)
 
         name_edit = QLineEdit()
-        name_edit.setPlaceholderText(f"{'Account name' if lang == 'en' else 'Nombre de la cuenta'} {idx}...")
-        form.addRow("Name:" if lang == "en" else "Nombre:", name_edit)
+        name_edit.setPlaceholderText(tr("setup.page.accounts.row.name_placeholder", lang, params={"idx": idx}))
+        form.addRow(tr("setup.page.accounts.row.name_label", lang), name_edit)
 
         type_combo = QComboBox()
-        type_combo.addItem("Bank" if lang == "en" else "Banco", "bank")
-        type_combo.addItem("Cash" if lang == "en" else "Efectivo", "cash")
-        type_combo.addItem("Credit card" if lang == "en" else "Tarjeta de crédito", "credit")
-        form.addRow("Type:" if lang == "en" else "Tipo:", type_combo)
+        type_combo.addItem(tr("setup.page.accounts.row.type.bank", lang), "bank")
+        type_combo.addItem(tr("setup.page.accounts.row.type.cash", lang), "cash")
+        type_combo.addItem(tr("setup.page.accounts.row.type.credit", lang), "credit")
+        form.addRow(tr("setup.page.accounts.row.type_label", lang), type_combo)
 
         currency_combo = QComboBox()
         currency_combo.setEditable(True)
@@ -1447,11 +1384,11 @@ class _AccountsPage(QWizardPage):
             currency_combo.setCurrentIndex(idx_currency)
         else:
             currency_combo.setCurrentText(currency_default)
-        form.addRow("Currency:" if lang == "en" else "Moneda:", currency_combo)
+        form.addRow(tr("setup.page.accounts.row.currency_label", lang), currency_combo)
 
         balance_spin = _make_balance_spin(self._db_ref())
         balance_spin.setValue(0.0)
-        form.addRow("Opening balance:" if lang == "en" else "Saldo inicial:", balance_spin)
+        form.addRow(tr("setup.page.accounts.row.balance_label", lang), balance_spin)
 
         row_spec: dict[str, object] = {
             "card": card,
@@ -1500,12 +1437,8 @@ class _AccountsPage(QWizardPage):
         card = cast(QGroupBox, row_spec["card"])
         name_edit = cast(QLineEdit, row_spec["name"])
         lang = getattr(self, "_lang", "en")
-        if lang == "es":
-            card.setTitle(f"Cuenta {idx}")
-            name_edit.setPlaceholderText(f"Nombre de la cuenta {idx}...")
-        else:
-            card.setTitle(f"Account {idx}")
-            name_edit.setPlaceholderText(f"Account name {idx}...")
+        card.setTitle(tr("setup.page.accounts.row.title", lang, params={"idx": idx}))
+        name_edit.setPlaceholderText(tr("setup.page.accounts.row.name_placeholder", lang, params={"idx": idx}))
 
     def _refresh_input_labels(self) -> None:
         for idx, row_spec in enumerate(self._account_rows, start=1):
@@ -1516,20 +1449,9 @@ class _AccountsPage(QWizardPage):
 
     def apply_language(self, lang: str) -> None:
         self._lang = lang
-        if lang == "es":
-            self.setTitle("Tus cuentas")
-            self.setSubTitle(
-                "Agrega las cuentas que deseas gestionar (cuenta bancaria, efectivo, etc.).\n"
-                "Si no agregas ninguna, MIRA creara una cuenta predeterminada automaticamente."
-            )
-            self._btn_add.setText("+ Agregar cuenta adicional")
-        else:
-            self.setTitle("Your accounts")
-            self.setSubTitle(
-                "Add the accounts you want to manage (bank account, cash, etc.).\n"
-                "If you do not add any, MIRA will create a default account automatically."
-            )
-            self._btn_add.setText("+ Add another account")
+        self.setTitle(tr("setup.page.accounts.title", lang))
+        self.setSubTitle(tr("setup.page.accounts.subtitle", lang))
+        self._btn_add.setText(tr("setup.page.accounts.btn_add", lang))
         self._refresh_input_labels()
 
     def get_account_names(self) -> list[str]:

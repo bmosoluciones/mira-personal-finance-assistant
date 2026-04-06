@@ -469,6 +469,61 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "settings.mode.chat": "Modo Chat",
         "settings.mode.chat_unavailable": "El modo chat requiere un modelo GGUF activo. Regresando a modo asistente.",
         "settings.saved_default_user": "Usuario",
+        "setup.welcome.title": "MIRA",
+        "setup.welcome.body": "¡Bienvenido a MIRA!\nConfiguración inicial completada.",
+        # --- Setup wizard ---
+        "setup.wizard.title": "MIRA - Configuración inicial",
+        "setup.wizard.btn.next": "Siguiente ->",
+        "setup.wizard.btn.back": "<- Anterior",
+        "setup.wizard.btn.finish": "Comenzar",
+        "setup.wizard.btn.cancel": "Cancelar",
+        "setup.page.welcome.tagline": "Asistente de Finanzas Personales",
+        "setup.page.welcome.text": (
+            "Bienvenido a MIRA.\n\n"
+            "Este asistente te guiará por la configuración inicial "
+            "para que tengas la mejor experiencia desde el primer momento.\n\n"
+            "Haz clic en Siguiente para comenzar."
+        ),
+        "setup.page.welcome.features_title": "Lo que configuraremos juntos",
+        "setup.page.welcome.feature.language": "Idioma y tema visual",
+        "setup.page.welcome.feature.currency": "Moneda y formato de números",
+        "setup.page.welcome.feature.categories": "Categorías predeterminadas",
+        "setup.page.welcome.feature.accounts": "Tus cuentas financieras",
+        "setup.page.welcome.note": "100% offline - tus datos nunca salen de tu dispositivo.",
+        "setup.page.profile.title": "Tu nombre",
+        "setup.page.profile.subtitle": "Dile a MIRA cómo quieres que te llame durante la configuración y en sus mensajes.",
+        "setup.page.profile.name_label": "Nombre:",
+        "setup.page.profile.name_placeholder": "¿Cómo quieres que MIRA te llame?",
+        "setup.page.profile.hint": "Puedes cambiarlo después en Ajustes si prefieres otro nombre o apodo.",
+        "setup.page.profile.validation.required": "El nombre de usuario es requerido. Por favor ingresa un nombre.",
+        "setup.page.language.title": "Idioma y tema",
+        "setup.page.language.subtitle": "Elige el idioma de la interfaz y el tema visual que prefieras.",
+        "setup.page.language.language_label": "Idioma:",
+        "setup.page.language.theme_label": "Tema:",
+        "setup.page.currency.title": "Moneda y formato de números",
+        "setup.page.currency.subtitle": "Selecciona la moneda principal y cómo se mostrarán los números.",
+        "setup.page.currency.currency_label": "Moneda predeterminada:",
+        "setup.page.currency.thousands_label": "Separador de miles:",
+        "setup.page.currency.decimal_label": "Separador decimal:",
+        "setup.page.currency.hint": (
+            "Ejemplo: con separador de miles ',' y decimal '.' -> 1,234.56\n"
+            "         con separador de miles '.' y decimal ',' -> 1.234,56"
+        ),
+        "setup.page.accounts.title": "Tus cuentas",
+        "setup.page.accounts.subtitle": (
+            "Agrega las cuentas que deseas gestionar (cuenta bancaria, efectivo, etc.).\n"
+            "Si no agregas ninguna, MIRA creará una cuenta predeterminada automáticamente."
+        ),
+        "setup.page.accounts.btn_add": "+ Agregar cuenta adicional",
+        "setup.page.accounts.row.title": "Cuenta {idx}",
+        "setup.page.accounts.row.name_label": "Nombre:",
+        "setup.page.accounts.row.name_placeholder": "Nombre de la cuenta {idx}...",
+        "setup.page.accounts.row.type_label": "Tipo:",
+        "setup.page.accounts.row.type.bank": "Banco",
+        "setup.page.accounts.row.type.cash": "Efectivo",
+        "setup.page.accounts.row.type.credit": "Tarjeta de crédito",
+        "setup.page.accounts.row.currency_label": "Moneda:",
+        "setup.page.accounts.row.balance_label": "Saldo inicial:",
         "settings.validation.number_separators_distinct": "El separador de miles y el separador decimal deben ser distintos.",
         "dialog.about.title": "Información de MIRA",
         "dialog.about.subtitle": "Manage Income & Resources Allocations",
@@ -557,6 +612,31 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "tools.goal_simulator.dialog.unreachable_body": "Con este escenario no alcanzarás la meta. ¿Deseas crearla de todas formas?",
         "tools.goal_simulator.dialog.create_title": "Crear meta",
         "tools.goal_simulator.dialog.create_body": "Se abrirá el formulario de metas con el monto objetivo y plazo simulados para que completes y guardes manualmente.",
+        # --- Feedback: daily contextual messages ---
+        "feedback.daily_budget_missing": "Tener un presupuesto te ayuda a saber cuánto puedes gastar sin preocuparte.",
+        "feedback.daily_no_savings_goal": "Aún estás a tiempo de empezar a ahorrar este mes. Definir una meta, aunque sea pequeña, marca la diferencia.",
+        "feedback.daily_no_transactions": "Aún puedes retomar el control: registra tus movimientos para entender mejor cómo va tu mes.",
+        # --- Feedback: income insights ---
+        "feedback.income_goal_100": "Has cumplido con tus ingresos estimados del mes.",
+        "feedback.income_goal_80": "Ya alcanzaste el 80% de tu meta de ingresos.",
+        "feedback.income_goal_110": "Superaste tu meta de ingresos. ¡Buen trabajo!",
+        "feedback.income_recovery": "Vas recuperando tu ritmo de ingresos este mes.",
+        "feedback.income_unusual_high": "Este ingreso es mayor a lo habitual.",
+        # --- Feedback: expense insights ---
+        "feedback.expense_category_100": "Has superado tu presupuesto de {category_name}.",
+        "feedback.expense_category_90": "Estás por agotar tu presupuesto de {category_name} (90%).",
+        "feedback.expense_total_100": "Has superado tu presupuesto total del mes.",
+        "feedback.expense_high_pace": "Estás gastando más rápido de lo previsto este mes.",
+        "feedback.expense_unusual_high": "Este gasto en {category_name} es más alto de lo habitual.",
+        # --- Feedback: achievements ---
+        "feedback.achievement_nl_transactions": "¡Logro desbloqueado! Registraste {milestone} transacciones con el asistente.",
+        "feedback.achievement_mira_report_views": "¡Gran hábito! Ya consultaste el Reporte Maestro MIRA {milestone} veces.",
+        "feedback.achievement_savings_contributions": "¡Excelente! Destinaste fondos al ahorro {milestone} veces.",
+        "feedback.achievement_income_goal_met": "¡Logro desbloqueado! Cumpliste tu meta de ingresos de este mes.",
+        "feedback.achievement_income_above_historical_avg": "¡Buen avance! Este ingreso superó tu promedio histórico.",
+        "feedback.achievement_saved_this_month": "¡Excelente inicio! Ya registraste ahorro este mes.",
+        "feedback.achievement_savings_vs_previous_month": "¡Bien hecho! Tu ahorro de este mes ya supera al mes anterior.",
+        "feedback.achievement_savings_three_month_streak": "¡Constancia lograda! Mantienes ahorro durante 3 meses consecutivos.",
     },
     "en": {
         "nav.dashboard": "🏠  Dashboard",
@@ -997,6 +1077,62 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "settings.mode.assistant": "Assistant mode",
         "settings.mode.chat": "Chat mode",
         "settings.mode.chat_unavailable": "Chat mode requires an active GGUF model. Returning to assistant mode.",
+        "settings.saved_default_user": "User",
+        "setup.welcome.title": "MIRA",
+        "setup.welcome.body": "Welcome to MIRA!\nInitial setup completed.",
+        # --- Setup wizard ---
+        "setup.wizard.title": "MIRA - Initial setup",
+        "setup.wizard.btn.next": "Next ->",
+        "setup.wizard.btn.back": "<- Back",
+        "setup.wizard.btn.finish": "Start",
+        "setup.wizard.btn.cancel": "Cancel",
+        "setup.page.welcome.tagline": "Personal Finance Assistant",
+        "setup.page.welcome.text": (
+            "Welcome to MIRA.\n\n"
+            "This assistant will guide you through the initial setup "
+            "so you get the best experience from day one.\n\n"
+            "Click Next to begin."
+        ),
+        "setup.page.welcome.features_title": "What we will configure together",
+        "setup.page.welcome.feature.language": "Language and visual theme",
+        "setup.page.welcome.feature.currency": "Currency and number format",
+        "setup.page.welcome.feature.categories": "Default categories",
+        "setup.page.welcome.feature.accounts": "Your financial accounts",
+        "setup.page.welcome.note": "100% offline - your data never leaves your device.",
+        "setup.page.profile.title": "Your name",
+        "setup.page.profile.subtitle": "Tell MIRA how you want to be addressed during setup and in messages.",
+        "setup.page.profile.name_label": "Name:",
+        "setup.page.profile.name_placeholder": "How should MIRA call you?",
+        "setup.page.profile.hint": "You can change this later from Settings if you prefer another name or nickname.",
+        "setup.page.profile.validation.required": "A username is required. Please enter a name.",
+        "setup.page.language.title": "Language and theme",
+        "setup.page.language.subtitle": "Choose the interface language and your preferred visual theme.",
+        "setup.page.language.language_label": "Language:",
+        "setup.page.language.theme_label": "Theme:",
+        "setup.page.currency.title": "Currency and number format",
+        "setup.page.currency.subtitle": "Select the main currency and how numbers should be displayed.",
+        "setup.page.currency.currency_label": "Default currency:",
+        "setup.page.currency.thousands_label": "Thousands separator:",
+        "setup.page.currency.decimal_label": "Decimal separator:",
+        "setup.page.currency.hint": (
+            "Example: thousands ',' and decimal '.' -> 1,234.56\n"
+            "         thousands '.' and decimal ',' -> 1.234,56"
+        ),
+        "setup.page.accounts.title": "Your accounts",
+        "setup.page.accounts.subtitle": (
+            "Add the accounts you want to manage (bank account, cash, etc.).\n"
+            "If you do not add any, MIRA will create a default account automatically."
+        ),
+        "setup.page.accounts.btn_add": "+ Add another account",
+        "setup.page.accounts.row.title": "Account {idx}",
+        "setup.page.accounts.row.name_label": "Name:",
+        "setup.page.accounts.row.name_placeholder": "Account name {idx}...",
+        "setup.page.accounts.row.type_label": "Type:",
+        "setup.page.accounts.row.type.bank": "Bank",
+        "setup.page.accounts.row.type.cash": "Cash",
+        "setup.page.accounts.row.type.credit": "Credit card",
+        "setup.page.accounts.row.currency_label": "Currency:",
+        "setup.page.accounts.row.balance_label": "Opening balance:",
         "dialog.about.title": "MIRA Information",
         "dialog.about.subtitle": "Manage Income & Resources Allocations",
         "dialog.about.version": "Version: {version}",
@@ -1089,6 +1225,31 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "tools.goal_simulator.dialog.unreachable_body": "With this scenario you will not reach the goal. Do you want to create it anyway?",
         "tools.goal_simulator.dialog.create_title": "Create goal",
         "tools.goal_simulator.dialog.create_body": "The goal form will open with the simulated target amount and term so you can complete and save it manually.",
+        # --- Feedback: daily contextual messages ---
+        "feedback.daily_budget_missing": "Having a budget helps you know how much you can spend without worry.",
+        "feedback.daily_no_savings_goal": "You still have time to start saving this month. Setting even a small goal makes a difference.",
+        "feedback.daily_no_transactions": "You can still regain control: record your transactions to better understand your month.",
+        # --- Feedback: income insights ---
+        "feedback.income_goal_100": "You reached your expected monthly income goal.",
+        "feedback.income_goal_80": "You have reached 80% of your monthly income goal.",
+        "feedback.income_goal_110": "You exceeded your income goal. Great work!",
+        "feedback.income_recovery": "You are recovering your income pace this month.",
+        "feedback.income_unusual_high": "This income is higher than usual.",
+        # --- Feedback: expense insights ---
+        "feedback.expense_category_100": "You exceeded your {category_name} budget.",
+        "feedback.expense_category_90": "You are close to exhausting your {category_name} budget (90%).",
+        "feedback.expense_total_100": "You exceeded your total monthly budget.",
+        "feedback.expense_high_pace": "You are spending faster than planned this month.",
+        "feedback.expense_unusual_high": "This {category_name} expense is higher than usual.",
+        # --- Feedback: achievements ---
+        "feedback.achievement_nl_transactions": "Achievement unlocked! You recorded {milestone} transactions with the assistant.",
+        "feedback.achievement_mira_report_views": "Great habit! You have reviewed the MIRA Master Report {milestone} times.",
+        "feedback.achievement_savings_contributions": "Great! You have allocated money to savings {milestone} times.",
+        "feedback.achievement_income_goal_met": "Achievement unlocked! You met your income goal this month.",
+        "feedback.achievement_income_above_historical_avg": "Great progress! This income exceeded your historical average.",
+        "feedback.achievement_saved_this_month": "Great start! You have already saved money this month.",
+        "feedback.achievement_savings_vs_previous_month": "Well done! Your savings this month already exceed last month.",
+        "feedback.achievement_savings_three_month_streak": "Consistency unlocked! You have kept savings for 3 consecutive months.",
     },
 }
 

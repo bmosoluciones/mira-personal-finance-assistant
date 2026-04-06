@@ -986,11 +986,7 @@ class MainWindow(QMainWindow):
             theme = self._normalize_theme(data.get("theme"))
             username = str(
                 data.get("username")
-                or tr(
-                    "settings.saved_default_user",
-                    language,
-                    default="Usuario" if language == "es" else "User",
-                )
+                or tr("settings.saved_default_user", language)
             ).strip()
             self._db.setting.set("language", language)
             self._db.setting.set("theme", theme)
@@ -1021,12 +1017,8 @@ class MainWindow(QMainWindow):
                     )
                 )
             self.notify_user_message(
-                "MIRA",
-                (
-                    "¡Bienvenido a MIRA!\nConfiguración inicial completada."
-                    if language == "es"
-                    else "Welcome to MIRA!\nInitial setup completed."
-                ),
+                tr("setup.welcome.title", language),
+                tr("setup.welcome.body", language),
             )
         else:
             self._startup_cancelled = True

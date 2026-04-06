@@ -26,6 +26,7 @@ from mira.db.model import (
     Transaction,
 )
 from mira.reports.mira_master import shift_month
+from mira.ui.i18n import tr
 
 logger = logging.getLogger(__name__)
 
@@ -69,11 +70,7 @@ class FeedbackRepository:
                     "code": "daily_budget_missing",
                     "message_type": "daily_context",
                     "priority": 90,
-                    "message": (
-                        "Tener un presupuesto te ayuda a saber cuánto puedes gastar sin preocuparte."
-                        if language == "es"
-                        else "Having a budget helps you know how much you can spend without worry."
-                    ),
+                    "message": tr("feedback.daily_budget_missing", language),
                 }
             )
 
@@ -83,11 +80,7 @@ class FeedbackRepository:
                     "code": "daily_no_savings_goal",
                     "message_type": "daily_context",
                     "priority": 70,
-                    "message": (
-                        "Aún estás a tiempo de empezar a ahorrar este mes. Definir una meta, aunque sea pequeña, marca la diferencia."
-                        if language == "es"
-                        else "You still have time to start saving this month. Setting even a small goal makes a difference."
-                    ),
+                    "message": tr("feedback.daily_no_savings_goal", language),
                 }
             )
 
@@ -104,11 +97,7 @@ class FeedbackRepository:
                     "code": "daily_no_transactions",
                     "message_type": "daily_context",
                     "priority": 80,
-                    "message": (
-                        "Aún puedes retomar el control: registra tus movimientos para entender mejor cómo va tu mes."
-                        if language == "es"
-                        else "You can still regain control: record your transactions to better understand your month."
-                    ),
+                    "message": tr("feedback.daily_no_transactions", language),
                 }
             )
 
@@ -317,7 +306,7 @@ class FeedbackRepository:
         goal = float(context["income_goal"])
         prev_income = float(context["income_actual_prev"])
         current_income = float(context["income_actual"])
-        language = (self.get_setting("language") or "en").strip().lower()
+        language = self._database_language()
         candidates: list[dict[str, Any]] = []
 
         if goal > 0 and self._crossed_up(prev_income, current_income, goal):
@@ -325,11 +314,7 @@ class FeedbackRepository:
                 {
                     "code": "income_goal_100",
                     "message_type": "realtime_insight",
-                    "message": (
-                        "Has cumplido con tus ingresos estimados del mes."
-                        if language == "es"
-                        else "You reached your expected monthly income goal."
-                    ),
+                    "message": tr("feedback.income_goal_100", language),
                     "priority": MESSAGE_PRIORITY["INSIGHT_CRITICAL"] - 5,
                     "specificity": 50,
                 }
@@ -339,11 +324,7 @@ class FeedbackRepository:
                 {
                     "code": "income_goal_80",
                     "message_type": "realtime_insight",
-                    "message": (
-                        "Ya alcanzaste el 80% de tu meta de ingresos."
-                        if language == "es"
-                        else "You have reached 80% of your monthly income goal."
-                    ),
+                    "message": tr("feedback.income_goal_80", language),
                     "priority": MESSAGE_PRIORITY["INSIGHT_WARNING"] - 10,
                     "specificity": 40,
                 }
@@ -353,11 +334,7 @@ class FeedbackRepository:
                 {
                     "code": "income_goal_110",
                     "message_type": "realtime_insight",
-                    "message": (
-                        "Superaste tu meta de ingresos. ¡Buen trabajo!"
-                        if language == "es"
-                        else "You exceeded your income goal. Great work!"
-                    ),
+                    "message": tr("feedback.income_goal_110", language),
                     "priority": MESSAGE_PRIORITY["INSIGHT_WARNING"] + 5,
                     "specificity": 45,
                 }
@@ -367,11 +344,7 @@ class FeedbackRepository:
                 {
                     "code": "income_recovery",
                     "message_type": "realtime_insight",
-                    "message": (
-                        "Vas recuperando tu ritmo de ingresos este mes."
-                        if language == "es"
-                        else "You are recovering your income pace this month."
-                    ),
+                    "message": tr("feedback.income_recovery", language),
                     "priority": MESSAGE_PRIORITY["INSIGHT_INFO"],
                     "specificity": 35,
                 }
@@ -382,11 +355,7 @@ class FeedbackRepository:
                 {
                     "code": "income_unusual_high",
                     "message_type": "realtime_insight",
-                    "message": (
-                        "Este ingreso es mayor a lo habitual."
-                        if language == "es"
-                        else "This income is higher than usual."
-                    ),
+                    "message": tr("feedback.income_unusual_high", language),
                     "priority": MESSAGE_PRIORITY["INSIGHT_INFO"] - 5,
                     "specificity": 20,
                     "cooldown_scope": "day",
@@ -396,7 +365,7 @@ class FeedbackRepository:
 
     def evaluate_expense_kpis(self, tx: dict[str, Any], context: dict[str, Any]) -> list[dict[str, Any]]:
         amount = float(tx.get("amount") or 0.0)
-        language = (self.get_setting("language") or "en").strip().lower()
+        language = self._database_language()
         category_name = context.get("category_name") or (tx.get("category") or "esta categoría")
         category_budget = float(context["category_budget"])
         category_prev = float(context["category_spent_prev"])
@@ -411,11 +380,7 @@ class FeedbackRepository:
                 {
                     "code": "expense_category_100",
                     "message_type": "realtime_insight",
-                    "message": (
-                        f"Has superado tu presupuesto de {category_name}."
-                        if language == "es"
-                        else f"You exceeded your {category_name} budget."
-                    ),
+                    "message": tr("feedback.expense_category_100", language, params={"category_name": category_name}),
                     "priority": MESSAGE_PRIORITY["INSIGHT_CRITICAL"],
                     "specificity": 50,
                 }
@@ -427,11 +392,7 @@ class FeedbackRepository:
                 {
                     "code": "expense_category_90",
                     "message_type": "realtime_insight",
-                    "message": (
-                        f"Estás por agotar tu presupuesto de {category_name} (90%)."
-                        if language == "es"
-                        else f"You are close to exhausting your {category_name} budget (90%)."
-                    ),
+                    "message": tr("feedback.expense_category_90", language, params={"category_name": category_name}),
                     "priority": MESSAGE_PRIORITY["INSIGHT_WARNING"],
                     "specificity": 40,
                     "cooldown_scope": "period_category",
@@ -443,11 +404,7 @@ class FeedbackRepository:
                 {
                     "code": "expense_total_100",
                     "message_type": "realtime_insight",
-                    "message": (
-                        "Has superado tu presupuesto total del mes."
-                        if language == "es"
-                        else "You exceeded your total monthly budget."
-                    ),
+                    "message": tr("feedback.expense_total_100", language),
                     "priority": MESSAGE_PRIORITY["INSIGHT_CRITICAL"] - 2,
                     "specificity": 45,
                 }
@@ -463,11 +420,7 @@ class FeedbackRepository:
                 {
                     "code": "expense_high_pace",
                     "message_type": "realtime_insight",
-                    "message": (
-                        "Estás gastando más rápido de lo previsto este mes."
-                        if language == "es"
-                        else "You are spending faster than planned this month."
-                    ),
+                    "message": tr("feedback.expense_high_pace", language),
                     "priority": MESSAGE_PRIORITY["INSIGHT_WARNING"] - 5,
                     "specificity": 30,
                 }
@@ -478,11 +431,7 @@ class FeedbackRepository:
                 {
                     "code": "expense_unusual_high",
                     "message_type": "realtime_insight",
-                    "message": (
-                        f"Este gasto en {category_name} es más alto de lo habitual."
-                        if language == "es"
-                        else f"This {category_name} expense is higher than usual."
-                    ),
+                    "message": tr("feedback.expense_unusual_high", language, params={"category_name": category_name}),
                     "priority": MESSAGE_PRIORITY["INSIGHT_INFO"],
                     "specificity": 20,
                     "cooldown_scope": "day",
@@ -520,7 +469,7 @@ class FeedbackRepository:
         *,
         source: str | None = None,
     ) -> list[dict[str, Any]]:
-        language = (self.get_setting("language") or "en").strip().lower()
+        language = self._database_language()
         tx_type = str(tx.get("type") or "")
         amount = float(tx.get("amount") or 0.0)
         period_key = str(context["period_key"])
@@ -536,10 +485,10 @@ class FeedbackRepository:
                         {
                             "code": f"achievement_nl_transactions_{milestone}",
                             "message_type": "achievement",
-                            "message": (
-                                f"¡Logro desbloqueado! Registraste {milestone} transacciones con el asistente."
-                                if language == "es"
-                                else f"Achievement unlocked! You recorded {milestone} transactions with the assistant."
+                            "message": tr(
+                                "feedback.achievement_nl_transactions",
+                                language,
+                                params={"milestone": milestone},
                             ),
                             "priority": MESSAGE_PRIORITY["ACHIEVEMENT_LOW"] + 10,
                             "cooldown_scope": "period",
@@ -555,10 +504,10 @@ class FeedbackRepository:
                     {
                         "code": f"achievement_mira_report_views_{milestone}",
                         "message_type": "achievement",
-                        "message": (
-                            f"¡Gran hábito! Ya consultaste el Reporte Maestro MIRA {milestone} veces."
-                            if language == "es"
-                            else f"Great habit! You have reviewed the MIRA Master Report {milestone} times."
+                        "message": tr(
+                            "feedback.achievement_mira_report_views",
+                            language,
+                            params={"milestone": milestone},
                         ),
                         "priority": MESSAGE_PRIORITY["ACHIEVEMENT_LOW"],
                         "cooldown_scope": "period",
@@ -575,10 +524,10 @@ class FeedbackRepository:
                         {
                             "code": f"achievement_savings_contributions_{milestone}",
                             "message_type": "achievement",
-                            "message": (
-                                f"¡Excelente! Destinaste fondos al ahorro {milestone} veces."
-                                if language == "es"
-                                else f"Great! You have allocated money to savings {milestone} times."
+                            "message": tr(
+                                "feedback.achievement_savings_contributions",
+                                language,
+                                params={"milestone": milestone},
                             ),
                             "priority": MESSAGE_PRIORITY["ACHIEVEMENT_MEDIUM"],
                             "cooldown_scope": "period",
@@ -595,11 +544,7 @@ class FeedbackRepository:
                 {
                     "code": "achievement_income_goal_met",
                     "message_type": "achievement",
-                    "message": (
-                        "¡Logro desbloqueado! Cumpliste tu meta de ingresos de este mes."
-                        if language == "es"
-                        else "Achievement unlocked! You met your income goal this month."
-                    ),
+                    "message": tr("feedback.achievement_income_goal_met", language),
                     "priority": MESSAGE_PRIORITY["ACHIEVEMENT_CRITICAL"],
                     "cooldown_scope": "period",
                 }
@@ -623,11 +568,7 @@ class FeedbackRepository:
                     {
                         "code": "achievement_income_above_historical_avg",
                         "message_type": "achievement",
-                        "message": (
-                            "¡Buen avance! Este ingreso superó tu promedio histórico."
-                            if language == "es"
-                            else "Great progress! This income exceeded your historical average."
-                        ),
+                        "message": tr("feedback.achievement_income_above_historical_avg", language),
                         "priority": MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"] + 5,
                         "cooldown_scope": "day",
                     }
@@ -640,11 +581,7 @@ class FeedbackRepository:
                 {
                     "code": "achievement_saved_this_month",
                     "message_type": "achievement",
-                    "message": (
-                        "¡Excelente inicio! Ya registraste ahorro este mes."
-                        if language == "es"
-                        else "Great start! You have already saved money this month."
-                    ),
+                    "message": tr("feedback.achievement_saved_this_month", language),
                     "priority": MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"],
                     "cooldown_scope": "period",
                 }
@@ -663,11 +600,7 @@ class FeedbackRepository:
                 {
                     "code": "achievement_savings_vs_previous_month",
                     "message_type": "achievement",
-                    "message": (
-                        "¡Bien hecho! Tu ahorro de este mes ya supera al mes anterior."
-                        if language == "es"
-                        else "Well done! Your savings this month already exceed last month."
-                    ),
+                    "message": tr("feedback.achievement_savings_vs_previous_month", language),
                     "priority": MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"] + 15,
                     "cooldown_scope": "period",
                 }
@@ -682,11 +615,7 @@ class FeedbackRepository:
                 {
                     "code": "achievement_savings_three_month_streak",
                     "message_type": "achievement",
-                    "message": (
-                        "¡Constancia lograda! Mantienes ahorro durante 3 meses consecutivos."
-                        if language == "es"
-                        else "Consistency unlocked! You have kept savings for 3 consecutive months."
-                    ),
+                    "message": tr("feedback.achievement_savings_three_month_streak", language),
                     "priority": MESSAGE_PRIORITY["ACHIEVEMENT_CRITICAL"] + 5,
                     "cooldown_scope": "period",
                 }

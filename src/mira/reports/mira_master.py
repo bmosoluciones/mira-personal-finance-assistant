@@ -264,7 +264,7 @@ def _report_text(
     *,
     params: dict[str, Any] | None = None,
 ) -> str:
-    text = es if language == "es" else en
+    text = {"es": es, "en": en}.get(language) or en
     if params:
         return text.format(**params)
     return text
@@ -2225,8 +2225,8 @@ class ReportMessageGenerator:
                 "Your Freedom Margin is {pct:.1f}%. Zone: {zone}. {tone}",
                 params={
                     "pct": freedom_margin_pct,
-                    "zone": freedom_zone_text_es if self._language == "es" else freedom_zone_text_en,
-                    "tone": freedom_tone_es if self._language == "es" else freedom_tone_en,
+                    "zone": self._t(freedom_zone_text_es, freedom_zone_text_en),
+                    "tone": self._t(freedom_tone_es, freedom_tone_en),
                 },
             ),
             always=True,
