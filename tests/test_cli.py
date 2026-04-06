@@ -35,7 +35,8 @@ def _set_user_version(path: Path, version: int) -> None:
 def _create_legacy_float_database(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE accounts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -45,7 +46,8 @@ def _create_legacy_float_database(path: Path) -> None:
                 is_default INTEGER DEFAULT 0,
                 created_at TEXT
             )
-            """)
+            """
+        )
         conn.commit()
 
 
@@ -457,3 +459,48 @@ def test_cli_restore_rejects_legacy_backup(
 
     assert restore_exit == 2
     assert "Pre-0.0.1a2 backups remain unsupported" in captured.err
+
+
+def test_cli_version_uses_importlib_metadata(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(cli_module.metadata, "version", lambda _name: "9.9.9")
+
+    exit_code = cli_module.main(["--version"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert captured.out.strip() == "9.9.9"
+
+
+def test_cli_check_reports_success(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.setattr(cli_module.importlib, "import_module", lambda _name: object())
+
+    exit_code = cli_module.main(["--check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "Check OK: all required modules imported correctly." in captured.out
+    assert captured.err == ""
+
+
+def test_cli_check_reports_qt_opengl_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    failing_modules = {"PySide6.QtWidgets", "PySide6.QtCharts"}
+    original_import = cli_module.importlib.import_module
+
+    def _fake_import(name: str) -> Any:
+        if name in failing_modules:
+            raise ImportError(f"{name} missing graphics backend")
+        return original_import("sys")
+
+    monkeypatch.setattr(cli_module.importlib, "import_module", _fake_import)
+
+    exit_code = cli_module.main(["--check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "OpenGL/Qt import failed" in captured.err
+    assert "verify graphics dependencies" in captured.err

@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import argparse
+import importlib
+from importlib import metadata
 from pathlib import Path
 import sys
 
@@ -25,8 +27,18 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help=f"Path to the SQLite database file. Defaults to {default_db_path_for_display()}.",
     )
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Print the installed MIRA package version.",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Run a dependency import check for headless/package verification.",
+    )
 
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command")
 
     backup_parser = subparsers.add_parser("backup", help="Create a SQLite backup of the current database.")
     backup_parser.add_argument(
@@ -54,6 +66,59 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _resolve_installed_version() -> str:
+    for package_name in ("mira-personal-finance-assistant", "mira"):
+        try:
+            return metadata.version(package_name)
+        except metadata.PackageNotFoundError:
+            continue
+    return "unknown"
+
+
+def _run_import_check() -> int:
+    modules_to_probe = (
+        "mira",
+        "mira.db.database",
+        "PySide6",
+        "PySide6.QtCore",
+        "PySide6.QtGui",
+        "qt_material",
+    )
+    open_gl_modules = ("PySide6.QtWidgets", "PySide6.QtCharts")
+    failures: list[tuple[str, str]] = []
+    opengl_failures: list[tuple[str, str]] = []
+
+    for module_name in modules_to_probe:
+        try:
+            importlib.import_module(module_name)
+        except Exception as exc:  # pragma: no cover - exercised through CLI tests
+            failures.append((module_name, str(exc)))
+
+    for module_name in open_gl_modules:
+        try:
+            importlib.import_module(module_name)
+        except Exception as exc:  # pragma: no cover - exercised through CLI tests
+            opengl_failures.append((module_name, str(exc)))
+
+    if not failures and not opengl_failures:
+        print("Check OK: all required modules imported correctly.")
+        return 0
+
+    if failures:
+        for module_name, error in failures:
+            print(f"Check FAIL: cannot import {module_name}: {error}", file=sys.stderr)
+
+    if opengl_failures:
+        for module_name, error in opengl_failures:
+            print(f"Check FAIL: OpenGL/Qt import failed in {module_name}: {error}", file=sys.stderr)
+        print(
+            "Recommendation: verify graphics dependencies (Qt/PySide6/OpenGL/EGL) in the target environment.",
+            file=sys.stderr,
+        )
+
+    return 1
+
+
 def _open_database(path: str | None) -> Database:
     db = Database(path=path)
     try:
@@ -66,6 +131,17 @@ def _open_database(path: str | None) -> Database:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+
+    if args.version:
+        print(_resolve_installed_version())
+        return 0
+
+    if args.check:
+        return _run_import_check()
+
+    if args.command is None:
+        parser.error("A command is required unless --version or --check is used.")
+        return 2
 
     db = _open_database(args.db)
     try:
