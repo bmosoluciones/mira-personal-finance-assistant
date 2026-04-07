@@ -1115,8 +1115,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "setup.page.currency.thousands_label": "Thousands separator:",
         "setup.page.currency.decimal_label": "Decimal separator:",
         "setup.page.currency.hint": (
-            "Example: thousands ',' and decimal '.' -> 1,234.56\n"
-            "         thousands '.' and decimal ',' -> 1.234,56"
+            "Example: thousands ',' and decimal '.' -> 1,234.56\n" "         thousands '.' and decimal ',' -> 1.234,56"
         ),
         "setup.page.accounts.title": "Your accounts",
         "setup.page.accounts.subtitle": (

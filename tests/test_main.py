@@ -18,6 +18,7 @@ import pytest
 from conftest import opengl_import_error
 from mira import main as main_module
 from mira.ai.executor import ActionResult
+from mira.db.database import Database
 
 
 def _import_main_window_or_xfail_headless() -> types.ModuleType:
@@ -79,6 +80,19 @@ class _FakeDatabase:
     def close(self) -> None:
         self.cleanup_events.append("db.close")
         self.closed = True
+
+
+class _DummyPipeline:
+    def __init__(self) -> None:
+        self.llm_ready = False
+        self.engine = object()
+        self._model_path = None
+
+    def reload_engine(self, model_path: str | None = None) -> None:
+        self._model_path = model_path
+
+    def shutdown(self) -> None:
+        return None
 
 
 def _install_fake_runtime(
@@ -432,6 +446,52 @@ def test_main_window_no_longer_uses_startup_model_offer() -> None:
 def test_main_window_no_longer_exposes_start_model_download() -> None:
     main_window_module = _import_main_window_or_xfail_headless()
     assert not hasattr(main_window_module.MainWindow, "_start_model_download")
+
+
+def test_main_window_uses_laptop_friendly_splitters(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    main_window_module = _import_main_window_or_xfail_headless()
+    db = Database(path=tmp_path / "main-window-layout.db")
+    db.connect()
+    db.setting.set("language", "es")
+    db.setting.set("onboarding_completed", "1")
+    db.setting.set("theme", "dark_teal.xml")
+
+    monkeypatch.setattr(main_window_module.MainWindow, "_qt_material_themes", staticmethod(lambda: ["dark_teal.xml"]))
+    monkeypatch.setattr(main_window_module.MainWindow, "_apply_theme", staticmethod(lambda _theme: None))
+    monkeypatch.setattr(main_window_module.MainWindow, "_run_initial_setup_if_needed", lambda self: None)
+
+    window = main_window_module.MainWindow(db, _DummyPipeline())
+
+    try:
+        window.show()
+        app.processEvents()
+
+        assert window._content_splitter.count() == 2
+        assert window._main_splitter.count() == 2
+        assert window._response_browser.maximumHeight() == main_window_module._CHAT_RESPONSE_MAX_HEIGHT
+        assert window._sidebar_host.width() <= main_window_module._SIDEBAR_MAX_WIDTH
+        assert window._logo_panel.width() == window._sidebar_host.width()
+
+        content_height, footer_height = window._main_splitter.sizes()
+        assert content_height > footer_height
+
+        window._toggle_chat_content()
+        app.processEvents()
+
+        assert window._chat_content.isVisible() is False
+        assert window._logo_avatar.isVisible() is False
+        assert window._main_splitter.sizes()[1] <= main_window_module._CHAT_PANEL_COLLAPSED_HEIGHT + 12
+
+        window._toggle_chat_content()
+        app.processEvents()
+
+        assert window._chat_content.isVisible() is True
+        assert window._logo_avatar.isVisible() is False
+        assert window._logo_title.isVisible() is True
+    finally:
+        window.close()
+        db.close()
 
 
 def test_data_analysis_action_routes_to_mira_view() -> None:

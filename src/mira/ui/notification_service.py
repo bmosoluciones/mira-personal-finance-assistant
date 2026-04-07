@@ -69,6 +69,11 @@ class NotificationService:
         if hasattr(action, "setChecked"):
             action.setChecked(True)
 
+        expand_panel = getattr(self._ui, "_set_chat_panel_expanded", None)
+        if callable(expand_panel):
+            expand_panel(True)
+            return
+
         chat_content = getattr(self._ui, "_chat_content", None)
         if hasattr(chat_content, "setVisible"):
             chat_content.setVisible(True)

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHeaderView,
     QLabel,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -46,13 +47,23 @@ class LoanAmortizationDialog(QDialog):
 
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(10)
+        root.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        root.addWidget(scroll)
+
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(16, 16, 16, 16)
+        content_layout.setSpacing(10)
+        scroll.setWidget(content)
 
         self._message = QLabel()
         self._message.setWordWrap(True)
         self._message.setStyleSheet("color:#9FB3C8;")
-        root.addWidget(self._message)
+        content_layout.addWidget(self._message)
 
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -93,16 +104,16 @@ class LoanAmortizationDialog(QDialog):
                 method,
             )
         form.addRow(tr("tools.loan_amortization.method", self._language, default="Amortization method"), self._method)
-        root.addLayout(form)
+        content_layout.addLayout(form)
 
         self._summary = QLabel()
         self._summary.setWordWrap(True)
         self._summary.setStyleSheet("font-weight:600;")
-        root.addWidget(self._summary)
+        content_layout.addWidget(self._summary)
 
         self._chart_view = QChartView()
         self._chart_view.setMinimumHeight(250)
-        root.addWidget(self._chart_view)
+        content_layout.addWidget(self._chart_view)
 
         self._table = QTableWidget()
         self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -121,7 +132,8 @@ class LoanAmortizationDialog(QDialog):
             ]
         )
         self._table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        root.addWidget(self._table, 1)
+        self._table.setMinimumHeight(260)
+        content_layout.addWidget(self._table)
 
         for widget in (self._loan_amount, self._annual_rate, self._frequency, self._years, self._method):
             if isinstance(widget, QComboBox):
