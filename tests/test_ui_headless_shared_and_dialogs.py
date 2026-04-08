@@ -75,7 +75,9 @@ def test_shared_helpers_cover_notifications_formatting_and_selection(monkeypatch
     selected = module._select_row_at_pos(table, qt.QtCore.QPoint(4, 5))
 
     transfer_text, transfer_color = module._tx_type_indicator({"is_transfer": 1}, {"savings"})
+    adjustment_text, adjustment_color = module._tx_type_indicator({"payment_method": "balance_adjustment"}, {"savings"})
     savings_item = module._make_tx_type_item({"type": "expense", "category": "savings"}, {"savings"})
+    adjustment_item = module._make_tx_type_item({"payment_method": "balance_adjustment"}, {"savings"})
     qdate = module._date_to_qdate(date(2026, 4, 1))
     scroll, content, layout = module._build_scrollable_container(widget)
     chart_view = qt.QtCharts.QChartView()
@@ -93,9 +95,12 @@ def test_shared_helpers_cover_notifications_formatting_and_selection(monkeypatch
     assert table.selected_row == 3
     assert transfer_text == "↔ transfer"
     assert transfer_color.value == "#D7BA7D"
+    assert adjustment_text == "~ adjustment"
+    assert adjustment_color.value == "#7AA2F7"
     assert savings_item.text() == "@ savings"
     assert savings_item.data(module._TYPE_BADGE_ROLE) == "savings"
     assert savings_item.foreground.color.value == "#569CD6"
+    assert adjustment_item.data(module._TYPE_BADGE_ROLE) == "adjustment"
     assert (qdate.year, qdate.month, qdate.day) == (2026, 4, 1)
     assert scroll.widget is content
     assert layout.spacing == 10

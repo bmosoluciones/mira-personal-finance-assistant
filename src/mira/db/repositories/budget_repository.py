@@ -13,6 +13,7 @@ from peewee import JOIN, Case, IntegrityError as PeeweeIntegrityError, fn
 from mira.db.errors import BudgetValidationError, DuplicateBudgetCodeError
 from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.db.model import Account, BudgetDetail, BudgetMaster, Category, Transaction
+from mira.transaction_kinds import analytics_included_expr, is_analytics_excluded_transaction
 
 
 class BudgetRepository:
@@ -176,9 +177,7 @@ class BudgetRepository:
         query = (
             Transaction.select()
             .where(
-                (fn.COALESCE(Transaction.is_transfer, 0) == 0)
-                & (Transaction.date >= start_date)
-                & (Transaction.date <= end_date)
+                analytics_included_expr(Transaction) & (Transaction.date >= start_date) & (Transaction.date <= end_date)
             )
             .order_by(Transaction.date, Transaction.id)
         )
@@ -233,7 +232,7 @@ class BudgetRepository:
             .switch(tx)
             .join(linked_category, JOIN.LEFT_OUTER, on=(tx.category_id == linked_category.id))
             .where(
-                (fn.COALESCE(tx.is_transfer, 0) == 0)
+                analytics_included_expr(tx)
                 & (tx.date >= start_date)
                 & (tx.date <= end_date)
                 & (tx.type << list(tx_types))
@@ -277,6 +276,7 @@ class BudgetRepository:
                 Transaction.category,
                 Transaction.category_id,
                 Transaction.is_transfer,
+                Transaction.payment_method,
             )
             .where((Transaction.date >= date(1900, 1, 1)) & (Transaction.date <= date(budget_year - 1, 12, 31)))
             .order_by(Transaction.date.desc(), Transaction.id.desc())
@@ -284,7 +284,7 @@ class BudgetRepository:
 
         active_months_by_year: dict[int, set[str]] = defaultdict(set)
         for tx in query:
-            if bool(tx.is_transfer):
+            if is_analytics_excluded_transaction(tx):
                 continue
             tx_type = str(tx.type or "")
             tx_category = str(tx.category or "").strip().casefold()

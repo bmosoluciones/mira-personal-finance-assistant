@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QSpinBox,
@@ -43,10 +44,17 @@ from PySide6.QtWidgets import (
     QWizardPage,
 )
 
+from mira.app.view_services import AccountsViewService
 from mira.db.database import CURRENCY_CODES, Database
 from mira.ui.i18n import normalize_language, tr
 from mira.ui.notifications import show_user_message
-from mira.ui.number_format import NumberMaskedSpinBox, separator_options, validate_number_format_config
+from mira.ui.number_format import (
+    NumberMaskedSpinBox,
+    format_number,
+    get_number_format_config,
+    separator_options,
+    validate_number_format_config,
+)
 
 # ---------------------------------------------------------------------------
 # Shared style
@@ -124,6 +132,12 @@ def _make_balance_spin(db: Database) -> QDoubleSpinBox:
     spin.setDecimals(2)
     spin.setValue(0.00)
     return spin
+
+
+def _format_amount_label(db: Database, amount: float, currency: str | None = None) -> str:
+    formatted = format_number(float(amount), get_number_format_config(db.setting), decimals=2, grouping=True)
+    normalized_currency = str(currency or "").strip().upper()
+    return f"{normalized_currency} {formatted}" if normalized_currency else formatted
 
 
 def _make_date_edit(default: date | None = None) -> QDateEdit:
@@ -2143,6 +2157,252 @@ class TransferDialog(QDialog):
             "converted_amount": self._converted_amount_spin.value(),
             "tx_date": self._date_edit.date().toString("yyyy-MM-dd"),
             "description": self._desc_edit.text().strip() or None,
+            "note": self._note_edit.toPlainText().strip() or None,
+        }
+
+
+# ---------------------------------------------------------------------------
+# BalanceAdjustmentDialog
+# ---------------------------------------------------------------------------
+
+
+class BalanceAdjustmentDialog(QDialog):
+    """Create or edit a balance adjustment for eligible accounts."""
+
+    def __init__(
+        self,
+        db: Database,
+        parent: QWidget | None = None,
+        *,
+        account_id: int | None = None,
+        tx: dict | None = None,
+        service: AccountsViewService | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._db = db
+        self._service = service or AccountsViewService(db)
+        self._tx = tx
+        self._transaction_id = int(tx["id"]) if tx and tx.get("id") is not None else None
+        self._requested_account_id = account_id
+        self._warn_before_creation_date = False
+        self._accounts = self._service.list_balance_adjustment_accounts()
+        self.setWindowTitle(self._dialog_title())
+        self.setMinimumWidth(620)
+        self._build_ui()
+        if self._tx is not None:
+            self._prefill(self._tx)
+        elif self._requested_account_id is not None:
+            self._set_account(self._requested_account_id)
+        self._refresh_preview()
+
+    def _dialog_title(self) -> str:
+        return _transfer_tr(self._db, "dialog.adjustment.title", "Balance adjustment")
+
+    def _save_button_text(self) -> str:
+        if self._tx is not None:
+            return _transfer_tr(self._db, "dialog.adjustment.save.edit", "Update adjustment")
+        return _transfer_tr(self._db, "dialog.adjustment.save.create", "Save adjustment")
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setSpacing(10)
+
+        title = QLabel(self._dialog_title())
+        title.setStyleSheet("font-size:28px;font-weight:700;padding-bottom:4px;")
+        layout.addWidget(title)
+
+        selectors = QHBoxLayout()
+
+        left = QFormLayout()
+        left.setSpacing(10)
+        self._account_combo = QComboBox()
+        self._account_combo.setEditable(False)
+        for account in self._accounts:
+            label = f"{account['name']} ({account.get('currency', 'USD')})"
+            self._account_combo.addItem(label, int(account["id"]))
+        left.addRow(
+            _transfer_tr(self._db, "dialog.adjustment.account", "Account:"),
+            self._account_combo,
+        )
+
+        self._date_edit = _make_date_edit()
+        left.addRow(
+            _transfer_tr(self._db, "dialog.adjustment.date", "Date:"),
+            self._date_edit,
+        )
+        selectors.addLayout(left, 1)
+
+        right = QFormLayout()
+        right.setSpacing(10)
+        self._currency_value = QLineEdit()
+        self._currency_value.setReadOnly(True)
+        right.addRow(
+            _transfer_tr(self._db, "dialog.adjustment.currency", "Currency:"),
+            self._currency_value,
+        )
+        selectors.addLayout(right, 1)
+        layout.addLayout(selectors)
+
+        self._balance_as_of_label = QLabel(
+            _transfer_tr(self._db, "dialog.adjustment.balance_as_of", "Balance at selected date:")
+        )
+        layout.addWidget(self._balance_as_of_label)
+        self._balance_as_of_value = QLabel("")
+        self._balance_as_of_value.setStyleSheet("font-size:24px;font-weight:700;color:#D7BA7D;")
+        layout.addWidget(self._balance_as_of_value)
+
+        self._amount_label = QLabel(_transfer_tr(self._db, "dialog.adjustment.amount", "Adjustment amount:"))
+        layout.addWidget(self._amount_label)
+        self._signed_amount_spin = _make_balance_spin(self._db)
+        self._signed_amount_spin.setButtonSymbols(QDoubleSpinBox.ButtonSymbols.NoButtons)
+        self._signed_amount_spin.setStyleSheet(_hero_amount_spin_style("#D7BA7D"))
+        layout.addWidget(self._signed_amount_spin)
+
+        self._projected_balance_label = QLabel(
+            _transfer_tr(self._db, "dialog.adjustment.projected_balance", "Balance after adjustment:")
+        )
+        layout.addWidget(self._projected_balance_label)
+        self._projected_balance_value = QLabel("")
+        self._projected_balance_value.setStyleSheet("font-size:24px;font-weight:700;color:#4EC9B0;")
+        layout.addWidget(self._projected_balance_value)
+
+        self._warning_label = QLabel(
+            _transfer_tr(
+                self._db,
+                "dialog.adjustment.warning.before_creation",
+                "The selected date is earlier than this account's creation date in MIRA.",
+            )
+        )
+        self._warning_label.setWordWrap(True)
+        self._warning_label.setStyleSheet(_NOTICE_LABEL_STYLE + "background:#472624;color:#FFB0A3;")
+        self._warning_label.hide()
+        layout.addWidget(self._warning_label)
+
+        note_label = QLabel(_transfer_tr(self._db, "dialog.adjustment.note", "Note:"))
+        layout.addWidget(note_label)
+        self._note_edit = QTextEdit()
+        self._note_edit.setMaximumHeight(90)
+        self._note_edit.setPlaceholderText(
+            _transfer_tr(self._db, "dialog.adjustment.note.placeholder", "Optional reconciliation note…")
+        )
+        layout.addWidget(self._note_edit)
+
+        self._account_combo.currentIndexChanged.connect(lambda *_args: self._refresh_preview())
+        self._date_edit.dateChanged.connect(lambda *_args: self._refresh_preview())
+        self._signed_amount_spin.valueChanged.connect(lambda *_args: self._refresh_preview())
+
+        action_row = QHBoxLayout()
+        cancel_btn = QPushButton(_transfer_tr(self._db, "dialog.common.cancel", "Cancel"))
+        cancel_btn.clicked.connect(self.reject)
+        self._save_btn = QPushButton(self._save_button_text())
+        self._save_btn.clicked.connect(self._on_accept)
+        cancel_btn.setStyleSheet(_SECONDARY_ACTION_BUTTON_STYLE)
+        self._save_btn.setStyleSheet(_PRIMARY_ACTION_BUTTON_STYLE)
+        action_row.addWidget(cancel_btn)
+        action_row.addWidget(self._save_btn)
+        layout.addLayout(action_row)
+
+    def _set_account(self, account_id: int) -> None:
+        for index in range(self._account_combo.count()):
+            if int(self._account_combo.itemData(index)) == int(account_id):
+                self._account_combo.setCurrentIndex(index)
+                return
+
+    @staticmethod
+    def _signed_amount_from_transaction(tx: dict) -> float:
+        amount = float(tx.get("amount") or 0.0)
+        return amount if str(tx.get("type") or "") == "income" else -amount
+
+    def _prefill(self, tx: dict) -> None:
+        self._set_account(int(tx.get("account_id") or 0))
+        if tx.get("date"):
+            tx_day = date.fromisoformat(str(tx["date"]))
+            from PySide6.QtCore import QDate
+
+            self._date_edit.setDate(QDate(tx_day.year, tx_day.month, tx_day.day))
+        self._signed_amount_spin.setValue(self._signed_amount_from_transaction(tx))
+        self._note_edit.setPlainText(str(tx.get("note") or ""))
+
+    def _update_amount_style(self) -> None:
+        amount = self._signed_amount_spin.value()
+        if amount > 0:
+            color = "#4EC9B0"
+        elif amount < 0:
+            color = "#F48771"
+        else:
+            color = "#D7BA7D"
+        self._signed_amount_spin.setStyleSheet(_hero_amount_spin_style(color))
+
+    def _refresh_preview(self) -> None:
+        self._update_amount_style()
+        account_id = self._account_combo.currentData()
+        tx_date = self._date_edit.date().toString("yyyy-MM-dd")
+        preview = self._service.preview_balance_adjustment(
+            int(account_id) if account_id is not None else None,
+            tx_date,
+            float(self._signed_amount_spin.value()),
+            exclude_transaction_id=self._transaction_id,
+        )
+        currency = preview.currency
+        self._currency_value.setText(currency)
+        self._amount_label.setText(
+            _transfer_tr(
+                self._db,
+                "dialog.adjustment.amount.currency",
+                "Adjustment amount ({currency}):",
+                currency=currency or str(self._db.setting.get_default_currency() or "USD"),
+            )
+        )
+        self._balance_as_of_value.setText(_format_amount_label(self._db, preview.balance_as_of, currency))
+        self._projected_balance_value.setText(_format_amount_label(self._db, preview.projected_balance, currency))
+        self._warn_before_creation_date = bool(preview.warn_before_creation_date)
+        self._warning_label.setVisible(self._warn_before_creation_date)
+
+    def _on_accept(self) -> None:
+        val_title = _transfer_tr(self._db, "dialog.adjustment.validation.title", "Validation")
+        if self._account_combo.count() == 0:
+            _notify_warning(
+                self,
+                val_title,
+                _transfer_tr(
+                    self._db,
+                    "dialog.adjustment.validation.accounts",
+                    "There are no eligible accounts for this operation.",
+                ),
+            )
+            return
+        if self._signed_amount_spin.value() == 0:
+            _notify_warning(
+                self,
+                val_title,
+                _transfer_tr(
+                    self._db,
+                    "dialog.adjustment.validation.amount",
+                    "Adjustment amount must be different from zero.",
+                ),
+            )
+            return
+        if self._warn_before_creation_date:
+            reply = QMessageBox.question(
+                self,
+                _transfer_tr(self._db, "dialog.adjustment.warning.title", "Confirm balance adjustment"),
+                _transfer_tr(
+                    self._db,
+                    "dialog.adjustment.warning.confirm",
+                    "The selected date is earlier than the account creation date in MIRA. Do you want to continue?",
+                ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+        self.accept()
+
+    def get_data(self) -> dict[str, object]:
+        return {
+            "account_id": self._account_combo.currentData(),
+            "tx_date": self._date_edit.date().toString("yyyy-MM-dd"),
+            "signed_amount": float(self._signed_amount_spin.value()),
             "note": self._note_edit.toPlainText().strip() or None,
         }
 

@@ -30,6 +30,7 @@ from mira.app.view_services import (
     TransactionsViewState,
 )
 from mira.db.database import Database
+from mira.transaction_kinds import is_balance_adjustment_transaction
 from mira.ui.views._shared import (
     _COMBO_STYLE,
     _DATE_STYLE,
@@ -272,6 +273,16 @@ class TransactionsView(QWidget):
             return None
         return self._tx_data[row]
 
+    def _adjustment_action_blocked_message(self) -> str:
+        return _tr_db(
+            self._db,
+            "transactions.balance_adjustment.blocked",
+            "Balance adjustments keep their own workflow. Edit the adjustment directly instead.",
+        )
+
+    def _is_balance_adjustment_selected(self, tx: dict | None) -> bool:
+        return tx is not None and is_balance_adjustment_transaction(tx)
+
     def _on_add(self) -> None:
         from mira.ui.dialogs import TransactionDialog
 
@@ -289,11 +300,20 @@ class TransactionsView(QWidget):
                 )
 
     def _on_edit(self) -> None:
-        from mira.ui.dialogs import TransactionDialog
-
         tx = self._get_selected_tx()
         if tx is None:
             return
+        if self._is_balance_adjustment_selected(tx):
+            from mira.ui.dialogs import BalanceAdjustmentDialog
+
+            dlg = BalanceAdjustmentDialog(self._db, tx=tx, parent=self)
+            if dlg.exec() == BalanceAdjustmentDialog.DialogCode.Accepted:
+                data = dlg.get_data()
+                self._service.update_balance_adjustment(int(tx["id"]), data)
+                self.refresh()
+            return
+        from mira.ui.dialogs import TransactionDialog
+
         dlg = TransactionDialog(self._db, tx=tx, parent=self)
         if dlg.exec() == TransactionDialog.DialogCode.Accepted:
             data = dlg.get_data()
@@ -319,6 +339,13 @@ class TransactionsView(QWidget):
 
         tx = self._get_selected_tx()
         if tx is None:
+            return
+        if self._is_balance_adjustment_selected(tx):
+            _notify_info(
+                self,
+                _tr_db(self._db, "transactions.balance_adjustment.title", "Balance adjustment"),
+                self._adjustment_action_blocked_message(),
+            )
             return
         # Open dialog pre-filled but without the id (creates new)
         dlg = TransactionDialog(self._db, tx=tx, parent=self)
@@ -369,6 +396,13 @@ class TransactionsView(QWidget):
                 _tr_db(self._db, "selection.transaction_required", "Select a transaction first."),
             )
             return
+        if self._is_balance_adjustment_selected(tx):
+            _notify_info(
+                self,
+                _tr_db(self._db, "transactions.balance_adjustment.title", "Balance adjustment"),
+                self._adjustment_action_blocked_message(),
+            )
+            return
 
         accounts = list(self._filter_options.accounts)
         if not accounts:
@@ -416,6 +450,13 @@ class TransactionsView(QWidget):
                 self,
                 _tr_db(self._db, "transactions.change_category.title", "Change Category"),
                 _tr_db(self._db, "selection.transaction_required", "Select a transaction first."),
+            )
+            return
+        if self._is_balance_adjustment_selected(tx):
+            _notify_info(
+                self,
+                _tr_db(self._db, "transactions.balance_adjustment.title", "Balance adjustment"),
+                self._adjustment_action_blocked_message(),
             )
             return
         categories = [cat["name"] for cat in self._filter_options.categories]

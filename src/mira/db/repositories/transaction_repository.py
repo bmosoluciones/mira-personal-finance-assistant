@@ -12,6 +12,13 @@ from peewee import JOIN, Case, fn
 
 from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.db.model import Account, BudgetDetail, Category, Transaction, TransactionTag
+from mira.transaction_kinds import (
+    BALANCE_ADJUSTMENT_PAYMENT_METHOD,
+    analytics_included_expr,
+    is_analytics_excluded_transaction,
+    is_balance_adjustment_transaction,
+    localized_balance_adjustment_description,
+)
 
 
 class TransactionRepository:
@@ -43,6 +50,7 @@ class TransactionRepository:
 
         def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict[str, Any]]: ...
         def get_account_by_id(self, account_id: int) -> dict[str, Any] | None: ...
+        def get_setting(self, key: str) -> str | None: ...
 
     _MAX_TRANSACTION_AMOUNT = 10_000_000_000
 
@@ -76,6 +84,30 @@ class TransactionRepository:
     def _month_window(self, year: int, month: int) -> tuple[str, str]:
         last_day = calendar.monthrange(year, month)[1]
         return f"{year:04d}-{month:02d}-01", f"{year:04d}-{month:02d}-{last_day:02d}"
+
+    def _validate_balance_adjustment_account(self, account_id: int) -> dict[str, Any]:
+        account = self.get_account_by_id(account_id)
+        if account is None:
+            raise ValueError(f"Account {account_id} not found.")
+        if str(account.get("account_type") or "") not in {"bank", "credit"}:
+            raise ValueError("Balance adjustments are only available for bank and credit accounts.")
+        return account
+
+    def _normalize_balance_adjustment_payload(
+        self,
+        account_id: int,
+        signed_amount: MoneyLike,
+        tx_date: str | None,
+    ) -> tuple[str, Decimal, str, str]:
+        self._validate_balance_adjustment_account(account_id)
+        normalized_signed_amount = self._money_to_decimal(signed_amount) or MONEY_ZERO
+        if normalized_signed_amount == MONEY_ZERO:
+            raise ValueError("Balance adjustment amount cannot be zero.")
+        normalized_date = self._validate_tx_date(tx_date or date.today().isoformat())
+        tx_type = "income" if normalized_signed_amount > MONEY_ZERO else "expense"
+        absolute_amount = abs(normalized_signed_amount)
+        description = localized_balance_adjustment_description(self.get_setting("language"))
+        return tx_type, absolute_amount, normalized_date, description
 
     def _serialize_transaction_row(self, row: Transaction) -> dict[str, Any]:
         # Rehydrate exact cents from SQLite into the decimal contract expected
@@ -151,7 +183,7 @@ class TransactionRepository:
                 ),
             )
             .join(Category, JOIN.LEFT_OUTER, on=(Category.id == Transaction.category_id))
-            .where((fn.COALESCE(Transaction.is_transfer, 0) == 0) & (Transaction.date.between(date_start, date_end)))
+            .where(analytics_included_expr(Transaction) & (Transaction.date.between(date_start, date_end)))
             .dicts()
             .get()
         )
@@ -200,7 +232,7 @@ class TransactionRepository:
                     fn.COUNT(Transaction.id).alias("total_count"),
                 )
                 .where(
-                    (fn.COALESCE(Transaction.is_transfer, 0) == 0)
+                    analytics_included_expr(Transaction)
                     & (Transaction.type == "expense")
                     & (Transaction.category_id == category_id)
                     & (Transaction.date.between(date_start, date_end))
@@ -315,9 +347,13 @@ class TransactionRepository:
             self.update_account_balance(account_id, delta)
             tx_data = self._serialize_transaction_row(tx)
             self._apply_savings_goal_delta_for_transaction(tx_data, sign=1)
-        achievement, insight = self.select_best_operation_message(tx_data, source=source)
-        tx_data["mira_achievement"] = achievement
-        tx_data["mira_insight"] = insight
+        if is_analytics_excluded_transaction(tx_data):
+            tx_data["mira_achievement"] = None
+            tx_data["mira_insight"] = None
+        else:
+            achievement, insight = self.select_best_operation_message(tx_data, source=source)
+            tx_data["mira_achievement"] = achievement
+            tx_data["mira_insight"] = insight
         return tx_data
 
     def get_transaction_by_id(self, tx_id: int) -> dict | None:
@@ -631,4 +667,72 @@ class TransactionRepository:
             exchange_rate=exchange_rate,
             converted_amount=converted_amount,
             description=payment_description,
+        )
+
+    def record_balance_adjustment(
+        self,
+        account_id: int,
+        signed_amount: MoneyLike,
+        *,
+        tx_date: str | None = None,
+        note: str | None = None,
+    ) -> dict[str, Any]:
+        tx_type, absolute_amount, normalized_date, description = self._normalize_balance_adjustment_payload(
+            account_id,
+            signed_amount,
+            tx_date,
+        )
+        return self.add_transaction(
+            account_id=account_id,
+            tx_type=tx_type,
+            amount=absolute_amount,
+            description=description,
+            category=None,
+            subcategory=None,
+            payment_method=BALANCE_ADJUSTMENT_PAYMENT_METHOD,
+            receipt_path=None,
+            tx_date=normalized_date,
+            note=note,
+            to_account_id=None,
+            is_transfer=0,
+            exchange_rate=None,
+            converted_amount=None,
+            category_id=None,
+            source="balance_adjustment",
+        )
+
+    def update_balance_adjustment(
+        self,
+        tx_id: int,
+        account_id: int,
+        signed_amount: MoneyLike,
+        *,
+        tx_date: str | None = None,
+        note: str | None = None,
+    ) -> dict[str, Any]:
+        existing = self.get_transaction_by_id(tx_id)
+        if existing is None:
+            raise ValueError(f"Transaction {tx_id} not found")
+        if not is_balance_adjustment_transaction(existing):
+            raise ValueError(f"Transaction {tx_id} is not a balance adjustment")
+        tx_type, absolute_amount, normalized_date, description = self._normalize_balance_adjustment_payload(
+            account_id,
+            signed_amount,
+            tx_date,
+        )
+        return self.update_transaction(
+            tx_id,
+            account_id=account_id,
+            tx_type=tx_type,
+            amount=absolute_amount,
+            description=description,
+            category=None,
+            category_id=None,
+            subcategory=None,
+            payment_method=BALANCE_ADJUSTMENT_PAYMENT_METHOD,
+            receipt_path=None,
+            tx_date=normalized_date,
+            note=note,
+            exchange_rate=None,
+            converted_amount=None,
         )

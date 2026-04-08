@@ -231,3 +231,6 @@ build/
 sites/
 
 MIRA.spec
+
+AGENTS.md
+base_line.md

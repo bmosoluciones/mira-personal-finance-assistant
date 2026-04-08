@@ -59,11 +59,15 @@ class AccountsView(QWidget):
         self._btn_edit = _make_toolbar_btn(_tr_db(self._db, "btn.edit", "✏ Edit"))
         self._btn_delete = _make_toolbar_btn(_tr_db(self._db, "btn.delete", "🗑 Delete"))
         self._btn_set_default = _make_toolbar_btn("⭐ Set as Default")
+        self._btn_balance_adjustment = _make_toolbar_btn(
+            _tr_db(self._db, "btn.balance_adjustment", "~ Balance Adjustment")
+        )
         for btn in [
             self._btn_add,
             self._btn_edit,
             self._btn_delete,
             self._btn_set_default,
+            self._btn_balance_adjustment,
         ]:
             tb.addWidget(btn)
         tb.addStretch()
@@ -84,6 +88,7 @@ class AccountsView(QWidget):
         self._btn_edit.clicked.connect(self._on_edit)
         self._btn_delete.clicked.connect(self._on_delete)
         self._btn_set_default.clicked.connect(self._on_set_default)
+        self._btn_balance_adjustment.clicked.connect(self._on_balance_adjustment)
         self._table.doubleClicked.connect(self._on_edit)
         self._table.customContextMenuRequested.connect(self._open_context_menu)
 
@@ -176,18 +181,37 @@ class AccountsView(QWidget):
         feedback = self._service.set_default(int(acc["id"]))
         self.refresh(selected_account_id=feedback.selected_id)
 
+    @staticmethod
+    def _is_adjustable_account(account: dict | None) -> bool:
+        return str((account or {}).get("account_type") or "") in {"bank", "credit"}
+
+    def _on_balance_adjustment(self) -> None:
+        from mira.ui.dialogs import BalanceAdjustmentDialog
+
+        selected = self._get_selected()
+        initial_account_id = int(selected["id"]) if self._is_adjustable_account(selected) and selected else None
+        dlg = BalanceAdjustmentDialog(self._db, parent=self, account_id=initial_account_id, service=self._service)
+        if dlg.exec() == BalanceAdjustmentDialog.DialogCode.Accepted:
+            feedback = self._service.record_balance_adjustment(dlg.get_data())
+            self.refresh(selected_account_id=feedback.selected_id)
+
     def _open_context_menu(self, pos: QPoint) -> None:
         if not _select_row_at_pos(self._table, pos):
             return
+        account = self._get_selected()
         menu = QMenu(self)
         act_edit = menu.addAction("Edit")
         act_set_default = menu.addAction("⭐ Set as Default")
+        act_adjust = menu.addAction(_tr_db(self._db, "btn.balance_adjustment", "~ Balance Adjustment"))
+        act_adjust.setEnabled(self._is_adjustable_account(account))
         act_delete = menu.addAction("Delete")
         chosen = menu.exec(self._table.viewport().mapToGlobal(pos))
         if chosen is act_edit:
             self._on_edit()
         elif chosen is act_set_default:
             self._on_set_default()
+        elif chosen is act_adjust:
+            self._on_balance_adjustment()
         elif chosen is act_delete:
             self._on_delete()
 

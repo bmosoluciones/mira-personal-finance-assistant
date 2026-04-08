@@ -13,6 +13,7 @@ from mira.app.view_services._common import PresentationContext
 from mira.db.database import Database
 from mira.db.errors import BudgetError
 from mira.finance_summary import build_savings_lookup, is_savings_transaction
+from mira.transaction_kinds import is_analytics_excluded_transaction, is_balance_adjustment_transaction
 
 _MULTICOLOR_PALETTE: tuple[str, ...] = (
     "#2EC4B6",
@@ -269,7 +270,7 @@ class ReportsViewService:
         comparisons: ReportsComparisons | None,
         year: int,
     ) -> ReportsLoadedState:
-        report_txs = [tx for tx in txs if int(tx.get("is_transfer") or 0) == 0]
+        report_txs = [tx for tx in txs if not is_analytics_excluded_transaction(tx)]
         by_month: dict[str, dict[str, float]] = {}
         by_month_account: dict[tuple[str, str], dict[str, float]] = {}
         by_tag_amount: dict[str, float] = {}
@@ -842,8 +843,9 @@ class ReportsViewStateBuilder:
         )
 
     def _transaction_type(self, tx: dict[str, Any], savings_categories: set[str]) -> _TransactionPresentation:
-        is_transfer = int(tx.get("is_transfer") or 0) == 1
-        if is_transfer:
+        if is_balance_adjustment_transaction(tx):
+            return _TransactionPresentation(type_text="~ adjustment", badge_kind="adjustment")
+        if int(tx.get("is_transfer") or 0) == 1:
             return _TransactionPresentation(type_text="↔ transfer", badge_kind="transfer")
 
         tx_type = str(tx.get("type") or "").strip().casefold()

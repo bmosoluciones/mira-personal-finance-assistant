@@ -8,12 +8,13 @@ from typing import Any, cast
 
 from mira.db.model import BudgetDetail, Category
 from mira.reports.mira_master import ReportInputs, build_report_payload, month_bounds, shift_month
+from mira.transaction_kinds import is_analytics_excluded_transaction
 
 
 def transactions_for_month(db: Any, year: int, month: int) -> list[dict[str, Any]]:
     start, end = month_bounds(year, month)
     txs = db.get_transactions(limit=50_000, since_date=start.isoformat(), until_date=end.isoformat())
-    return [tx for tx in txs if int(tx.get("is_transfer") or 0) == 0]
+    return [tx for tx in txs if not is_analytics_excluded_transaction(tx)]
 
 
 def budget_period_snapshot(

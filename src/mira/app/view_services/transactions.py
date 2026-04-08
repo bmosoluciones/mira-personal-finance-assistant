@@ -142,6 +142,16 @@ class TransactionsViewService:
         )
         return OperationFeedback()
 
+    def update_balance_adjustment(self, transaction_id: int, data: dict[str, Any]) -> OperationFeedback:
+        self._db.transaction.update_balance_adjustment(
+            transaction_id,
+            account_id=int(data["account_id"]),
+            signed_amount=float(data["signed_amount"]),
+            tx_date=str(data["tx_date"]),
+            note=data.get("note"),
+        )
+        return OperationFeedback(selected_id=int(transaction_id))
+
     def update_account(self, transaction_id: int, account_id: int) -> OperationFeedback:
         self._db.transaction.update_account(transaction_id, account_id)
         return OperationFeedback(selected_id=int(transaction_id))

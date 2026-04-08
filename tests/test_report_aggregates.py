@@ -154,3 +154,24 @@ def test_report_category_transaction_counts_group_in_sql(db: Database) -> None:
 
     assert counts["Food"] == 2
     assert counts["Salary"] == 1
+
+
+def test_report_aggregates_exclude_balance_adjustments(db: Database) -> None:
+    account = db.account.create("Checking", "bank", 0.0, "USD")
+    tag = db.tag.create("Recon", color="#224466")
+    adjustment = db.transaction.record_balance_adjustment(account["id"], 150.0, tx_date="2026-04-01")
+    db.tag.set_for_transaction(int(adjustment["id"]), [int(tag["id"])])
+
+    transactions = db.transaction.list(limit=10, since_date="2026-04-01", until_date="2026-04-30")
+    summary = db.report.summarize_financials(transactions)
+    tag_counts = db.report.tag_transaction_counts(since_date="2026-04-01", until_date="2026-04-30")
+    category_counts = db.report.category_transaction_counts(since_date="2026-04-01", until_date="2026-04-30")
+
+    assert summary == {
+        "income": 0.0,
+        "expense": 0.0,
+        "savings": 0.0,
+        "net": 0.0,
+    }
+    assert tag_counts == {}
+    assert category_counts == {}

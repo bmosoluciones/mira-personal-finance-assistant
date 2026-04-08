@@ -152,6 +152,25 @@ def test_internal_transfers_are_excluded(db: Database):
     assert payload["kpis"]["expense_operational"] == 0.0
 
 
+def test_balance_adjustments_are_excluded_from_mira_master_kpis(db: Database):
+    _seed_categories_for_mira(db)
+    acc = db.account.get_or_create("General")
+    db.transaction.create(
+        account_id=acc["id"],
+        tx_type="income",
+        amount=1000,
+        category="Salario",
+        tx_date="2025-03-02",
+    )
+    db.transaction.record_balance_adjustment(acc["id"], 250.0, tx_date="2025-03-03")
+
+    payload = db.report.get_mira_master_report(year=2025, month=3)
+
+    assert payload["kpis"]["income"] == 1000.0
+    assert payload["kpis"]["expense_operational"] == 0.0
+    assert payload["kpis"]["net"] == 1000.0
+
+
 def test_budget_period_snapshot_uses_orm_without_legacy_cursor_contract(
     db: Database,
 ) -> None:

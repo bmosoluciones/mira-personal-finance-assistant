@@ -4,7 +4,7 @@
 """UI-facing application services used by MIRA views."""
 
 from ._common import OperationFeedback, PresentationContext
-from .accounts import AccountsViewService, AccountsViewState
+from .accounts import AccountsViewService, AccountsViewState, BalanceAdjustmentPreview
 from .categories import CategoriesViewService, CategoriesViewState
 from .mira_analysis import (
     MiraAnalysisCardState,
@@ -47,6 +47,7 @@ from .transactions import TransactionsFilterOptions, TransactionsViewService, Tr
 __all__ = [
     "AccountsViewService",
     "AccountsViewState",
+    "BalanceAdjustmentPreview",
     "CategoriesViewService",
     "CategoriesViewState",
     "MiraAnalysisCardState",

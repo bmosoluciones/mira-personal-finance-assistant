@@ -116,7 +116,8 @@ def test_atomic_rolls_back_on_unexpected_exception(db) -> None:
 def _create_legacy_float_database(path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE accounts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -126,7 +127,8 @@ def _create_legacy_float_database(path) -> None:
                 is_default INTEGER DEFAULT 0,
                 created_at TEXT
             )
-            """)
+            """
+        )
         conn.commit()
 
 
@@ -542,6 +544,96 @@ class TestAccounts:
 
 
 class TestTransactions:
+    def test_account_balance_as_of_uses_selected_date_as_inclusive(self, db):
+        account = db.account.create("Checking", "bank", 0.0, "USD")
+        db.transaction.create(account_id=account["id"], tx_type="income", amount=100.0, tx_date="2026-01-10")
+        db.transaction.create(account_id=account["id"], tx_type="expense", amount=20.0, tx_date="2026-01-10")
+        db.transaction.create(account_id=account["id"], tx_type="income", amount=50.0, tx_date="2026-01-11")
+
+        balance = db.account.balance_as_of(account["id"], "2026-01-10")
+
+        assert balance["account_id"] == account["id"]
+        assert balance["currency"] == "USD"
+        _assert_money(balance["balance_as_of"], 80.0)
+
+    def test_balance_adjustment_creates_transaction_updates_balance_and_skips_messages(self, db):
+        account = db.account.create("BAC", "bank", 100.0, "USD")
+
+        tx = db.transaction.record_balance_adjustment(
+            account["id"],
+            25.0,
+            tx_date="2026-02-05",
+            note="Saldo real del banco",
+        )
+
+        updated = db.account.get(account["id"])
+        assert tx["payment_method"] == "balance_adjustment"
+        assert tx["type"] == "income"
+        assert tx["description"] in {"Balance adjustment", "Ajuste de saldo"}
+        _assert_money(tx["amount"], 25.0)
+        assert tx["category"] is None
+        assert tx["mira_achievement"] is None
+        assert tx["mira_insight"] is None
+        _assert_money(updated["balance"], 125.0)
+
+    def test_balance_adjustment_rejects_zero_and_ineligible_accounts(self, db):
+        bank = db.account.create("Banco", "bank", 100.0, "USD")
+        cash = db.account.create("Caja", "cash", 20.0, "USD")
+
+        with pytest.raises(ValueError, match="cannot be zero"):
+            db.transaction.record_balance_adjustment(bank["id"], 0.0)
+
+        with pytest.raises(ValueError, match="only available for bank and credit accounts"):
+            db.transaction.record_balance_adjustment(cash["id"], 10.0)
+
+    def test_balance_adjustment_update_recomputes_balance_and_preserves_marker(self, db):
+        account = db.account.create("Visa", "credit", -200.0, "USD")
+        adjustment = db.transaction.record_balance_adjustment(account["id"], 25.0, tx_date="2026-02-10")
+
+        balance_before_edit = db.account.balance_as_of(
+            account["id"],
+            "2026-02-10",
+            exclude_transaction_id=adjustment["id"],
+        )
+        _assert_money(balance_before_edit["balance_as_of"], -200.0)
+
+        updated_tx = db.transaction.update_balance_adjustment(
+            adjustment["id"],
+            account["id"],
+            -10.0,
+            tx_date="2026-02-12",
+            note="Conciliacion final",
+        )
+
+        updated_account = db.account.get(account["id"])
+        assert updated_tx["payment_method"] == "balance_adjustment"
+        assert updated_tx["type"] == "expense"
+        _assert_money(updated_tx["amount"], 10.0)
+        assert updated_tx["note"] == "Conciliacion final"
+        _assert_money(updated_account["balance"], -210.0)
+
+    def test_balance_adjustments_are_excluded_from_reports_counts_and_goals(self, db):
+        account = db.account.get_or_create("General")
+        db.savings_goal.create("Viaje", 500.0)
+        tag = db.tag.create("Conciliacion", color="#336699")
+
+        adjustment = db.transaction.record_balance_adjustment(account["id"], 300.0, tx_date="2026-02-01")
+        db.tag.set_for_transaction(int(adjustment["id"]), [int(tag["id"])])
+
+        summary = db.report.summary()
+        category_rows = db.report.category_summary()
+        tag_counts = db.report.tag_transaction_counts(since_date="2026-02-01", until_date="2026-02-28")
+        category_counts = db.report.category_transaction_counts(since_date="2026-02-01", until_date="2026-02-28")
+        goal = db.savings_goal.find_by_name("Viaje")
+
+        assert float(summary["total_income"]) == pytest.approx(0.0)
+        assert float(summary["total_expenses"]) == pytest.approx(0.0)
+        assert category_rows == []
+        assert tag_counts == {}
+        assert category_counts == {}
+        assert goal is not None
+        _assert_money(goal["current_amount"], 0.0)
+
     def test_credit_card_payment_records_transfer_and_updates_balances(self, db):
         source = db.account.create("BAC", "bank", 1200.0, "NIO")
         credit = db.account.create("Visa", "credit", -450.0, "NIO")

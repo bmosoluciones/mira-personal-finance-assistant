@@ -74,7 +74,7 @@ class _TypeBadgeDelegate(QStyledItemDelegate):
 
     def paint(self, painter: QPainter, option, index) -> None:  # type: ignore[override]
         badge = index.data(_TYPE_BADGE_ROLE)
-        if badge not in {"income", "expense", "savings", "transfer"}:
+        if badge not in {"income", "expense", "savings", "transfer", "adjustment"}:
             super().paint(painter, option, index)
             return
 
@@ -90,6 +90,10 @@ class _TypeBadgeDelegate(QStyledItemDelegate):
             background = QColor("#3B3520")
             foreground = QColor("#D7BA7D")
             border = QColor("#8B7D3C")
+        elif badge == "adjustment":
+            background = QColor("#24324D")
+            foreground = QColor("#7AA2F7")
+            border = QColor("#4B6FB6")
         else:
             background = QColor("#1F3650")
             foreground = QColor("#569CD6")

@@ -9,6 +9,7 @@ from peewee import JOIN, Case, fn
 
 from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.db.model import Category, SavingsGoal
+from mira.transaction_kinds import is_analytics_excluded_transaction
 
 
 def _base_goal_query():
@@ -177,7 +178,7 @@ class SavingsGoalRepository:
             return
         if str(tx.get("type")) != "expense":
             return
-        if int(tx.get("is_transfer") or 0) == 1:
+        if is_analytics_excluded_transaction(tx):
             return
         amount = self._money_to_decimal(tx.get("amount")) or MONEY_ZERO
         if amount <= MONEY_ZERO:

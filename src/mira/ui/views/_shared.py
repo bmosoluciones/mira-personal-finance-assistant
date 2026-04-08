@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from mira.db.database import Database
 from mira.finance_summary import build_savings_lookup
+from mira.transaction_kinds import is_balance_adjustment_transaction
 from mira.ui.i18n import normalize_language, tr
 from mira.ui.notifications import show_user_message
 from mira.ui.number_format import format_number, get_number_format_config
@@ -178,6 +179,8 @@ def _savings_category_names(db: Database) -> set[str]:
 
 
 def _tx_type_indicator(tx: dict[str, Any], savings_categories: set[str]) -> tuple[str, QColor]:
+    if is_balance_adjustment_transaction(tx):
+        return "~ adjustment", QColor("#7AA2F7")
     is_transfer = int(tx.get("is_transfer") or 0) == 1
     if is_transfer:
         return "↔ transfer", QColor("#D7BA7D")
@@ -196,8 +199,9 @@ def _make_tx_type_item(tx: dict[str, Any], savings_categories: set[str]) -> QTab
     text, color = _tx_type_indicator(tx, savings_categories)
     item = QTableWidgetItem(text)
     item.setForeground(QBrush(color))
-    is_transfer = int(tx.get("is_transfer") or 0) == 1
-    if is_transfer:
+    if is_balance_adjustment_transaction(tx):
+        badge_kind = "adjustment"
+    elif int(tx.get("is_transfer") or 0) == 1:
         badge_kind = "transfer"
     elif str(tx.get("type") or "").strip().casefold() == "income":
         badge_kind = "income"

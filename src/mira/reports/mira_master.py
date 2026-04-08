@@ -12,6 +12,7 @@ from datetime import date, datetime
 from typing import Any, cast
 
 from mira.finance_summary import build_savings_lookup, is_savings_transaction, summarize_financial_kpis
+from mira.transaction_kinds import is_balance_adjustment_transaction
 
 _REFUND_KEYWORDS = ("reembolso", "refund", "devolucion", "devolución")
 _DEBT_KEYWORDS = ("deuda", "prestamo", "préstamo", "loan", "tarjeta", "credit")
@@ -974,6 +975,8 @@ class ReportMetricsCalculator:
             except (TypeError, ValueError):
                 continue
             if account_id not in credit_account_ids:
+                continue
+            if is_balance_adjustment_transaction(tx):
                 continue
             tx_type = str(tx.get("type") or "")
             amount = float(tx.get("amount") or 0.0)

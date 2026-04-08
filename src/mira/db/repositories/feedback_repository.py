@@ -26,6 +26,7 @@ from mira.db.model import (
     Transaction,
 )
 from mira.reports.mira_master import shift_month
+from mira.transaction_kinds import analytics_included_expr, is_analytics_excluded_transaction
 from mira.ui.i18n import tr
 
 logger = logging.getLogger(__name__)
@@ -87,7 +88,9 @@ class FeedbackRepository:
         month_start = today.replace(day=1)
         month_tx_total = int(
             Transaction.select(fn.COUNT(Transaction.id))
-            .where((Transaction.date >= month_start) & (Transaction.date <= today))
+            .where(
+                analytics_included_expr(Transaction) & (Transaction.date >= month_start) & (Transaction.date <= today)
+            )
             .scalar()
             or 0
         )
@@ -453,7 +456,7 @@ class FeedbackRepository:
             Transaction.select(fn.COALESCE(fn.SUM(Transaction.amount), 0.0).alias("savings_total"))
             .join(Category, JOIN.LEFT_OUTER, on=(Transaction.category_id == Category.id))
             .where(
-                (fn.COALESCE(Transaction.is_transfer, 0) == 0)
+                analytics_included_expr(Transaction)
                 & (Transaction.type == "expense")
                 & (fn.COALESCE(Category.is_savings, 0) == 1)
                 & (Transaction.date >= month_start)
@@ -469,6 +472,8 @@ class FeedbackRepository:
         *,
         source: str | None = None,
     ) -> list[dict[str, Any]]:
+        if is_analytics_excluded_transaction(tx):
+            return []
         language = self._database_language()
         tx_type = str(tx.get("type") or "")
         amount = float(tx.get("amount") or 0.0)
@@ -555,7 +560,7 @@ class FeedbackRepository:
                 self._cents_to_money(
                     Transaction.select(fn.COALESCE(fn.AVG(Transaction.amount), 0.0))
                     .where(
-                        (fn.COALESCE(Transaction.is_transfer, 0) == 0)
+                        analytics_included_expr(Transaction)
                         & (Transaction.type == "income")
                         & (Transaction.id != int(tx["id"]))
                     )
@@ -629,6 +634,8 @@ class FeedbackRepository:
         *,
         source: str | None = None,
     ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        if is_analytics_excluded_transaction(tx):
+            return None, None
         is_nl_transaction = source == "nl_assistant"
         context = self.build_monthly_context(tx)
         achievement_candidates = self.evaluate_operation_achievements(tx, context, source=source)

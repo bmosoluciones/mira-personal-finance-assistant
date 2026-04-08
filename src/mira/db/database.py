@@ -74,6 +74,19 @@ class AccountFacade(_DatabaseFacade):
     def get_balance_report(self) -> dict[str, Any]:
         return self._db.get_account_balance_report()
 
+    def balance_as_of(
+        self,
+        account_id: int,
+        on_date: str,
+        *,
+        exclude_transaction_id: int | None = None,
+    ) -> dict[str, Any]:
+        return self._db.get_account_balance_as_of(
+            account_id,
+            on_date,
+            exclude_transaction_id=exclude_transaction_id,
+        )
+
     def update_balance(self, account_id: int, delta: MoneyLike) -> None:
         self._db.update_account_balance(account_id, delta)
 
@@ -339,6 +352,38 @@ class TransactionFacade(_DatabaseFacade):
             exchange_rate=exchange_rate,
             converted_amount=converted_amount,
             description=description,
+        )
+
+    def record_balance_adjustment(
+        self,
+        account_id: int,
+        signed_amount: MoneyLike,
+        *,
+        tx_date: str | None = None,
+        note: str | None = None,
+    ) -> dict[str, Any]:
+        return self._db.record_balance_adjustment(
+            account_id,
+            signed_amount,
+            tx_date=tx_date,
+            note=note,
+        )
+
+    def update_balance_adjustment(
+        self,
+        tx_id: int,
+        account_id: int,
+        signed_amount: MoneyLike,
+        *,
+        tx_date: str | None = None,
+        note: str | None = None,
+    ) -> dict[str, Any]:
+        return self._db.update_balance_adjustment(
+            tx_id,
+            account_id,
+            signed_amount,
+            tx_date=tx_date,
+            note=note,
         )
 
 

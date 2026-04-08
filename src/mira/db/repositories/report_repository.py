@@ -11,6 +11,7 @@ from mira.db.money import MONEY_ZERO
 from mira.db.model import Category, Transaction, TransactionTag
 from mira.finance_summary import build_savings_lookup, summarize_financial_kpis
 from mira.reports import mira_master_backend
+from mira.transaction_kinds import analytics_included_expr
 
 
 class ReportRepository:
@@ -99,6 +100,7 @@ class ReportRepository:
             query = query.where(tx.date >= since_date)
         if until_date:
             query = query.where(tx.date <= until_date)
+        query = query.where(analytics_included_expr(tx))
 
         rows = [
             dict(row)
@@ -164,6 +166,7 @@ class ReportRepository:
             tx_tag.tag.alias("tag_id"),
             fn.COUNT(tx_tag.transaction_id).alias("count"),
         ).join(tx, on=(tx_tag.transaction_id == tx.id))
+        query = query.where(analytics_included_expr(tx))
         if since_date:
             query = query.where(tx.date >= since_date)
         if until_date:
@@ -181,6 +184,7 @@ class ReportRepository:
             category_expr.alias("category"),
             fn.COUNT(Transaction.id).alias("count"),
         )
+        query = query.where(analytics_included_expr(Transaction))
         if since_date:
             query = query.where(Transaction.date >= since_date)
         if until_date:

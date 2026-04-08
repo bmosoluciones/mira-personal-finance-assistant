@@ -3,10 +3,11 @@
 
 from __future__ import annotations
 
+from datetime import date
 import re
 from typing import TYPE_CHECKING, Any, cast
 
-from peewee import fn
+from peewee import Case, fn
 
 from mira.db.helpers import (
     _ACCOUNT_ALIAS_STOPWORDS,
@@ -14,7 +15,7 @@ from mira.db.helpers import (
     fold_text as _fold_text,
 )
 from mira.db.money import MONEY_ZERO, MoneyLike
-from mira.db.model import Account
+from mira.db.model import Account, Transaction
 
 
 class AccountRepository:
@@ -240,6 +241,59 @@ class AccountRepository:
             "default_currency": default_currency,
             "rows": rows,
             "consolidated_total": self._round_money(consolidated_total),
+        }
+
+    def get_account_balance_as_of(
+        self,
+        account_id: int,
+        on_date: str,
+        *,
+        exclude_transaction_id: int | None = None,
+    ) -> dict[str, Any]:
+        account = self.get_account_by_id(account_id)
+        if account is None:
+            raise ValueError(f"Account {account_id} not found")
+
+        normalized_date = str(on_date or "").strip()
+        try:
+            target_day = date.fromisoformat(normalized_date)
+        except ValueError as exc:
+            raise ValueError(f"Invalid balance date: {normalized_date!r}. Expected YYYY-MM-DD.") from exc
+
+        current_balance = self._money_to_decimal(account.get("balance")) or MONEY_ZERO
+        if exclude_transaction_id is not None:
+            excluded_tx = Transaction.get_or_none(
+                (Transaction.id == int(exclude_transaction_id)) & (Transaction.account_id == int(account_id))
+            )
+            if excluded_tx is not None:
+                excluded_amount = self._cents_to_money(excluded_tx.amount) or MONEY_ZERO
+                excluded_effect = excluded_amount if str(excluded_tx.type or "") == "income" else -excluded_amount
+                current_balance -= excluded_effect
+
+        future_effect_query = Transaction.select(
+            fn.COALESCE(
+                fn.SUM(
+                    Case(
+                        None,
+                        (
+                            ((Transaction.type == "income"), Transaction.amount),
+                            ((Transaction.type == "expense"), Transaction.amount * -1),
+                        ),
+                        0,
+                    )
+                ),
+                0,
+            ).alias("net_effect_cents")
+        ).where((Transaction.account_id == int(account_id)) & (Transaction.date > target_day))
+        if exclude_transaction_id is not None:
+            future_effect_query = future_effect_query.where(Transaction.id != int(exclude_transaction_id))
+
+        future_effect = self._cents_to_money(future_effect_query.scalar()) or MONEY_ZERO
+        balance_as_of = self._round_money(current_balance - future_effect)
+        return {
+            "account_id": int(account["id"]),
+            "currency": str(account.get("currency") or self.get_default_currency()).strip().upper(),
+            "balance_as_of": balance_as_of,
         }
 
     def update_account_balance(self, account_id: int, delta: MoneyLike) -> None:

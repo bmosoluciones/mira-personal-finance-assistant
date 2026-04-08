@@ -150,3 +150,54 @@ def test_accounts_view_add_edit_set_default_and_delete_keep_table_in_sync(
         assert FakeAccountDialog.seen_accounts == [None, wallet]
     finally:
         view.close()
+
+
+def test_accounts_view_balance_adjustment_button_records_transaction(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.accounts")
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    account = db.account.create("Banco", "bank", 100.0, "USD")
+    cash = db.account.create("Caja", "cash", 20.0, "USD")
+
+    class FakeBalanceAdjustmentDialog:
+        class DialogCode:
+            Accepted = 1
+
+        def __init__(self, _db: Database, parent=None, *, account_id=None, tx=None, service=None) -> None:
+            del parent, tx, service
+            self._payload = {
+                "account_id": account_id or account["id"],
+                "tx_date": "2026-04-01",
+                "signed_amount": 35.0,
+                "note": "Conciliacion",
+            }
+
+        def exec(self) -> int:
+            return self.DialogCode.Accepted
+
+        def get_data(self) -> dict:
+            return dict(self._payload)
+
+    monkeypatch.setattr(dialogs_module, "BalanceAdjustmentDialog", FakeBalanceAdjustmentDialog)
+
+    view = views_module.AccountsView(db)
+
+    try:
+        view.refresh()
+        cash_row = _find_row_by_user_role(view._table, int(cash["id"]))
+        view._table.selectRow(cash_row)
+        view._table.setCurrentCell(cash_row, 0)
+
+        view._on_balance_adjustment()
+
+        updated = db.account.get(int(account["id"]))
+        txs = db.transaction.list(limit=10)
+        assert updated is not None
+        assert updated["balance"] == pytest.approx(135.0)
+        assert len(txs) == 1
+        assert txs[0]["payment_method"] == "balance_adjustment"
+    finally:
+        view.close()

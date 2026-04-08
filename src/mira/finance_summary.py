@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from mira.db.money import MONEY_ZERO, Money, money_to_decimal, round_money
+from mira.transaction_kinds import is_analytics_excluded_transaction
 
 SavingsLookup = tuple[set[int], set[str]]
 
@@ -58,7 +59,7 @@ def summarize_financial_kpis(
     savings = MONEY_ZERO
 
     for tx in transactions:
-        if int(tx.get("is_transfer") or 0) == 1:
+        if is_analytics_excluded_transaction(tx):
             continue
 
         amount = money_to_decimal(tx.get("amount")) or MONEY_ZERO
