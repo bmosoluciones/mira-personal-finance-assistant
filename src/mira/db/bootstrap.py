@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import calendar
 from datetime import date
 from typing import Any, Protocol, cast
 
@@ -15,6 +14,20 @@ from mira.db.helpers import (
     localized_default_account_name,
     localized_default_savings_name,
     normalize_language,
+)
+from mira.db.demo_seed import (
+    build_demo_seed_catalog,
+    build_budget_plan,
+    build_demo_seed_result,
+    build_demo_seed_runtime,
+    ensure_seed_accounts,
+    ensure_seed_goals,
+    normalize_demo_seed_language,
+    reset_seed_artifacts,
+    resolve_seed_categories,
+    resolve_seed_tags,
+    seed_budget_plan,
+    seed_monthly_transactions,
 )
 from mira.db.model import Account, Currency, RecurringTransaction, SavingsGoal, Setting, Transaction
 from mira.db.money import MoneyLike, money_to_cents
@@ -745,9 +758,7 @@ def seed_demo_data(db: _BootstrapDatabaseProtocol, *, reference_date: date | Non
     """Populate the current-year database with realistic demo budget and transactions."""
     current = reference_date or date.today()
     year = int(current.year)
-    language = (db.get_setting("language") or "en").strip().lower()
-    if language not in {"es", "en"}:
-        language = "en"
+    language = normalize_demo_seed_language(db.get_setting("language"))
 
     seed_initial_data(
         db,
@@ -756,540 +767,47 @@ def seed_demo_data(db: _BootstrapDatabaseProtocol, *, reference_date: date | Non
         update_existing_category_metadata=False,
     )
 
-    _demo_data = _DEMO_CATALOG_DATA.get(language, _DEMO_CATALOG_DATA["en"])
-    catalog: dict[str, Any] = {
-        "main_account": _demo_data["main_account"],
-        "reserve_account": _demo_data["reserve_account"],
-        "categories": {
-            "salary": (_cn(language, "net_salary"), "income"),
-            "freelance": (_cn(language, "freelance"), "income"),
-            "bonus": (_cn(language, "bonuses"), "income"),
-            "item_sales": (_cn(language, "item_sales"), "income"),
-            "rent_income": (_cn(language, "rent_collected"), "income"),
-            "interest_income": (_cn(language, "investment_interest"), "income"),
-            "housing": (_cn(language, "rent_mortgage"), "expense"),
-            "home_maintenance": (_cn(language, "home_maintenance"), "expense"),
-            "utilities": (_cn(language, "electricity"), "expense"),
-            "telecom": (_cn(language, "internet_phone"), "expense"),
-            "food": (_cn(language, "groceries"), "expense"),
-            "cleaning": (_cn(language, "hygiene_cleaning"), "expense"),
-            "transport": (_cn(language, "fuel_tolls"), "expense"),
-            "public_transport": (_cn(language, "public_transport"), "expense"),
-            "health": (_cn(language, "pharmacy"), "expense"),
-            "health_insurance": (_cn(language, "health_insurance"), "expense"),
-            "tuition": (_cn(language, "tuition"), "expense"),
-            "books": (_cn(language, "books_courses"), "expense"),
-            "life_insurance": (_cn(language, "life_insurance"), "expense"),
-            "property_insurance": (_cn(language, "vehicle_home_insurance"), "expense"),
-            "credit_cards": (_cn(language, "credit_cards"), "expense"),
-            "personal_loans": (_cn(language, "personal_loans"), "expense"),
-            "savings": (_cn(language, "savings"), "expense"),
-            "emergency_fund": (_cn(language, "emergency_fund"), "expense"),
-            "retirement": (_cn(language, "retirement"), "expense"),
-            "subscriptions": (_cn(language, "subscriptions"), "expense"),
-            "restaurants": (_cn(language, "restaurants"), "expense"),
-        },
-        "tags": {
-            "fixed": _cn(language, "tag_fixed"),
-            "variable": _cn(language, "tag_variable"),
-            "essential": _cn(language, "tag_essential"),
-            "discretionary": _cn(language, "tag_discretionary"),
-        },
-        "descriptions": _demo_data["descriptions"],
-    }
-
-    category_rows: dict[str, dict[str, Any]] = {}
-    missing_categories: list[str] = []
-    for key, (name, cat_type) in cast(dict[str, tuple[str, str]], catalog["categories"]).items():
-        category = db.get_category_by_name(name, cat_type)
-        if category is None:
-            missing_categories.append(name)
-            continue
-        category_rows[key] = category
-    if missing_categories:
-        raise ValueError(
-            "Seed requires the default category catalog for the database language. Missing: "
-            + ", ".join(missing_categories)
-        )
-
-    tag_rows: dict[str, dict[str, Any]] = {}
-    for key, name in cast(dict[str, str], catalog["tags"]).items():
-        tag = db.get_tag_by_name(name)
-        if tag is not None:
-            tag_rows[key] = tag
-
-    default_account = db.get_default_account()
-    if default_account is None:
-        main_name = str(catalog["main_account"])
-        default_account = db.get_account_by_name(main_name) or db.get_or_create_account(main_name)
-        db.set_default_account(int(default_account["id"]))
-
-    reserve_name = str(catalog["reserve_account"])
-    reserve_account = db.get_account_by_name(reserve_name)
-    if reserve_account is None:
-        reserve_account = db.add_account(
-            name=reserve_name,
-            account_type="bank",
-            opening_balance=0.0,
-            currency=db.get_default_currency(),
-        )
-
-    savings_goal_specs = [
-        (str(category_rows["emergency_fund"]["name"]), 2500.0, f"{year + 1}-12-31", "emergency_fund"),
-        (str(category_rows["retirement"]["name"]), 6000.0, f"{year + 3}-12-31", "retirement"),
-    ]
-    for goal_name, target_amount, target_date, category_key in savings_goal_specs:
-        if db.get_savings_goal_by_name(goal_name) is None:
-            db.add_savings_goal(
-                name=goal_name,
-                target_amount=target_amount,
-                target_date=target_date,
-                currency=db.get_default_currency(),
-                category_name=str(category_rows[category_key]["name"]),
-            )
-
-    seed_note = f"mira_cli_seed:{year}"
-    budget_code = f"mira_cli_seed_{year}"
-
-    seeded_ids = [
-        int(tx.id)
-        for tx in Transaction.select(Transaction.id)
-        .where(Transaction.note == seed_note)
-        .order_by(Transaction.id.desc())
-    ]
-    for tx_id in seeded_ids:
-        db.delete_transaction(tx_id)
-
-    existing_budget = db.get_budget_by_code(budget_code)
-    if existing_budget is not None:
-        db.delete_budget(int(existing_budget["id"]))
+    catalog = build_demo_seed_catalog(
+        language=language,
+        catalog_data=_DEMO_CATALOG_DATA,
+        translate=_cn,
+    )
+    category_rows = resolve_seed_categories(db, catalog)
+    tag_rows = resolve_seed_tags(db, catalog)
+    default_account, reserve_account = ensure_seed_accounts(db, catalog)
+    ensure_seed_goals(db, year=year, category_rows=category_rows)
+    seed_note, budget_code = reset_seed_artifacts(db, year=year, transaction_model=Transaction)
 
     budget = db.create_budget(budget_code, year, db.get_default_currency())
     budget_id = int(budget["id"])
+    budget_plan = build_budget_plan()
+    seed_budget_plan(
+        db,
+        budget_id=budget_id,
+        year=year,
+        category_rows=category_rows,
+        budget_plan=budget_plan,
+    )
+    tx_count, tag_links = seed_monthly_transactions(
+        db,
+        build_demo_seed_runtime(
+            year=year,
+            budget_id=budget_id,
+            default_account=default_account,
+            reserve_account=reserve_account,
+            seed_note=seed_note,
+            category_rows=category_rows,
+            tag_rows=tag_rows,
+            descriptions=catalog.descriptions,
+        ),
+        budget_plan,
+    )
 
-    budget_plan: dict[str, list[float]] = {
-        "salary": [1850.0] * 12,
-        "freelance": [180.0, 240.0, 190.0, 260.0, 210.0, 280.0, 200.0, 270.0, 220.0, 290.0, 210.0, 320.0],
-        "bonus": [0.0, 0.0, 260.0, 0.0, 0.0, 280.0, 0.0, 0.0, 300.0, 0.0, 0.0, 350.0],
-        "item_sales": [40.0, 0.0, 35.0, 0.0, 55.0, 0.0, 45.0, 0.0, 60.0, 0.0, 50.0, 0.0],
-        "rent_income": [0.0, 0.0, 0.0, 220.0, 0.0, 0.0, 0.0, 220.0, 0.0, 0.0, 0.0, 220.0],
-        "interest_income": [12.0, 12.0, 14.0, 14.0, 15.0, 15.0, 16.0, 16.0, 16.0, 18.0, 18.0, 20.0],
-        "housing": [560.0] * 12,
-        "home_maintenance": [0.0, 0.0, 35.0, 0.0, 0.0, 45.0, 0.0, 0.0, 40.0, 0.0, 0.0, 60.0],
-        "utilities": [92.0, 94.0, 96.0, 98.0, 100.0, 104.0, 106.0, 104.0, 100.0, 98.0, 96.0, 94.0],
-        "telecom": [42.0] * 12,
-        "food": [250.0, 255.0, 265.0, 260.0, 270.0, 280.0, 275.0, 285.0, 278.0, 290.0, 282.0, 300.0],
-        "cleaning": [35.0, 36.0, 38.0, 37.0, 39.0, 41.0, 40.0, 42.0, 41.0, 43.0, 42.0, 45.0],
-        "transport": [85.0, 82.0, 88.0, 86.0, 90.0, 92.0, 91.0, 93.0, 89.0, 94.0, 90.0, 96.0],
-        "public_transport": [20.0, 22.0, 21.0, 24.0, 25.0, 23.0, 26.0, 24.0, 23.0, 27.0, 25.0, 28.0],
-        "health": [18.0, 0.0, 22.0, 0.0, 26.0, 18.0, 30.0, 0.0, 24.0, 0.0, 20.0, 28.0],
-        "health_insurance": [48.0] * 12,
-        "tuition": [75.0] * 12,
-        "books": [12.0, 0.0, 18.0, 0.0, 15.0, 0.0, 20.0, 0.0, 18.0, 0.0, 24.0, 0.0],
-        "life_insurance": [28.0] * 12,
-        "property_insurance": [0.0, 45.0, 0.0, 0.0, 45.0, 0.0, 0.0, 45.0, 0.0, 0.0, 45.0, 0.0],
-        "credit_cards": [78.0, 80.0, 82.0, 85.0, 87.0, 89.0, 90.0, 92.0, 94.0, 95.0, 97.0, 100.0],
-        "personal_loans": [32.0] * 12,
-        "savings": [90.0, 95.0, 90.0, 100.0, 95.0, 105.0, 100.0, 110.0, 105.0, 115.0, 110.0, 120.0],
-        "emergency_fund": [60.0] * 12,
-        "retirement": [45.0, 45.0, 50.0, 50.0, 50.0, 55.0, 55.0, 55.0, 60.0, 60.0, 60.0, 65.0],
-        "subscriptions": [18.0, 18.0, 20.0, 20.0, 22.0, 22.0, 24.0, 24.0, 24.0, 26.0, 26.0, 28.0],
-        "restaurants": [32.0, 36.0, 38.0, 35.0, 42.0, 45.0, 39.0, 48.0, 44.0, 50.0, 46.0, 55.0],
-    }
-
-    for month in range(1, 13):
-        for key, monthly_amounts in budget_plan.items():
-            db.upsert_budget_amount(
-                budget_id,
-                int(category_rows[key]["id"]),
-                year,
-                month,
-                float(monthly_amounts[month - 1]),
-            )
-
-    tx_count = 0
-    tag_links = 0
-
-    def _attach_tags(transaction_id: int, *tag_keys: str) -> None:
-        nonlocal tag_links
-        for tag_key in tag_keys:
-            tag = tag_rows.get(tag_key)
-            if tag is None:
-                continue
-            db.add_transaction_tag(transaction_id, int(tag["id"]))
-            tag_links += 1
-
-    def _add_seed_transaction(
-        *,
-        month: int,
-        day: int,
-        tx_type: str,
-        amount: float,
-        category_key: str,
-        description_key: str,
-        tag_keys: tuple[str, ...],
-    ) -> None:
-        nonlocal tx_count
-        valid_day = min(day, calendar.monthrange(year, month)[1])
-        tx = db.add_transaction(
-            account_id=int(default_account["id"]),
-            tx_type=tx_type,
-            amount=round(amount, 2),
-            category=str(category_rows[category_key]["name"]),
-            description=str(cast(dict[str, str], catalog["descriptions"])[description_key]),
-            tx_date=f"{year}-{month:02d}-{valid_day:02d}",
-            note=seed_note,
-        )
-        tx_count += 1
-        _attach_tags(int(tx["id"]), *tag_keys)
-
-    deficit_months = {2, 8, 11}
-    strong_surplus_months = {3, 6, 12}
-    for month in range(1, 13):
-        salary_actual = 1810.0 + (month * 12.0)
-        freelance_actual = budget_plan["freelance"][month - 1] + (-20.0 if month % 2 else 35.0)
-        item_sales_actual = budget_plan["item_sales"][month - 1] + (10.0 if month in {5, 9} else 0.0)
-        rent_income_actual = budget_plan["rent_income"][month - 1]
-        interest_income_actual = budget_plan["interest_income"][month - 1] + (2.0 if month in {6, 12} else 0.0)
-        housing_actual = budget_plan["housing"][month - 1] + (5.0 if month in {6, 12} else 0.0)
-        home_maintenance_actual = budget_plan["home_maintenance"][month - 1] + (5.0 if month in {3, 6, 9, 12} else 0.0)
-        utilities_actual = budget_plan["utilities"][month - 1] + (3.0 if month % 4 == 0 else -2.0)
-        telecom_actual = budget_plan["telecom"][month - 1]
-        food_total = budget_plan["food"][month - 1] + (8.0 if month in {3, 7, 12} else -6.0)
-        cleaning_actual = budget_plan["cleaning"][month - 1] + (2.0 if month in {4, 8, 12} else 0.0)
-        transport_actual = budget_plan["transport"][month - 1] + (4.0 if month % 3 == 0 else -3.0)
-        public_transport_actual = budget_plan["public_transport"][month - 1] + (3.0 if month % 2 == 0 else -1.0)
-        health_actual = budget_plan["health"][month - 1] + (6.0 if month in {7, 12} else 0.0)
-        health_insurance_actual = budget_plan["health_insurance"][month - 1]
-        tuition_actual = budget_plan["tuition"][month - 1]
-        books_actual = budget_plan["books"][month - 1] + (4.0 if budget_plan["books"][month - 1] > 0 else 0.0)
-        life_insurance_actual = budget_plan["life_insurance"][month - 1]
-        property_insurance_actual = budget_plan["property_insurance"][month - 1]
-        credit_cards_actual = budget_plan["credit_cards"][month - 1] + (8.0 if month in {4, 9} else 0.0)
-        personal_loans_actual = budget_plan["personal_loans"][month - 1]
-        savings_actual = budget_plan["savings"][month - 1] + (10.0 if month in {6, 12} else 0.0)
-        emergency_actual = budget_plan["emergency_fund"][month - 1]
-        retirement_actual = budget_plan["retirement"][month - 1] + (5.0 if month in {6, 12} else 0.0)
-        subscriptions_actual = budget_plan["subscriptions"][month - 1]
-        restaurants_actual = budget_plan["restaurants"][month - 1] + (6.0 if month in {5, 8, 12} else -3.0)
-
-        if month in deficit_months:
-            salary_actual -= 380.0
-            freelance_actual = max(40.0, freelance_actual - 120.0)
-            home_maintenance_actual += 260.0
-            health_actual += 180.0
-            transport_actual += 55.0
-            restaurants_actual += 35.0
-            subscriptions_actual += 10.0
-            savings_actual = max(30.0, savings_actual - 45.0)
-            retirement_actual = max(15.0, retirement_actual - 20.0)
-        elif month in strong_surplus_months:
-            salary_actual += 120.0
-            freelance_actual += 60.0
-            interest_income_actual += 4.0
-            savings_actual += 35.0
-            emergency_actual += 25.0
-            retirement_actual += 20.0
-            restaurants_actual = max(20.0, restaurants_actual - 8.0)
-
-        _add_seed_transaction(
-            month=month,
-            day=2,
-            tx_type="income",
-            amount=salary_actual,
-            category_key="salary",
-            description_key="salary",
-            tag_keys=("fixed",),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=7,
-            tx_type="income",
-            amount=freelance_actual,
-            category_key="freelance",
-            description_key="freelance",
-            tag_keys=("variable",),
-        )
-        if budget_plan["bonus"][month - 1] > 0:
-            _add_seed_transaction(
-                month=month,
-                day=10,
-                tx_type="income",
-                amount=budget_plan["bonus"][month - 1] + 25.0,
-                category_key="bonus",
-                description_key="bonus",
-                tag_keys=("variable", "discretionary"),
-            )
-        if budget_plan["item_sales"][month - 1] > 0:
-            _add_seed_transaction(
-                month=month,
-                day=11,
-                tx_type="income",
-                amount=item_sales_actual,
-                category_key="item_sales",
-                description_key="item_sales",
-                tag_keys=("variable", "discretionary"),
-            )
-        if rent_income_actual > 0:
-            _add_seed_transaction(
-                month=month,
-                day=15,
-                tx_type="income",
-                amount=rent_income_actual,
-                category_key="rent_income",
-                description_key="rent_income",
-                tag_keys=("fixed",),
-            )
-        _add_seed_transaction(
-            month=month,
-            day=16,
-            tx_type="income",
-            amount=interest_income_actual,
-            category_key="interest_income",
-            description_key="interest_income",
-            tag_keys=("fixed",),
-        )
-
-        _add_seed_transaction(
-            month=month,
-            day=4,
-            tx_type="expense",
-            amount=housing_actual,
-            category_key="housing",
-            description_key="housing",
-            tag_keys=("fixed", "essential"),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=6,
-            tx_type="expense",
-            amount=utilities_actual,
-            category_key="utilities",
-            description_key="utilities",
-            tag_keys=("fixed", "essential"),
-        )
-        if home_maintenance_actual > 0:
-            _add_seed_transaction(
-                month=month,
-                day=5,
-                tx_type="expense",
-                amount=home_maintenance_actual,
-                category_key="home_maintenance",
-                description_key="home_maintenance",
-                tag_keys=("variable", "essential"),
-            )
-        _add_seed_transaction(
-            month=month,
-            day=8,
-            tx_type="expense",
-            amount=telecom_actual,
-            category_key="telecom",
-            description_key="telecom",
-            tag_keys=("fixed", "essential"),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=12,
-            tx_type="expense",
-            amount=round(food_total * 0.62, 2),
-            category_key="food",
-            description_key="food_a",
-            tag_keys=("variable", "essential"),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=19,
-            tx_type="expense",
-            amount=cleaning_actual,
-            category_key="cleaning",
-            description_key="food_b",
-            tag_keys=("variable", "essential"),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=14,
-            tx_type="expense",
-            amount=transport_actual,
-            category_key="transport",
-            description_key="transport",
-            tag_keys=("variable", "essential"),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=21,
-            tx_type="expense",
-            amount=public_transport_actual,
-            category_key="public_transport",
-            description_key="public_transport",
-            tag_keys=("variable", "essential"),
-        )
-        if health_actual > 0:
-            _add_seed_transaction(
-                month=month,
-                day=22,
-                tx_type="expense",
-                amount=health_actual,
-                category_key="health",
-                description_key="health",
-                tag_keys=("variable", "essential"),
-            )
-        _add_seed_transaction(
-            month=month,
-            day=23,
-            tx_type="expense",
-            amount=health_insurance_actual,
-            category_key="health_insurance",
-            description_key="health_insurance",
-            tag_keys=("fixed", "essential"),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=24,
-            tx_type="expense",
-            amount=tuition_actual,
-            category_key="tuition",
-            description_key="tuition",
-            tag_keys=("fixed", "essential"),
-        )
-        if books_actual > 0:
-            _add_seed_transaction(
-                month=month,
-                day=25,
-                tx_type="expense",
-                amount=books_actual,
-                category_key="books",
-                description_key="books",
-                tag_keys=("variable", "essential"),
-            )
-        _add_seed_transaction(
-            month=month,
-            day=20,
-            tx_type="expense",
-            amount=life_insurance_actual,
-            category_key="life_insurance",
-            description_key="life_insurance",
-            tag_keys=("fixed", "essential"),
-        )
-        if property_insurance_actual > 0:
-            _add_seed_transaction(
-                month=month,
-                day=9,
-                tx_type="expense",
-                amount=property_insurance_actual,
-                category_key="property_insurance",
-                description_key="property_insurance",
-                tag_keys=("fixed", "essential"),
-            )
-        _add_seed_transaction(
-            month=month,
-            day=26,
-            tx_type="expense",
-            amount=credit_cards_actual,
-            category_key="credit_cards",
-            description_key="credit_cards",
-            tag_keys=("fixed",),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=27,
-            tx_type="expense",
-            amount=personal_loans_actual,
-            category_key="personal_loans",
-            description_key="personal_loans",
-            tag_keys=("fixed",),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=28,
-            tx_type="expense",
-            amount=subscriptions_actual,
-            category_key="subscriptions",
-            description_key="subscriptions",
-            tag_keys=("variable", "discretionary"),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=13,
-            tx_type="expense",
-            amount=restaurants_actual,
-            category_key="restaurants",
-            description_key="restaurants",
-            tag_keys=("variable", "discretionary"),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=29,
-            tx_type="expense",
-            amount=savings_actual,
-            category_key="savings",
-            description_key="savings",
-            tag_keys=("fixed", "essential"),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=18,
-            tx_type="expense",
-            amount=emergency_actual,
-            category_key="emergency_fund",
-            description_key="emergency_fund",
-            tag_keys=("fixed", "essential"),
-        )
-        _add_seed_transaction(
-            month=month,
-            day=17,
-            tx_type="expense",
-            amount=retirement_actual,
-            category_key="retirement",
-            description_key="retirement",
-            tag_keys=("fixed", "essential"),
-        )
-        if month in {5, 8, 12}:
-            _add_seed_transaction(
-                month=month,
-                day=7,
-                tx_type="expense",
-                amount=round(25.0 + month, 2),
-                category_key="health",
-                description_key="health",
-                tag_keys=("variable", "essential"),
-            )
-
-        if month in deficit_months:
-            _add_seed_transaction(
-                month=month,
-                day=3,
-                tx_type="expense",
-                amount=185.0,
-                category_key="home_maintenance",
-                description_key="home_maintenance",
-                tag_keys=("variable", "essential"),
-            )
-            _add_seed_transaction(
-                month=month,
-                day=11,
-                tx_type="expense",
-                amount=95.0,
-                category_key="health",
-                description_key="health",
-                tag_keys=("variable", "essential"),
-            )
-
-        if month in {3, 6, 9, 12}:
-            db.transfer_between_accounts(
-                from_account_id=int(default_account["id"]),
-                to_account_id=int(reserve_account["id"]),
-                amount=125.0,
-                note=seed_note,
-                tx_date=f"{year}-{month:02d}-30",
-                description=str(cast(dict[str, str], catalog["descriptions"])["transfer"]),
-            )
-            tx_count += 2
-
-    return {
-        "year": year,
-        "budget_code": budget_code,
-        "budget_id": budget_id,
-        "transactions_created": tx_count,
-        "tag_links_created": tag_links,
-        "language": language,
-    }
+    return build_demo_seed_result(
+        year=year,
+        budget_code=budget_code,
+        budget_id=budget_id,
+        transactions_created=tx_count,
+        tag_links_created=tag_links,
+        language=language,
+    )

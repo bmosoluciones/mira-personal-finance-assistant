@@ -16,7 +16,9 @@ import pytest
 
 from mira import cli as cli_module
 from mira.db import migrations as db_migrations
+from mira.db import bootstrap as bootstrap_module
 from mira.db.database import Database
+from mira.db.demo_seed import build_demo_seed_catalog, normalize_demo_seed_language
 from tests.db_inspection import fetch_all_dicts, fetch_one_dict
 
 
@@ -89,6 +91,18 @@ def _database_from_template(template_path: Path, path: Path) -> Database:
     db = Database(path=path)
     db.connect()
     return db
+
+
+def test_demo_seed_language_normalization_and_catalog_fallback() -> None:
+    assert normalize_demo_seed_language("ES") == "es"
+    assert normalize_demo_seed_language("pt") == "en"
+    catalog = build_demo_seed_catalog(
+        language="en",
+        catalog_data=bootstrap_module._DEMO_CATALOG_DATA,
+        translate=bootstrap_module._cn,
+    )
+    assert catalog.main_account == "Main account"
+    assert catalog.tags["fixed"] == "Fixed"
 
 
 @pytest.fixture(scope="module")
@@ -361,6 +375,40 @@ def test_seed_demo_data_clamps_february_savings_date_and_uses_emergency_descript
         assert "2026-02-29" not in {str(row["date"]) for row in savings_rows}
         assert emergency_descriptions
         assert all(description == "Emergency fund contribution" for description in emergency_descriptions)
+    finally:
+        db.close()
+
+
+@pytest.mark.full
+def test_seed_demo_data_creates_expected_transfer_pairs_and_tag_links(
+    tmp_path: Path,
+    seeded_demo_en_snapshot: SeedSnapshot,
+) -> None:
+    db = _database_from_template(seeded_demo_en_snapshot.db_path, tmp_path / "transfer_seed.db")
+    try:
+        transfer_total = int(
+            fetch_one_dict(
+                db,
+                "SELECT COUNT(*) AS total FROM transactions WHERE note = ? AND is_transfer = 1",
+                ("mira_cli_seed:2026",),
+            )["total"]
+        )
+        tag_links_total = int(
+            fetch_one_dict(
+                db,
+                """
+                SELECT COUNT(*) AS total
+                FROM transaction_tags tt
+                JOIN transactions t ON t.id = tt.transaction_id
+                WHERE t.note = ?
+                """,
+                ("mira_cli_seed:2026",),
+            )["total"]
+        )
+
+        assert transfer_total == 8
+        assert tag_links_total == seeded_demo_en_snapshot.result["tag_links_created"]
+        assert seeded_demo_en_snapshot.result["tag_links_created"] > 200
     finally:
         db.close()
 

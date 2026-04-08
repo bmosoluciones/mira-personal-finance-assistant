@@ -8,6 +8,19 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 
 ### Added
 
+ - Add balance adjustment flow for accounts and cards
+
+### Changed
+
+- Internal refactor for the demo seed flow, executor collaborators, main window orchestration seams, and dialog package exports while preserving the public behavior of the offline assistant, MIRA report, and notification flows.
+- `mira.ui.dialogs.crud` is now a compatibility layer only; transaction, category, budget, recurring, goal, and tag dialogs live in dedicated owner modules, while `MainWindow` now delegates layout and navigation to focused mixins and the demo seed/executor helpers moved further into internal collaborators.
+- `MainWindow` now delegates prompt/chat command flow to a dedicated mixin, `Executor` delegates income/expense recording to a transaction recorder collaborator, and the demo seed bootstrap now uses explicit runtime/result builders to keep the seed entrypoint declarative.
+- Beta readiness cleanup: the main window shell/refresh helpers now live in a dedicated mixin, executor delegation was reduced further to collaborators, and the development environment documentation/metadata now explicitly includes `openpyxl` so `pytest -m full` is a real quality gate instead of an implicit setup trap.
+
+## [0.0.1a3] - 2026-04-07
+
+### Added
+
 - Schema migration scaffolding in `src/mira/db/migrations.py`, including a version gate, sequential migration registry, and a shared migration entrypoint for future database upgrades.
 
 ### Changed

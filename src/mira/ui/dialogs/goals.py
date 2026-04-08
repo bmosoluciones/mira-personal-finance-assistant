@@ -1,0 +1,158 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
+
+"""Savings goal dialogs."""
+
+from __future__ import annotations
+
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout
+
+from mira.db.database import Database
+from mira.ui.dialogs._shared import _NOTICE_LABEL_STYLE, _make_amount_spin, _make_date_edit, _notify_warning
+from mira.ui.i18n import normalize_language, tr
+
+
+class SavingsGoalDialog(QDialog):
+    """Create a savings goal."""
+
+    def __init__(self, db: Database, goal: dict | None = None, prefill: dict | None = None, parent=None) -> None:
+        super().__init__(parent)
+        self._db = db
+        self._goal = goal
+        self._language = normalize_language(self._db.setting.get("language"))
+        self.setWindowTitle(
+            self._t("goals.dialog.title.edit", "Edit Goal")
+            if goal
+            else self._t("goals.dialog.title.add", "Add Savings Goal")
+        )
+        self.setMinimumWidth(340)
+        self._build_ui()
+        if goal:
+            self._prefill(goal)
+        elif prefill:
+            self._prefill(prefill)
+        self._update_notice()
+
+    def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        return tr(key, self._language, default=default, params=params)
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        form.setSpacing(10)
+        self._name_edit = QLineEdit()
+        self._name_edit.setPlaceholderText("Goal name… (e.g. Viaje a Europa)")
+        self._name_edit.textChanged.connect(self._update_notice)
+        form.addRow(self._t("goals.dialog.name", "Name:"), self._name_edit)
+        self._target_spin = _make_amount_spin(self._db)
+        form.addRow(self._t("goals.dialog.target_amount", "Target Amount:"), self._target_spin)
+        self._date_edit = _make_date_edit()
+        form.addRow(self._t("goals.dialog.target_date", "Target Date:"), self._date_edit)
+        layout.addLayout(form)
+        self._notice_lbl = QLabel("")
+        self._notice_lbl.setWordWrap(True)
+        self._notice_lbl.setStyleSheet(_NOTICE_LABEL_STYLE)
+        layout.addWidget(self._notice_lbl)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self._on_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _prefill(self, goal: dict) -> None:
+        from PySide6.QtCore import QDate
+
+        self._name_edit.setText(goal.get("name", ""))
+        if (target_amount := goal.get("target_amount")) is not None:
+            try:
+                self._target_spin.setValue(float(target_amount))
+            except (ValueError, TypeError):
+                pass
+        if td := goal.get("target_date"):
+            parts = td.split("-")
+            if len(parts) == 3:
+                try:
+                    self._date_edit.setDate(QDate(int(parts[0]), int(parts[1]), int(parts[2])))
+                except (ValueError, TypeError):
+                    pass
+
+    def _update_notice(self) -> None:
+        goal_name = self._name_edit.text().strip()
+        parent_name = self._db.setting.get_savings_goals_parent_name()
+        if self._goal is None:
+            key = "goals.dialog.notice.create.named" if goal_name else "goals.dialog.notice.create.generic"
+            default = (
+                "MIRA will link this goal to the savings expense category '{name}'. "
+                "If it does not exist, it will be created automatically under '{parent}'."
+                if goal_name
+                else "MIRA will link this goal to a savings expense category with the same name. "
+                "If it does not exist, it will be created automatically under '{parent}'."
+            )
+        else:
+            key = "goals.dialog.notice.edit.named" if goal_name else "goals.dialog.notice.edit.generic"
+            default = (
+                "This goal is linked to a savings expense category. If you change its name to '{name}', "
+                "MIRA will relink it to a category with that name under '{parent}'. Existing categories and history are not renamed."
+                if goal_name
+                else "This goal remains linked to a savings expense category. If you change its name, "
+                "MIRA will relink it to a category with that new name under '{parent}'. Existing categories and history are not renamed."
+            )
+        self._notice_lbl.setText(self._t(key, default, params={"name": goal_name, "parent": parent_name}))
+
+    def _on_accept(self) -> None:
+        if not self._name_edit.text().strip():
+            _notify_warning(
+                self,
+                self._t("validation.title", "Validation"),
+                self._t("goals.dialog.validation.name", "Goal name cannot be empty."),
+            )
+            return
+        if self._target_spin.value() <= 0:
+            _notify_warning(
+                self,
+                self._t("validation.title", "Validation"),
+                self._t("goals.dialog.validation.target", "Target amount must be greater than zero."),
+            )
+            return
+        self.accept()
+
+    def get_data(self) -> dict:
+        return {
+            "name": self._name_edit.text().strip(),
+            "target_amount": self._target_spin.value(),
+            "target_date": self._date_edit.date().toString("yyyy-MM-dd"),
+        }
+
+
+class ContributeGoalDialog(QDialog):
+    """Add a contribution to a savings goal."""
+
+    def __init__(self, db: Database, goal_name: str, parent=None) -> None:
+        super().__init__(parent)
+        self._db = db
+        self.setWindowTitle(f"Contribute to: {goal_name}")
+        self.setMinimumWidth(300)
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        form.setSpacing(10)
+        self._amount_spin = _make_amount_spin(self._db)
+        form.addRow("Amount to Contribute:", self._amount_spin)
+        layout.addLayout(form)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self._on_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _on_accept(self) -> None:
+        if self._amount_spin.value() <= 0:
+            _notify_warning(self, "Validation", "Amount must be greater than zero.")
+            return
+        self.accept()
+
+    def get_data(self) -> dict:
+        return {"amount": self._amount_spin.value()}
+
+
+__all__ = ["ContributeGoalDialog", "SavingsGoalDialog"]

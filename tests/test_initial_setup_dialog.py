@@ -93,10 +93,10 @@ def test_initial_setup_dialog_rejects_equal_number_separators(
 ) -> None:
     _get_qapplication_or_xfail(monkeypatch)
     dialogs_module = importlib.import_module("mira.ui.dialogs")
-    crud_module = importlib.import_module("mira.ui.dialogs.crud")
+    setup_module = importlib.import_module("mira.ui.dialogs.setup")
     warnings: list[tuple[str, str, str]] = []
     monkeypatch.setattr(
-        crud_module,
+        setup_module,
         "show_user_message",
         lambda _widget, title, message, level="info": warnings.append((title, message, level)),
     )

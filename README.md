@@ -70,6 +70,12 @@ If you are building MIRA from this repository for development or packaging work:
 pip install .
 ```
 
+For local development with the full test/tooling stack:
+
+```bash
+pip install ".[dev]"
+```
+
 Optional local chat support for source builds:
 
 ```bash
