@@ -43,6 +43,10 @@ class ReportRepository:
 
         def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any: ...
 
+        def get_category_by_name(self, name: str) -> dict[str, Any] | None: ...
+
+        def get_descendant_category_names(self, category_id: int) -> list[str]: ...
+
     def summarize_financials(
         self,
         transactions: list[dict[str, Any]],
@@ -60,6 +64,65 @@ class ReportRepository:
             "total_expenses": summary["expense"],
             "savings": summary["savings"],
             "net": summary["net"],
+        }
+
+    def summarize_financials_filtered(
+        self,
+        *,
+        tx_type: str | None = None,
+        account_id: int | None = None,
+        since_date: str | None = None,
+        until_date: str | None = None,
+        category: str | None = None,
+        tag_id: int | None = None,
+        include_children: bool = False,
+    ) -> dict[str, Any]:
+        tx = Transaction.alias()
+        linked_category = Category.alias()
+        legacy_name_match = fn.LOWER(fn.TRIM(fn.COALESCE(tx.category, ""))) == fn.LOWER(fn.TRIM(linked_category.name))
+        joined_on = ((tx.category_id.is_null(False)) & (tx.category_id == linked_category.id)) | (
+            (tx.category_id.is_null(True)) & (linked_category.type == tx.type) & legacy_name_match
+        )
+        reportable_expense = (tx.type == "expense") & (fn.COALESCE(linked_category.is_savings, 0) == 0)
+        income_sum = fn.COALESCE(fn.SUM(Case(None, ((tx.type == "income", tx.amount),), 0.0)), 0.0)
+        expense_sum = fn.COALESCE(fn.SUM(Case(None, ((reportable_expense, tx.amount),), 0.0)), 0.0)
+
+        query = tx.select(income_sum.alias("income"), expense_sum.alias("expense")).join(
+            linked_category,
+            JOIN.LEFT_OUTER,
+            on=joined_on,
+        )
+
+        if tx_type:
+            query = query.where(tx.type == tx_type)
+        if account_id is not None:
+            query = query.where(tx.account == account_id)
+        if since_date:
+            query = query.where(tx.date >= since_date)
+        if until_date:
+            query = query.where(tx.date <= until_date)
+        if category:
+            if include_children:
+                cat_row = self.get_category_by_name(category)
+                if cat_row is not None:
+                    names = self.get_descendant_category_names(int(cat_row["id"]))
+                    query = query.where(tx.category.in_(names))
+                else:
+                    query = query.where(tx.category == category)
+            else:
+                query = query.where(tx.category == category)
+        if tag_id is not None:
+            tagged_ids = TransactionTag.select(TransactionTag.transaction_id).where(TransactionTag.tag == tag_id)
+            query = query.where(tx.id.in_(tagged_ids))
+
+        query = query.where(analytics_included_expr(tx))
+        row = query.dicts().get()
+        income = self._cents_to_money(row["income"])
+        expense = self._cents_to_money(row["expense"])
+        return {
+            "income": income,
+            "expense": expense,
+            "net": income - expense,
         }
 
     def get_category_summary(

@@ -229,25 +229,28 @@ class ReportsViewService:
         yoy_end = end_d - timedelta(days=365)
 
         current = self._db.transaction.list(limit=20_000, since_date=since, until_date=until, **filters)
-        previous = self._db.transaction.list(
-            limit=20_000,
+        current_summary = self._summary_for_period(
+            since_date=since,
+            until_date=until,
+            filters=filters,
+        )
+        previous_summary = self._summary_for_period(
             since_date=prev_start.isoformat(),
             until_date=prev_end.isoformat(),
-            **filters,
+            filters=filters,
         )
-        yoy = self._db.transaction.list(
-            limit=20_000,
+        yoy_summary = self._summary_for_period(
             since_date=yoy_start.isoformat(),
             until_date=yoy_end.isoformat(),
-            **filters,
+            filters=filters,
         )
 
         return self._build_loaded_state(
             current,
             comparisons=ReportsComparisons(
-                current=self._summary_from_transactions(current),
-                previous=self._summary_from_transactions(previous),
-                yoy=self._summary_from_transactions(yoy),
+                current=current_summary,
+                previous=previous_summary,
+                yoy=yoy_summary,
             ),
             year=start_d.year,
         )
@@ -257,6 +260,22 @@ class ReportsViewService:
 
     def _summary_from_transactions(self, txs: list[dict[str, Any]]) -> dict[str, float]:
         summary = self._db.report.summarize_financials(txs)
+        return {
+            "income": float(summary["income"]),
+            "expense": float(summary["expense"]),
+            "net": float(summary["net"]),
+        }
+
+    def _summary_for_period(self, *, since_date: str, until_date: str, filters: dict[str, Any]) -> dict[str, float]:
+        summary = self._db.report.summarize_financials_filtered(
+            tx_type=filters.get("tx_type"),
+            account_id=filters.get("account_id"),
+            since_date=since_date,
+            until_date=until_date,
+            category=filters.get("category"),
+            tag_id=filters.get("tag_id"),
+            include_children=bool(filters.get("include_children")),
+        )
         return {
             "income": float(summary["income"]),
             "expense": float(summary["expense"]),

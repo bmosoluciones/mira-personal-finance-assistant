@@ -129,6 +129,55 @@ def test_reports_view_service_load_report_state_builds_comparisons(db: Database)
     assert state.by_month["2026-03"]["income"] == pytest.approx(100.0)
 
 
+def test_reports_view_service_load_report_state_uses_filtered_summary_queries(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    service = ReportsViewService(db)
+
+    original_list = db.transaction.list
+    seen_periods: list[tuple[str | None, str | None]] = []
+
+    def tracking_list(**kwargs: object) -> list[dict]:
+        if kwargs.get("since_date") != "2026-03-01" or kwargs.get("until_date") != "2026-03-31":
+            raise AssertionError("load_report_state should only list current-period transactions")
+        return original_list(**kwargs)
+
+    def fake_summary_filtered(**kwargs: object) -> dict[str, float]:
+        since = kwargs.get("since_date")
+        until = kwargs.get("until_date")
+        seen_periods.append((since if isinstance(since, str) else None, until if isinstance(until, str) else None))
+        if since == "2026-03-01":
+            return {"income": 100.0, "expense": 40.0, "net": 60.0}
+        if since == "2026-01-29":
+            return {"income": 60.0, "expense": 15.0, "net": 45.0}
+        return {"income": 80.0, "expense": 10.0, "net": 70.0}
+
+    monkeypatch.setattr(db.transaction, "list", tracking_list)
+    monkeypatch.setattr(db.report, "summarize_financials_filtered", fake_summary_filtered)
+
+    state = service.load_report_state(
+        since="2026-03-01",
+        until="2026-03-31",
+        filters={
+            "account_id": None,
+            "tx_type": None,
+            "category": None,
+            "tag_id": None,
+            "include_children": False,
+        },
+    )
+
+    assert state.comparisons is not None
+    assert state.comparisons.current["income"] == pytest.approx(100.0)
+    assert state.comparisons.previous["expense"] == pytest.approx(15.0)
+    assert state.comparisons.yoy["net"] == pytest.approx(70.0)
+    assert seen_periods == [
+        ("2026-03-01", "2026-03-31"),
+        ("2026-01-29", "2026-02-28"),
+        ("2025-03-01", "2025-03-31"),
+    ]
+
+
 def test_reports_view_service_load_budget_comparison_swallows_domain_errors(
     monkeypatch: pytest.MonkeyPatch, db: Database
 ) -> None:

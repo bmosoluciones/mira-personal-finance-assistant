@@ -175,3 +175,54 @@ def test_report_aggregates_exclude_balance_adjustments(db: Database) -> None:
     }
     assert tag_counts == {}
     assert category_counts == {}
+
+
+def test_report_summarize_financials_filtered_runs_in_sql_with_filters(db: Database) -> None:
+    account = db.account.create("Checking", "bank", 0.0, "USD")
+    income_category = db.category.create("Salary", "income")
+    parent = db.category.create("Food", "expense")
+    child = db.category.create("Dining", "expense", parent_id=int(parent["id"]))
+    savings = db.category.create("Emergency", "expense", is_savings=True)
+    tag = db.tag.create("Team lunch")
+
+    tx_income = db.transaction.create(
+        account_id=account["id"],
+        tx_type="income",
+        amount=500.0,
+        description="Payroll",
+        category=income_category["name"],
+        tx_date="2026-03-01",
+    )
+    tx_expense = db.transaction.create(
+        account_id=account["id"],
+        tx_type="expense",
+        amount=120.0,
+        description="Lunch",
+        category=child["name"],
+        tx_date="2026-03-02",
+    )
+    db.transaction.create(
+        account_id=account["id"],
+        tx_type="expense",
+        amount=200.0,
+        description="Transfer to savings",
+        category=savings["name"],
+        tx_date="2026-03-03",
+    )
+    db.tag.set_for_transaction(int(tx_expense["id"]), [int(tag["id"])])
+    db.tag.set_for_transaction(int(tx_income["id"]), [int(tag["id"])])
+
+    summary = db.report.summarize_financials_filtered(
+        account_id=int(account["id"]),
+        since_date="2026-03-01",
+        until_date="2026-03-31",
+        category=parent["name"],
+        include_children=True,
+        tag_id=int(tag["id"]),
+    )
+
+    assert summary == {
+        "income": 0.0,
+        "expense": 120.0,
+        "net": -120.0,
+    }

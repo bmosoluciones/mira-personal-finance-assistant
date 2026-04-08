@@ -620,6 +620,27 @@ class ReportFacade(_DatabaseFacade):
     ) -> dict[str, Money]:
         return self._db.summarize_financials(transactions, categories=categories)
 
+    def summarize_financials_filtered(
+        self,
+        *,
+        tx_type: str | None = None,
+        account_id: int | None = None,
+        since_date: str | None = None,
+        until_date: str | None = None,
+        category: str | None = None,
+        tag_id: int | None = None,
+        include_children: bool = False,
+    ) -> dict[str, Money]:
+        return self._db.summarize_financials_filtered(
+            tx_type=tx_type,
+            account_id=account_id,
+            since_date=since_date,
+            until_date=until_date,
+            category=category,
+            tag_id=tag_id,
+            include_children=include_children,
+        )
+
     def get_category_summary(
         self,
         *,
