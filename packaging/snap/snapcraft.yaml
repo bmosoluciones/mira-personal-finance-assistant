@@ -1,7 +1,7 @@
 name: mira-personal-finance-assistant
 title: MIRA
 base: core24
-version: 0.0.1a3
+version: 0.0.1a2
 summary: Offline personal finance assistant
 description: |
   MIRA is a desktop application for personal finance management that keeps
@@ -22,19 +22,6 @@ icon: 256x256.png
 apps:
   mira:
     command: local/bin/mira
-    extensions:
-      - kde-neon-6
-    common-id: solutions.bmogroup.mira.desktop
-    desktop: usr/share/applications/solutions.bmogroup.mira.desktop
-    plugs:
-      - home
-      - opengl
-    environment:
-      MIRA_MODELS_DIR: $SNAP_USER_COMMON/.mira/models
-      PYTHONPATH: $SNAP/local/lib/python3.12/dist-packages:$SNAP/usr/lib/python3/dist-packages${PYTHONPATH:+:$PYTHONPATH}
-      XDG_DATA_HOME: $SNAP_USER_COMMON/.local/share
-  mira-cli:
-    command: local/bin/mira-cli
     extensions:
       - kde-neon-6
     common-id: solutions.bmogroup.mira.desktop
@@ -67,9 +54,9 @@ parts:
     after:
       - metadata
     plugin: nil
-    source: https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1a3-py3-none-any.whl
+    source: https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1a2-py3-none-any.whl
     source-type: file
-    source-checksum: sha256/3a5e66ee20cb61e07a76fa9841b1d2f98ce118cb28edb3ccc12ed1463d572c12
+    source-checksum: sha256/466fac85e4482ddde6762cb5b2de41193acfaec98c8a59214370abf3bea2e599
     build-snaps:
       - kde-pyside6-core24-sdk/latest/stable
     stage-snaps:
@@ -77,8 +64,7 @@ parts:
     build-packages:
       - python3-pip
     override-build: |
-      python3 -m pip install --no-deps --prefix=$CRAFT_PART_INSTALL \
-        $CRAFT_PART_SRC/mira_personal_finance_assistant-0.0.1a3-py3-none-any.whl
+      python3 -m pip install --no-deps --prefix=$CRAFT_PART_INSTALL $CRAFT_PART_SRC/mira_personal_finance_assistant-0.0.1a2-py3-none-any.whl
       python3 -m pip install --prefix=$CRAFT_PART_INSTALL \
         et-xmlfile==2.0.0 \
         jinja2==3.1.6 \
