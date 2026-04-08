@@ -330,8 +330,15 @@ class TransactionDialog(QDialog):
         super().__init__(parent)
         self._db = db
         self._tx = tx
+        self._language = normalize_language(self._db.setting.get("language"))
         self._is_expense = True
-        self.setWindowTitle("Editar Transacción" if tx else "Nueva Transacción")
+        self.setWindowTitle(
+            tr(
+                "dialog.transaction.title.edit" if tx else "dialog.transaction.title.new",
+                self._language,
+                default="Edit Transaction" if tx else "New Transaction",
+            )
+        )
         self.setMinimumWidth(660)
         self._build_ui()
         if tx:
@@ -345,13 +352,19 @@ class TransactionDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
 
-        title = QLabel("Editar Transacción" if self._tx else "Nueva Transacción")
+        title = QLabel(
+            tr(
+                "dialog.transaction.title.edit" if self._tx else "dialog.transaction.title.new",
+                self._language,
+                default="Edit Transaction" if self._tx else "New Transaction",
+            )
+        )
         title.setStyleSheet("font-size:28px;font-weight:700;padding-bottom:4px;")
         layout.addWidget(title)
 
         type_row = QHBoxLayout()
-        self._btn_expense = QPushButton("Gasto")
-        self._btn_income = QPushButton("Ingreso")
+        self._btn_expense = QPushButton(tr("dialog.transaction.type.expense", self._language, default="Expense"))
+        self._btn_income = QPushButton(tr("dialog.transaction.type.income", self._language, default="Income"))
         self._btn_expense.clicked.connect(lambda: self._set_type("expense"))
         self._btn_income.clicked.connect(lambda: self._set_type("income"))
         type_row.addWidget(self._btn_expense)
@@ -362,7 +375,7 @@ class TransactionDialog(QDialog):
         self._type_combo.addItems(["expense", "income"])
         self._type_combo.hide()
 
-        amount_lbl = QLabel("Monto original")
+        amount_lbl = QLabel(tr("dialog.transaction.original_amount", self._language, default="Original amount"))
         layout.addWidget(amount_lbl)
         self._amount_spin = _make_amount_spin(self._db)
         self._amount_spin.setPrefix("$")
@@ -376,13 +389,13 @@ class TransactionDialog(QDialog):
         left = QFormLayout()
         left.setSpacing(10)
         self._date_edit = _make_date_edit()
-        left.addRow("Fecha:", self._date_edit)
+        left.addRow(tr("dialog.transaction.date", self._language, default="Date:"), self._date_edit)
 
         self._account_combo = QComboBox()
         self._account_combo.setEditable(False)
         self._populate_accounts()
         self._account_combo.currentIndexChanged.connect(self._sync_fx_state)
-        left.addRow("Cuenta:", self._account_combo)
+        left.addRow(tr("dialog.transaction.account", self._language, default="Account:"), self._account_combo)
 
         self._account_currency_lbl = QLabel("")
         self._account_currency_lbl.setStyleSheet("font-size:11px;")
@@ -395,10 +408,10 @@ class TransactionDialog(QDialog):
         self._category_combo = QComboBox()
         self._category_combo.setEditable(False)
         self._populate_categories()
-        right.addRow("Categoría:", self._category_combo)
+        right.addRow(tr("dialog.transaction.category", self._language, default="Category:"), self._category_combo)
 
         self._tag_selector = _TagMultiSelectButton(self, lang=normalize_language(self._db.setting.get("language")))
-        right.addRow("Etiquetas:", self._tag_selector)
+        right.addRow(tr("dialog.transaction.tags", self._language, default="Tags:"), self._tag_selector)
         self._refresh_tag_selector()
         grid.addLayout(right, 1)
 
@@ -407,10 +420,19 @@ class TransactionDialog(QDialog):
         self._payment_method_combo = QComboBox()
         self._payment_method_combo.addItems(["cash", "credit_card", "debit_card", "transfer", "other"])
         layout.addLayout(grid)
-        self._payment_method_form.addRow("Método:", self._payment_method_combo)
+        self._payment_method_form.addRow(
+            tr("dialog.transaction.payment_method", self._language, default="Payment method:"),
+            self._payment_method_combo,
+        )
         layout.addLayout(self._payment_method_form)
 
-        self._fx_check = QCheckBox("Ingresar en moneda distinta a la cuenta")
+        self._fx_check = QCheckBox(
+            tr(
+                "dialog.transaction.fx.enable",
+                self._language,
+                default="Enter amount in a different currency than the account",
+            )
+        )
         self._fx_check.toggled.connect(self._sync_fx_state)
         layout.addWidget(self._fx_check)
 
@@ -420,31 +442,39 @@ class TransactionDialog(QDialog):
         self._source_currency_combo.setEditable(False)
         self._populate_source_currencies()
         self._source_currency_combo.currentTextChanged.connect(self._sync_fx_state)
-        fx_form.addRow("Moneda original:", self._source_currency_combo)
+        fx_form.addRow(
+            tr("dialog.transaction.fx.source_currency", self._language, default="Original currency:"),
+            self._source_currency_combo,
+        )
 
         self._rate_spin = NumberMaskedSpinBox(self._db.setting)
         self._rate_spin.setRange(0.000001, 9_999_999.99)
         self._rate_spin.setDecimals(6)
         self._rate_spin.setValue(1.0)
         self._rate_spin.valueChanged.connect(self._recompute_converted_amount)
-        fx_form.addRow("Tipo de cambio:", self._rate_spin)
+        fx_form.addRow(tr("dialog.transaction.fx.rate", self._language, default="Exchange rate:"), self._rate_spin)
 
         self._converted_amount_spin = _make_amount_spin(self._db)
         self._converted_amount_spin.setPrefix("$")
         self._converted_amount_spin.setButtonSymbols(QDoubleSpinBox.ButtonSymbols.NoButtons)
         self._converted_amount_spin.setReadOnly(False)
-        fx_form.addRow("Monto convertido:", self._converted_amount_spin)
+        fx_form.addRow(
+            tr("dialog.transaction.fx.converted_amount", self._language, default="Converted amount:"),
+            self._converted_amount_spin,
+        )
 
         layout.addLayout(fx_form)
 
         self._amount_spin.valueChanged.connect(self._recompute_converted_amount)
 
         self._desc_edit = QLineEdit()
-        self._desc_edit.setPlaceholderText("Descripción")
-        layout.addWidget(QLabel("Descripción"))
+        self._desc_edit.setPlaceholderText(tr("dialog.transaction.description", self._language, default="Description"))
+        layout.addWidget(QLabel(tr("dialog.transaction.description", self._language, default="Description")))
         layout.addWidget(self._desc_edit)
 
-        self._details_check = QCheckBox("Añadir más detalles... (opcional)")
+        self._details_check = QCheckBox(
+            tr("dialog.transaction.more_details", self._language, default="Add more details... (optional)")
+        )
         self._details_check.toggled.connect(self._toggle_optional)
         layout.addWidget(self._details_check)
 
@@ -453,26 +483,36 @@ class TransactionDialog(QDialog):
         optional_layout.setSpacing(8)
         self._note_edit = QTextEdit()
         self._note_edit.setMaximumHeight(90)
-        self._note_edit.setPlaceholderText("Notas adicionales")
-        optional_layout.addRow("Notas:", self._note_edit)
+        self._note_edit.setPlaceholderText(
+            tr("dialog.transaction.notes.placeholder", self._language, default="Additional notes")
+        )
+        optional_layout.addRow(tr("dialog.transaction.notes", self._language, default="Notes:"), self._note_edit)
 
         receipt_row = QHBoxLayout()
         self._receipt_path_edit = QLineEdit()
-        self._receipt_path_edit.setPlaceholderText("Ruta del comprobante")
+        self._receipt_path_edit.setPlaceholderText(
+            tr("dialog.transaction.receipt.path", self._language, default="Receipt file path")
+        )
         self._receipt_path_edit.setReadOnly(True)
-        browse_btn = QPushButton("Buscar…")
+        browse_btn = QPushButton(tr("dialog.transaction.receipt.browse", self._language, default="Browse…"))
         browse_btn.clicked.connect(self._browse_receipt)
         receipt_row.addWidget(self._receipt_path_edit)
         receipt_row.addWidget(browse_btn)
-        optional_layout.addRow("Comprobante:", receipt_row)
+        optional_layout.addRow(tr("dialog.transaction.receipt", self._language, default="Receipt:"), receipt_row)
 
         self._optional_container.hide()
         layout.addWidget(self._optional_container)
 
         action_row = QHBoxLayout()
-        cancel_btn = QPushButton("Cancelar")
+        cancel_btn = QPushButton(tr("dialog.common.cancel", self._language, default="Cancel"))
         cancel_btn.clicked.connect(self.reject)
-        save_btn = QPushButton("Actualizar Transacción" if self._tx else "Guardar Transacción")
+        save_btn = QPushButton(
+            tr(
+                "dialog.transaction.save.edit" if self._tx else "dialog.transaction.save.new",
+                self._language,
+                default="Update Transaction" if self._tx else "Save Transaction",
+            )
+        )
         save_btn.clicked.connect(self._on_accept)
         cancel_btn.setStyleSheet(_SECONDARY_ACTION_BUTTON_STYLE)
         save_btn.setStyleSheet(_PRIMARY_ACTION_BUTTON_STYLE)
@@ -492,7 +532,14 @@ class TransactionDialog(QDialog):
 
     def _sync_fx_state(self) -> None:
         account_currency = self._selected_account_currency()
-        self._account_currency_lbl.setText(f"Moneda de la cuenta: {account_currency}")
+        self._account_currency_lbl.setText(
+            tr(
+                "dialog.transaction.account_currency",
+                self._language,
+                default="Account currency: {currency}",
+                params={"currency": account_currency},
+            )
+        )
 
         enabled = self._fx_check.isChecked()
         self._source_currency_combo.setEnabled(enabled)
@@ -601,9 +648,13 @@ class TransactionDialog(QDialog):
 
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "Seleccionar comprobante",
+            tr("dialog.transaction.receipt.select", self._language, default="Select receipt"),
             "",
-            "Images (*.png *.jpg *.jpeg *.gif *.bmp *.pdf);;All Files (*)",
+            tr(
+                "dialog.transaction.receipt.filter",
+                self._language,
+                default="Images (*.png *.jpg *.jpeg *.gif *.bmp *.pdf);;All Files (*)",
+            ),
         )
         if path:
             self._receipt_path_edit.setText(path)
@@ -670,27 +721,68 @@ class TransactionDialog(QDialog):
 
     def _on_accept(self) -> None:
         if self._amount_spin.value() <= 0:
-            _notify_warning(self, "Validación", "La cantidad debe ser mayor que cero.")
+            _notify_warning(
+                self,
+                tr("dialog.common.validation", self._language, default="Validation"),
+                tr(
+                    "dialog.transaction.validation.amount_positive",
+                    self._language,
+                    default="Amount must be greater than zero.",
+                ),
+            )
             return
         if self._account_combo.count() == 0:
-            _notify_warning(self, "Validación", "No hay cuentas disponibles.")
+            _notify_warning(
+                self,
+                tr("dialog.common.validation", self._language, default="Validation"),
+                tr("dialog.transaction.validation.accounts_required", self._language, default="No accounts available."),
+            )
             return
         if self._fx_check.isChecked():
             if not self._source_currency_combo.currentText().strip():
-                _notify_warning(self, "Validación", "Ingrese la moneda original del monto.")
+                _notify_warning(
+                    self,
+                    tr("dialog.common.validation", self._language, default="Validation"),
+                    tr(
+                        "dialog.transaction.validation.source_currency_required",
+                        self._language,
+                        default="Enter the source currency.",
+                    ),
+                )
                 return
             if self._rate_spin.value() <= 0:
-                _notify_warning(self, "Validación", "El tipo de cambio debe ser mayor que cero.")
+                _notify_warning(
+                    self,
+                    tr("dialog.common.validation", self._language, default="Validation"),
+                    tr(
+                        "dialog.transaction.validation.exchange_rate_positive",
+                        self._language,
+                        default="Exchange rate must be greater than zero.",
+                    ),
+                )
                 return
             if self._converted_amount_spin.value() <= 0:
-                _notify_warning(self, "Validación", "El monto convertido debe ser mayor que cero.")
+                _notify_warning(
+                    self,
+                    tr("dialog.common.validation", self._language, default="Validation"),
+                    tr(
+                        "dialog.transaction.validation.converted_amount_positive",
+                        self._language,
+                        default="Converted amount must be greater than zero.",
+                    ),
+                )
                 return
         max_tags = int(self._db.setting.get("max_tags_per_transaction") or 10)
         if len(self._get_selected_tag_ids()) > max_tags:
             _notify_warning(
                 self,
-                "Validación",
-                f"No puedes asignar más de {max_tags} etiquetas a una transacción.",
+                tr("dialog.common.validation", self._language, default="Validation"),
+                tr(
+                    "dialog.transaction.validation.max_tags",
+                    self._language,
+                    default="You can assign at most {max_tags} tags to a transaction.",
+                    params={"max_tags": max_tags},
+                ),
             )
             return
         self.accept()
@@ -743,7 +835,14 @@ class AccountDialog(QDialog):
         super().__init__(parent)
         self._db = db
         self._account = account
-        self.setWindowTitle("Edit Account" if account else "Add Account")
+        self._language = normalize_language(self._db.setting.get("language"))
+        self.setWindowTitle(
+            tr(
+                "dialog.account.title.edit" if account else "dialog.account.title.new",
+                self._language,
+                default="Edit Account" if account else "Add Account",
+            )
+        )
         self.setMinimumWidth(340)
         self._build_ui()
         if account:
@@ -755,15 +854,17 @@ class AccountDialog(QDialog):
         form.setSpacing(10)
 
         self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText("Account name…")
-        form.addRow("Name:", self._name_edit)
+        self._name_edit.setPlaceholderText(
+            tr("dialog.account.name.placeholder", self._language, default="Account name…")
+        )
+        form.addRow(tr("dialog.account.name", self._language, default="Name:"), self._name_edit)
 
         self._type_combo = QComboBox()
         self._type_combo.addItem("bank", "bank")
         self._type_combo.addItem("cash", "cash")
         self._type_combo.addItem("credit", "credit")
         self._type_combo.currentIndexChanged.connect(self._sync_balance_range)
-        form.addRow("Type:", self._type_combo)
+        form.addRow(tr("dialog.account.type", self._language, default="Type:"), self._type_combo)
 
         self._currency_combo = QComboBox()
         self._currency_combo.setEditable(False)
@@ -776,11 +877,13 @@ class AccountDialog(QDialog):
         current_idx = self._currency_combo.findData(default_currency)
         if current_idx >= 0:
             self._currency_combo.setCurrentIndex(current_idx)
-        form.addRow("Currency:", self._currency_combo)
+        form.addRow(tr("dialog.account.currency", self._language, default="Currency:"), self._currency_combo)
 
         self._balance_spin = _make_balance_spin(self._db)
         self._balance_spin.setValue(0.00)
-        self._balance_row_label = QLabel("Opening Balance:")
+        self._balance_row_label = QLabel(
+            tr("dialog.account.opening_balance", self._language, default="Opening Balance:")
+        )
         form.addRow(self._balance_row_label, self._balance_spin)
 
         # Hide opening balance when editing
@@ -830,7 +933,11 @@ class AccountDialog(QDialog):
 
     def _on_accept(self) -> None:
         if not self._name_edit.text().strip():
-            _notify_warning(self, "Validation", "Account name cannot be empty.")
+            _notify_warning(
+                self,
+                tr("dialog.common.validation", self._language, default="Validation"),
+                tr("dialog.account.validation.name_required", self._language, default="Account name cannot be empty."),
+            )
             return
         self.accept()
 
@@ -1515,7 +1622,14 @@ class CategoryDialog(QDialog):
         self._db = db
         self._category = category
         self._default_type = default_type
-        self.setWindowTitle("Edit Category" if category else "Add Category")
+        self._language = normalize_language(self._db.setting.get("language"))
+        self.setWindowTitle(
+            tr(
+                "dialog.category.title.edit" if category else "dialog.category.title.new",
+                self._language,
+                default="Edit Category" if category else "Add Category",
+            )
+        )
         self.setMinimumWidth(320)
         self._build_ui()
         if category:
@@ -1527,8 +1641,10 @@ class CategoryDialog(QDialog):
         form.setSpacing(10)
 
         self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText("Category name…")
-        form.addRow("Name:", self._name_edit)
+        self._name_edit.setPlaceholderText(
+            tr("dialog.category.name.placeholder", self._language, default="Category name…")
+        )
+        form.addRow(tr("dialog.category.name", self._language, default="Name:"), self._name_edit)
 
         self._type_combo = QComboBox()
         self._type_combo.addItems(["expense", "income"])
@@ -1536,7 +1652,7 @@ class CategoryDialog(QDialog):
         if idx >= 0:
             self._type_combo.setCurrentIndex(idx)
         self._type_combo.currentIndexChanged.connect(self._populate_parents)
-        form.addRow("Type:", self._type_combo)
+        form.addRow(tr("dialog.category.type", self._language, default="Type:"), self._type_combo)
 
         # Color picker (reuses the same pattern as TagDialog)
         self._color_preview = QLabel()
@@ -1545,7 +1661,7 @@ class CategoryDialog(QDialog):
         self._color_value_label = QLabel()
         self._color_value_label.setMinimumWidth(84)
         self._color_value_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-        self._color_btn = QPushButton("Choose color")
+        self._color_btn = QPushButton(tr("dialog.category.color.choose", self._language, default="Choose color"))
         self._color_btn.clicked.connect(self._choose_color)
         color_container = QWidget()
         color_row = QHBoxLayout(color_container)
@@ -1556,16 +1672,16 @@ class CategoryDialog(QDialog):
         color_row.addWidget(self._color_btn)
         self._selected_color = "#888888"
         self._update_color_preview(self._selected_color)
-        form.addRow("Color:", color_container)
+        form.addRow(tr("dialog.category.color", self._language, default="Color:"), color_container)
 
         self._icon_combo = _build_icon_combo(self, lang=normalize_language(self._db.setting.get("language")))
-        form.addRow("Icon:", self._icon_combo)
+        form.addRow(tr("dialog.category.icon", self._language, default="Icon:"), self._icon_combo)
 
         # Parent category selector (only one level)
         self._parent_combo = QComboBox()
-        self._parent_combo.addItem("(None)", None)
+        self._parent_combo.addItem(tr("dialog.category.parent.none", self._language, default="(None)"), None)
         # Will be populated in _populate_parents()
-        form.addRow("Parent:", self._parent_combo)
+        form.addRow(tr("dialog.category.parent", self._language, default="Parent:"), self._parent_combo)
 
         layout.addLayout(form)
 
@@ -1592,7 +1708,11 @@ class CategoryDialog(QDialog):
         )
 
     def _choose_color(self) -> None:
-        color = QColorDialog.getColor(QColor(self._selected_color), self, "Select Category Color")
+        color = QColorDialog.getColor(
+            QColor(self._selected_color),
+            self,
+            tr("dialog.category.color.select_title", self._language, default="Select Category Color"),
+        )
         if color.isValid():
             self._update_color_preview(color.name())
 
@@ -1612,7 +1732,13 @@ class CategoryDialog(QDialog):
 
     def _on_accept(self) -> None:
         if not self._name_edit.text().strip():
-            _notify_warning(self, "Validation", "Category name cannot be empty.")
+            _notify_warning(
+                self,
+                tr("dialog.common.validation", self._language, default="Validation"),
+                tr(
+                    "dialog.category.validation.name_required", self._language, default="Category name cannot be empty."
+                ),
+            )
             return
         self.accept()
 
@@ -1636,7 +1762,7 @@ class CategoryDialog(QDialog):
         all_cats = self._db.category.list(cat_type)
         current_id = self._category["id"] if self._category and "id" in self._category else None
         self._parent_combo.clear()
-        self._parent_combo.addItem("(None)", None)
+        self._parent_combo.addItem(tr("dialog.category.parent.none", self._language, default="(None)"), None)
         for cat in all_cats:
             if current_id is not None and cat["id"] == current_id:
                 continue
@@ -1656,7 +1782,8 @@ class MergeCategoryDialog(QDialog):
         super().__init__(parent)
         self._db = db
         self._cat_type = cat_type
-        self.setWindowTitle("Merge Categories")
+        self._language = normalize_language(self._db.setting.get("language"))
+        self.setWindowTitle(tr("dialog.category.merge.title", self._language, default="Merge Categories"))
         self.setMinimumWidth(380)
         self._categories = self._db.category.list(cat_type)
         self._build_ui()
@@ -1676,11 +1803,18 @@ class MergeCategoryDialog(QDialog):
         if self._target_combo.count() > 1:
             self._target_combo.setCurrentIndex(1)
 
-        form.addRow("Source category:", self._source_combo)
-        form.addRow("Destination category:", self._target_combo)
+        form.addRow(tr("dialog.category.merge.source", self._language, default="Source category:"), self._source_combo)
+        form.addRow(
+            tr("dialog.category.merge.target", self._language, default="Destination category:"),
+            self._target_combo,
+        )
 
         note = QLabel(
-            "All transactions and recurring records from source category " "will be moved to the destination category."
+            tr(
+                "dialog.category.merge.note",
+                self._language,
+                default="All transactions and recurring records from source category will be moved to the destination category.",
+            )
         )
         note.setWordWrap(True)
         note.setStyleSheet("font-size:11px;")
@@ -1696,7 +1830,15 @@ class MergeCategoryDialog(QDialog):
         source_id = self._source_combo.currentData()
         target_id = self._target_combo.currentData()
         if source_id == target_id:
-            _notify_warning(self, "Validation", "Source and destination categories must be different.")
+            _notify_warning(
+                self,
+                tr("dialog.common.validation", self._language, default="Validation"),
+                tr(
+                    "dialog.category.merge.validation.distinct",
+                    self._language,
+                    default="Source and destination categories must be different.",
+                ),
+            )
             return
         self.accept()
 
@@ -1714,7 +1856,8 @@ class BudgetCreateDialog(QDialog):
     def __init__(self, db: Database, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._db = db
-        self.setWindowTitle("Nuevo presupuesto")
+        self._language = normalize_language(self._db.setting.get("language"))
+        self.setWindowTitle(tr("dialog.budget_create.title", self._language, default="New budget"))
         self.setMinimumWidth(360)
         self._build_ui()
 
@@ -1724,13 +1867,19 @@ class BudgetCreateDialog(QDialog):
         form.setSpacing(10)
 
         self._code_edit = QLineEdit()
-        self._code_edit.setPlaceholderText("ppto2026, ppto_vacaciones, ppto_v2…")
-        form.addRow("Código:", self._code_edit)
+        self._code_edit.setPlaceholderText(
+            tr(
+                "dialog.budget_create.code.placeholder",
+                self._language,
+                default="budget2026, budget_holidays, budget_v2…",
+            )
+        )
+        form.addRow(tr("dialog.budget_create.code", self._language, default="Code:"), self._code_edit)
 
         self._year_spin = QSpinBox()
         self._year_spin.setRange(1900, 9999)
         self._year_spin.setValue(date.today().year)
-        form.addRow("Año:", self._year_spin)
+        form.addRow(tr("dialog.budget_create.year", self._language, default="Year:"), self._year_spin)
 
         self._currency_combo = QComboBox()
         self._currency_combo.setEditable(True)
@@ -1743,11 +1892,14 @@ class BudgetCreateDialog(QDialog):
             self._currency_combo.setCurrentIndex(current_idx)
         else:
             self._currency_combo.setCurrentText(default_currency)
-        form.addRow("Moneda:", self._currency_combo)
+        form.addRow(tr("dialog.budget_create.currency", self._language, default="Currency:"), self._currency_combo)
 
         help_lbl = QLabel(
-            "El presupuesto es anual. Después de crearlo podrás editar los 12 meses, "
-            "proponer un presupuesto inicial y compararlo contra lo real."
+            tr(
+                "dialog.budget_create.help",
+                self._language,
+                default="The budget is yearly. After creating it, you'll be able to edit all 12 months, propose an initial budget, and compare it with actuals.",
+            )
         )
         help_lbl.setWordWrap(True)
         help_lbl.setStyleSheet("font-size:11px;")
@@ -1762,7 +1914,11 @@ class BudgetCreateDialog(QDialog):
 
     def _on_accept(self) -> None:
         if not self._code_edit.text().strip():
-            _notify_warning(self, "Validación", "El código del presupuesto es obligatorio.")
+            _notify_warning(
+                self,
+                tr("dialog.common.validation", self._language, default="Validation"),
+                tr("dialog.budget_create.validation.code_required", self._language, default="Budget code is required."),
+            )
             return
         if not self._currency_combo.currentText().strip():
             _notify_warning(self, "Validación", "La moneda del presupuesto es obligatoria.")

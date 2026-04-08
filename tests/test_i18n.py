@@ -196,6 +196,16 @@ def test_recently_fixed_visible_strings_are_marked_for_translation() -> None:
             'QPushButton("Siguiente")',
             'QMessageBox.critical(self, "Import Error"',
             'QMessageBox.critical(self, "Export Error"',
+            'header = QLabel("MIRA")',
+            'progress.setWindowTitle("MIRA")',
+        ],
+        "src/mira/ui/dialogs/crud.py": [
+            'self.setWindowTitle("Editar Transacción" if tx else "Nueva Transacción")',
+            'self._btn_expense = QPushButton("Gasto")',
+            'self._btn_income = QPushButton("Ingreso")',
+            'self._name_edit.setPlaceholderText("Account name…")',
+            'self.setWindowTitle("Merge Categories")',
+            'self.setWindowTitle("Nuevo presupuesto")',
         ],
         "src/mira/ui/views/dashboard.py": [
             'QMessageBox.information(self, "Edit Transaction", "Select a transaction first.")',

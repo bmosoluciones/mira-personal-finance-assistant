@@ -322,7 +322,7 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
 
         # App name header
-        header = QLabel("MIRA")
+        header = QLabel(tr("app.name", self._language, default="MIRA"))
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header.setFont(QFont("Arial", 13, QFont.Weight.Bold))
         header.setStyleSheet("padding:10px 0;")
@@ -330,7 +330,8 @@ class MainWindow(QMainWindow):
 
         # Navigation list
         self._nav_list = QListWidget()
-        self._nav_list.setStyleSheet("""
+        self._nav_list.setStyleSheet(
+            """
             QListWidget {{
                 background:palette(window);
                 border:none;
@@ -351,7 +352,8 @@ class MainWindow(QMainWindow):
                 background:palette(button);
                 color:palette(button-text);
             }}
-            """)
+            """
+        )
         self._nav_list.setSpacing(1)
 
         for label in [
@@ -1432,7 +1434,7 @@ class MainWindow(QMainWindow):
             0,
             self,
         )
-        progress.setWindowTitle("MIRA")
+        progress.setWindowTitle(tr("app.name", self._language, default="MIRA"))
         progress.setCancelButton(None)
         progress.setMinimumDuration(0)
         progress.setWindowModality(Qt.WindowModality.ApplicationModal)
