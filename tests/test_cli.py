@@ -35,8 +35,7 @@ def _set_user_version(path: Path, version: int) -> None:
 def _create_legacy_float_database(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE accounts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -46,8 +45,7 @@ def _create_legacy_float_database(path: Path) -> None:
                 is_default INTEGER DEFAULT 0,
                 created_at TEXT
             )
-            """
-        )
+            """)
         conn.commit()
 
 

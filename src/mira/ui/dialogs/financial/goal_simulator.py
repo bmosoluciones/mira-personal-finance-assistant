@@ -313,13 +313,15 @@ class GoalScenarioDialog(QDialog):
         if self._latest is None:
             return
 
+        language = getattr(self, "_language", "en")
+
         if not self._latest.is_reachable:
             reply = QMessageBox.question(
                 self,
-                tr("tools.goal_simulator.dialog.unreachable_title", self._language, default="Unreachable scenario"),
+                tr("tools.goal_simulator.dialog.unreachable_title", language, default="Unreachable scenario"),
                 tr(
                     "tools.goal_simulator.dialog.unreachable_body",
-                    self._language,
+                    language,
                     default="With this scenario you will not reach the goal. Do you want to create it anyway?",
                 ),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -329,10 +331,10 @@ class GoalScenarioDialog(QDialog):
 
         show_user_message(
             self,
-            tr("tools.goal_simulator.dialog.create_title", self._language, default="Create goal"),
+            tr("tools.goal_simulator.dialog.create_title", language, default="Create goal"),
             tr(
                 "tools.goal_simulator.dialog.create_body",
-                self._language,
+                language,
                 default="The goal form will open with the simulated target amount and term so you can complete and save it manually.",
             ),
         )

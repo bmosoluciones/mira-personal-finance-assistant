@@ -66,11 +66,24 @@ def _ensure_positive_budget_value(value: float) -> float:
 
 def _looks_like_formula(raw: str) -> bool:
     stripped = raw.strip()
+    if not any(ch.isdigit() for ch in stripped):
+        return False
     if any(ch in stripped for ch in "*/()"):
         return True
     if "+" in stripped:
         return True
     return "-" in stripped[1:]
+
+
+def _parse_plain_budget_number(raw: str, number_format: NumberFormatConfig) -> float:
+    stripped = raw.strip()
+    sign = 1.0
+    if stripped[:1] in "+-":
+        sign = -1.0 if stripped[0] == "-" else 1.0
+        stripped = stripped[1:].strip()
+    if not stripped:
+        raise ValueError("Budget value is empty.")
+    return sign * parse_number(stripped, number_format)
 
 
 def _starts_number(expr: str, index: int, number_format: NumberFormatConfig) -> bool:
@@ -258,7 +271,7 @@ def process_budget_value(
 
     # Plain number path – parse according to the active number format.
     try:
-        return _ensure_positive_budget_value(parse_number(raw, safe_number_format))
+        parsed_number = _parse_plain_budget_number(raw, safe_number_format)
     except ValueError as exc:
         if _looks_like_formula(raw):
             raise ValueError(
@@ -267,3 +280,4 @@ def process_budget_value(
         raise ValueError(
             f"Invalid value: '{raw}'. " "Enter a positive number or a formula starting with '=' " "(e.g. '=100+200')."
         ) from exc
+    return _ensure_positive_budget_value(parsed_number)

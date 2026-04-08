@@ -12,7 +12,6 @@ import pytest
 from mira.ai.executor import Executor
 from mira.ai import executor as executor_module
 from mira.db.database import Database
-from mira.db.helpers import localized_default_account_name
 
 
 @pytest.fixture

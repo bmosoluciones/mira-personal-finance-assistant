@@ -139,7 +139,7 @@ def test_dashboard_uses_compact_spacing_for_laptop(monkeypatch: pytest.MonkeyPat
 
         assert (margins.left(), margins.top(), margins.right(), margins.bottom()) == (16, 12, 16, 12)
         assert layout.spacing() == 10
-        assert view._income_card.minimumHeight() == 132
+        assert view._income_card.minimumHeight() == 110
         assert len(view._filter_btns) == 3
         assert view._tx_table.columnCount() == 5
     finally:

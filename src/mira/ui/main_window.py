@@ -13,7 +13,7 @@ from typing import cast
 import webbrowser
 
 from PySide6.QtCore import QThread, Qt, QTimer
-from PySide6.QtGui import QAction, QFont, QKeyEvent, QPixmap
+from PySide6.QtGui import QAction, QFont, QKeyEvent, QPalette, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -442,6 +442,7 @@ class MainWindow(QMainWindow):
         footer = QFrame()
         footer.setStyleSheet("")
         footer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        footer.setMaximumHeight(140)
 
         row = QHBoxLayout(footer)
         row.setContentsMargins(0, 0, 0, 0)
@@ -456,7 +457,7 @@ class MainWindow(QMainWindow):
         vsep.setStyleSheet("color:palette(mid);")
         row.addWidget(vsep)
 
-        # ---- Prompt panel (right, aligns with main area) ----
+        # ---- Prompt panel ----
         row.addWidget(self._make_prompt_panel(), 1)
 
         return footer
@@ -497,22 +498,6 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # --- Header bar (always visible, acts as collapse toggle) ---
-        header = QFrame()
-        header.setStyleSheet("border-top:1px solid palette(mid);border-bottom:1px solid palette(mid);")
-        header.setFixedHeight(34)
-        header_row = QHBoxLayout(header)
-        header_row.setContentsMargins(12, 0, 8, 0)
-        header_row.setSpacing(6)
-
-        chat_icon = QLabel("💬")
-        chat_icon.setStyleSheet("background:transparent;font-size:13px;border:none;")
-        header_row.addWidget(chat_icon)
-
-        chat_title = QLabel(tr("chat.panel.title", self._language, default="MIRA Chat"))
-        chat_title.setStyleSheet("background:transparent;font-size:12px;font-weight:bold;border:none;")
-        header_row.addWidget(chat_title)
-
         self._mode_switch = QComboBox()
         self._mode_switch.setStyleSheet(
             "QComboBox{border:1px solid palette(mid);" "border-radius:3px;padding:2px 6px;font-size:11px;}"
@@ -528,22 +513,6 @@ class MainWindow(QMainWindow):
             self._mode_switch.setCurrentIndex(mode_idx)
         self._mode_switch.currentIndexChanged.connect(self._on_mode_changed)
         self._mode_switch.setVisible(self._model_lifecycle.sync_engine_info(self._active_model_path).mode_visible)
-        header_row.addWidget(self._mode_switch)
-        header_row.addStretch()
-
-        self._chat_toggle_btn = QPushButton("▼")
-        self._chat_toggle_btn.setFixedSize(26, 26)
-        self._chat_toggle_btn.setStyleSheet("QPushButton{background:transparent;border:none;font-size:11px;}")
-        self._chat_toggle_btn.setToolTip(
-            tr(
-                "chat.panel.toggle",
-                self._language,
-                default="Collapse / Expand chat panel",
-            )
-        )
-        self._chat_toggle_btn.clicked.connect(self._toggle_chat_content)
-        header_row.addWidget(self._chat_toggle_btn)
-        layout.addWidget(header)
 
         # --- Collapsible content area ---
         self._chat_content = QFrame()
@@ -554,20 +523,29 @@ class MainWindow(QMainWindow):
         content_layout.setSpacing(4)
 
         # Response drawer
+        response_frame = QFrame()
+        response_frame.setStyleSheet(
+            "QFrame{border:1px solid palette(mid);border-radius:4px;background:palette(base);padding:6px;}"
+        )
+        response_layout = QVBoxLayout(response_frame)
+        response_layout.setContentsMargins(0, 0, 0, 0)
+        response_layout.setSpacing(6)
+
         self._response_browser = QTextBrowser()
         self._response_browser.setStyleSheet(
-            "QTextBrowser{border:1px solid palette(mid);" "border-radius:4px;font-size:12px;padding:6px;}"
+            "QTextBrowser{border:none;font-size:12px;padding:4px;background:transparent;color:palette(text);}"
         )
-        self._response_browser.setMaximumHeight(100)
-        self._response_browser.setPlaceholderText(
-            tr(
-                "prompt.response_placeholder",
-                self._language,
-                default="La respuesta aparecerá aquí...",
-            )
+        self._response_browser.setMinimumHeight(50)
+        self._response_browser.setMaximumHeight(70)
+        self._response_browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._response_browser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._response_placeholder_text = tr(
+            "prompt.response_placeholder",
+            self._language,
+            default="La respuesta aparecerá aquí...",
         )
-        content_layout.addWidget(self._response_browser)
-
+        self._response_browser.setHtml(self._placeholder_chat_html())
+        response_layout.addWidget(self._response_browser)
         nav_row = QHBoxLayout()
         nav_row.setContentsMargins(0, 0, 0, 0)
         nav_row.setSpacing(6)
@@ -599,7 +577,8 @@ class MainWindow(QMainWindow):
         self._chat_next_btn.clicked.connect(self._show_next_chat_message)
         nav_row.addWidget(self._chat_next_btn)
 
-        content_layout.addLayout(nav_row)
+        response_layout.addLayout(nav_row)
+        content_layout.addWidget(response_frame)
         self._update_chat_navigation()
 
         # Quick action buttons (shown when "none" action)
@@ -647,6 +626,7 @@ class MainWindow(QMainWindow):
             "QLineEdit{border:1px solid palette(mid);" "border-radius:4px;padding:6px 10px;font-size:13px;}"
         )
         self._input.returnPressed.connect(self._send)
+        input_row.addWidget(self._mode_switch)
         input_row.addWidget(self._input, 1)
 
         self._send_btn = QPushButton(tr("prompt.send", self._language, default="Enviar"))
@@ -714,8 +694,9 @@ class MainWindow(QMainWindow):
         )
 
     def _append_chat_assistant(self, text: str, title: str | None = None) -> None:
-        shown_title = title or tr("chat.assistant.title", self._language, default="MIRA Assistant")
-        block = f"{shown_title}\n\n{text}".strip()
+        block = text.strip()
+        if not block:
+            return
         started_new_batch = self._chat_state.append_block(block)
         if started_new_batch:
             QTimer.singleShot(0, self._clear_pending_chat_batch)
@@ -769,12 +750,29 @@ class MainWindow(QMainWindow):
     def _show_chat_message(self) -> None:
         current_message = self._chat_state.current_message()
         if current_message is None:
-            self._response_browser.clear()
+            if hasattr(self._response_browser, "setHtml"):
+                self._response_browser.setHtml(self._placeholder_chat_html())
+            elif hasattr(self._response_browser, "clear"):
+                self._response_browser.clear()
             self._update_chat_navigation()
             return
 
-        self._response_browser.setPlainText(current_message)
+        text_color = self._chat_theme_primary_color()
+        escaped_message = current_message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        if hasattr(self._response_browser, "setHtml"):
+            self._response_browser.setHtml(
+                f'<div style="color:{text_color}; white-space:pre-wrap;">{escaped_message}</div>'
+            )
+        elif hasattr(self._response_browser, "setPlainText"):
+            self._response_browser.setPlainText(current_message)
         self._update_chat_navigation()
+
+    def _placeholder_chat_html(self) -> str:
+        placeholder_color = self._chat_theme_primary_color()
+        return f'<div style="color:{placeholder_color}; white-space:pre-wrap;">{self._response_placeholder_text}</div>'
+
+    def _chat_theme_primary_color(self) -> str:
+        return self._response_browser.palette().color(QPalette.ColorRole.Link).name()
 
     def _update_chat_navigation(self) -> None:
         total = self._chat_state.message_count
@@ -854,7 +852,8 @@ class MainWindow(QMainWindow):
             return
         visible = self._act_sidebar.isChecked()
         self._sidebar_panel.setVisible(visible)
-        self._logo_panel.setVisible(visible)
+        if hasattr(self, "_logo_panel"):
+            self._logo_panel.setVisible(visible)
 
     def _toggle_prompt_panel(self) -> None:
         if self._act_prompt is None:
@@ -866,7 +865,8 @@ class MainWindow(QMainWindow):
         """Collapse or expand the MIRA Chat content area."""
         visible = not self._chat_content.isVisible()
         self._chat_content.setVisible(visible)
-        self._chat_toggle_btn.setText("▼" if visible else "▲")
+        if hasattr(self, "_chat_toggle_btn"):
+            self._chat_toggle_btn.setText("▼" if visible else "▲")
 
     # ------------------------------------------------------------------
     # Refresh
@@ -999,10 +999,7 @@ class MainWindow(QMainWindow):
                 self._startup_cancelled = True
                 return
             theme = self._normalize_theme(data.get("theme"))
-            username = str(
-                data.get("username")
-                or tr("settings.saved_default_user", language)
-            ).strip()
+            username = str(data.get("username") or tr("settings.saved_default_user", language)).strip()
             self._db.setting.set("language", language)
             self._db.setting.set("theme", theme)
             self._db.setting.set("username", username)
@@ -1372,7 +1369,10 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _menu_open_goal_simulator(self) -> None:
-        currency = self._db.setting.get("default_currency") or "USD"
+        db = getattr(self, "_db", None)
+        currency = "USD"
+        if db is not None:
+            currency = db.setting.get("default_currency") or "USD"
         dialog = _GoalScenarioDialog(self._language, currency, self)
         if dialog.exec() == QDialog.DialogCode.Accepted and dialog.should_open_goal_form:
             self._navigate(MainWindow.VIEW_GOALS)

@@ -83,6 +83,38 @@ def test_reports_view_apply_binds_presentation_state(monkeypatch: pytest.MonkeyP
     views_module = importlib.import_module("mira.ui.views.reports")
     qtcore = importlib.import_module("PySide6.QtCore")
 
+    class DummySignal:
+        def __init__(self) -> None:
+            self._callbacks: list[object] = []
+
+        def connect(self, callback, *_args) -> None:
+            self._callbacks.append(callback)
+
+        def emit(self, *args) -> None:
+            for callback in list(self._callbacks):
+                callback(*args)
+
+    class ImmediateWorker:
+        def __init__(self, service, since, until, filters, request_snapshot) -> None:
+            self._service = service
+            self._since = since
+            self._until = until
+            self._filters = filters
+            self._request_snapshot = request_snapshot
+            self.loaded = DummySignal()
+            self.failed = DummySignal()
+            self.finished = DummySignal()
+
+        def isRunning(self) -> bool:
+            return False
+
+        def start(self) -> None:
+            state = self._service.load_report_state(since=self._since, until=self._until, filters=self._filters)
+            self.loaded.emit(self._request_snapshot, state)
+            self.finished.emit()
+
+    monkeypatch.setattr(views_module, "_ReportWorker", ImmediateWorker)
+
     account = db.account.create("Wallet", "bank", 0.0, "USD")
     food = db.category.create("Food", "expense")
     db.transaction.create(

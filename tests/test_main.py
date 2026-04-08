@@ -467,28 +467,23 @@ def test_main_window_uses_laptop_friendly_splitters(monkeypatch: pytest.MonkeyPa
         window.show()
         app.processEvents()
 
-        assert window._content_splitter.count() == 2
-        assert window._main_splitter.count() == 2
-        assert window._response_browser.maximumHeight() == main_window_module._CHAT_RESPONSE_MAX_HEIGHT
-        assert window._sidebar_host.width() <= main_window_module._SIDEBAR_MAX_WIDTH
-        assert window._logo_panel.width() == window._sidebar_host.width()
-
-        content_height, footer_height = window._main_splitter.sizes()
-        assert content_height > footer_height
+        assert window._footer.maximumHeight() == 140
+        assert window._response_browser.maximumHeight() == 70
+        assert window._sidebar_panel.width() == main_window_module._SIDEBAR_WIDTH
+        assert window._logo_panel.width() == main_window_module._SIDEBAR_WIDTH
+        assert window._chat_content.isVisible() is True
 
         window._toggle_chat_content()
         app.processEvents()
 
         assert window._chat_content.isVisible() is False
-        assert window._logo_avatar.isVisible() is False
-        assert window._main_splitter.sizes()[1] <= main_window_module._CHAT_PANEL_COLLAPSED_HEIGHT + 12
+        assert window._logo_panel.isVisible() is True
 
         window._toggle_chat_content()
         app.processEvents()
 
         assert window._chat_content.isVisible() is True
-        assert window._logo_avatar.isVisible() is False
-        assert window._logo_title.isVisible() is True
+        assert window._logo_panel.isVisible() is True
     finally:
         window.close()
         db.close()
@@ -774,6 +769,7 @@ def test_goal_scenario_dialog_requests_goal_form_without_persisting(
 
     class DummyDialog:
         def __init__(self) -> None:
+            self._language = "es"
             self._latest = types.SimpleNamespace(is_reachable=True, target_amount=7500.5, years=2.0)
             self._request_open_goal_form = False
             self._goal_prefill = None
@@ -805,7 +801,7 @@ def test_menu_open_goal_simulator_opens_goal_add_flow_when_requested(
     main_window_module = _import_main_window_or_xfail_headless()
 
     class FakeGoalDialog:
-        def __init__(self, _language: str, _parent: object) -> None:
+        def __init__(self, _language: str, _currency: str, _parent: object) -> None:
             self.should_open_goal_form = True
             self.goal_prefill = {"target_amount": 9000.0, "target_date": "2029-01-01"}
 
@@ -824,6 +820,7 @@ def test_menu_open_goal_simulator_opens_goal_add_flow_when_requested(
     class DummyWindow:
         def __init__(self) -> None:
             self._language = "es"
+            self._db = types.SimpleNamespace(setting=types.SimpleNamespace(get=lambda _key: "USD"))
             self._view_goals = DummyGoalsView()
             self.navigation: list[int] = []
 

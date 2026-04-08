@@ -930,20 +930,12 @@ class MiraAnalysisMessageBuilder:
                 (context_text, self._t(language, "mira.analysis.context.chat_title", "Comparativas y contexto"))
             )
 
-        period = payload.get("period") or {}
         advisor_messages = (payload.get("advisor") or {}).get("messages") or []
         if advisor_messages:
-            header = self._t(
-                language,
-                "mira.analysis.assistant.messages_header",
-                "Mensaje MIRA {year:04d}-{month:02d}",
-                params={
-                    "year": int(period.get("year") or 0),
-                    "month": int(period.get("month") or 0),
-                },
-            )
             chat_title = self._t(language, "mira.analysis.assistant_title", "Análisis MIRA")
             for msg in advisor_messages:
-                messages.append((f"{header}\n\n{msg.get('text')}", chat_title))
+                message_text = str(msg.get("text") or "").strip()
+                if message_text:
+                    messages.append((message_text, chat_title))
 
         return messages

@@ -52,10 +52,17 @@ class CommandCoordinator:
         on_error: Callable[[str], None],
     ) -> QThread:
         worker = PipelineCommandWorker(self._pipeline, text, mode)
-        worker.finished.connect(
-            lambda result: on_success(cast(ActionResult, result)),
-            Qt.ConnectionType.QueuedConnection,
-        )
-        worker.error.connect(on_error, Qt.ConnectionType.QueuedConnection)
+
+        def success_handler(result: object) -> None:
+            on_success(cast(ActionResult, result))
+
+        try:
+            worker.finished.connect(success_handler, Qt.ConnectionType.QueuedConnection)
+        except TypeError:
+            worker.finished.connect(success_handler)
+        try:
+            worker.error.connect(on_error, Qt.ConnectionType.QueuedConnection)
+        except TypeError:
+            worker.error.connect(on_error)
         worker.start()
         return worker

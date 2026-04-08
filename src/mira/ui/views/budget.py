@@ -51,6 +51,8 @@ from mira.ui.views._shared import (
 from mira.ui.widgets.cards import CardWidget
 from mira.ui.delegates.cell_delegates import _SignalCellDelegate
 
+_BUDGET_AMOUNT_ROLE = int(Qt.ItemDataRole.UserRole) + 1
+
 
 @dataclass
 class BudgetViewState:
@@ -572,6 +574,7 @@ class BudgetView(QWidget):
     def _make_amount_item(self, amount: float, *, editable: bool = False, color: str | None = None) -> QTableWidgetItem:
         item = self._make_text_item(_fmt_amount(self._db, amount), editable=editable)
         item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        item.setData(_BUDGET_AMOUNT_ROLE, float(amount))
         if color:
             font = item.font()
             font.setWeight(QFont.Weight.DemiBold)
@@ -897,6 +900,9 @@ class BudgetView(QWidget):
                 )
                 self._restore_budget_cell_after_invalid_input(row, column, message)
                 return
+        previous_amount = value_item.data(_BUDGET_AMOUNT_ROLE)
+        if previous_amount is not None and abs(float(previous_amount) - amount) < 1e-9:
+            return
         budget = self._selected_budget()
         if budget is None:
             return

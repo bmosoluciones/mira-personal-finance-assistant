@@ -90,7 +90,7 @@ def test_mira_analysis_message_builder_builds_assistant_messages(db: Database) -
 
     assert messages
     assert messages[0][0].startswith("Comparisons and context")
-    assert messages[1][0].startswith("MIRA message 2026-03")
+    assert messages[1][0] == "Keep saving."
     assert messages[1][1] == "MIRA Analysis"
 
 

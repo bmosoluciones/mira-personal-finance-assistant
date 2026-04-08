@@ -14,7 +14,6 @@ from mira.ai.parser_engine import TransactionParserEngine
 from mira.ai.pipeline import Pipeline
 from mira.ai.validator import ValidationResult
 from mira.db.database import Database
-from mira.db.helpers import localized_default_account_name
 
 
 @pytest.fixture
