@@ -30,6 +30,7 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 
 ### Fixed
 
+- Chat batch navigation once again defers the pending assistant-batch reset to the next event-loop tick, preserving focus on the first message when the UI appends multi-part assistant responses within the same turn.
 - MIRA now rejects corrupt SQLite files, non-MIRA backups, and unsupported pre-`0.0.1a2` legacy schemas before touching the active database.
 - Startup no longer silently deletes incompatible database files when the schema is unsupported for in-place migration.
 - Application shutdown now calls `pipeline.shutdown()` before closing the database so loaded GGUF chat resources are released cleanly on exit.

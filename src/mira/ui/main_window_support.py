@@ -66,7 +66,9 @@ class MainWindowChatPresenter:
             return
         started_new_batch = self._window._chat_state.append_block(block)
         if started_new_batch:
-            self._window._clear_pending_chat_batch()
+            from mira.ui import main_window as main_window_module
+
+            main_window_module.QTimer.singleShot(0, self._window._clear_pending_chat_batch)
         self.show_current_message()
 
     def show_current_message(self) -> None:
