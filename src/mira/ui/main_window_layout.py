@@ -95,6 +95,22 @@ class MainWindowLayoutMixin:
         )
         self._status_bar = status
 
+    @staticmethod
+    def _sidebar_nav_stylesheet() -> str:
+        """Return the stylesheet for the sidebar navigation list.
+
+        Only overrides the widget-level background and border; sub-element rules
+        (``::item``, ``::item:selected``) are intentionally omitted so that
+        qt-material's app-level stylesheet controls item colours and selection
+        states correctly for both dark and light themes.
+
+        ``background: transparent`` is the key fix: without it QListWidget renders
+        with Qt's default Base colour (usually white), which clashes with dark themes.
+        ``_refresh_sidebar_style()`` re-applies this stylesheet after every theme
+        switch to force Qt to redraw the widget against the new app-level stylesheet.
+        """
+        return "QListWidget{border:none;background:transparent;outline:0;}"
+
     def _make_sidebar(self) -> QFrame:
         panel = QFrame()
         panel.setFixedWidth(_SIDEBAR_WIDTH)

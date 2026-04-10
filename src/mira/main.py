@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import ctypes
 import logging
+import os
 from pathlib import Path
 import sys
 from typing import Any
@@ -46,6 +47,36 @@ def _resolve_app_icon_path() -> Path | None:
     return None
 
 
+def _check_display_available() -> None:
+    """On Linux, exit with a clear message when no display server is reachable.
+
+    Qt calls ``qFatal()`` → ``abort()`` when it cannot connect to a display,
+    which terminates the process at the C level and bypasses Python's exception
+    handling entirely.  This function detects the missing display *before* any
+    Qt code runs, so the user always sees an actionable error message.
+
+    The check is skipped when:
+    * Running on Windows or macOS (they handle display differently).
+    * ``QT_QPA_PLATFORM`` is already set (e.g. ``offscreen`` for headless CI).
+    * ``DISPLAY`` (X11) or ``WAYLAND_DISPLAY`` is present in the environment.
+    """
+    if sys.platform in ("win32", "darwin"):
+        return
+    if os.environ.get("QT_QPA_PLATFORM"):
+        return
+    if os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"):
+        return
+    print(
+        "Error: No display server detected. "
+        "DISPLAY and WAYLAND_DISPLAY are both unset.\n"
+        "To run MIRA you need a graphical environment (X11 or Wayland).\n"
+        "For headless testing set QT_QPA_PLATFORM=offscreen before running mira,\n"
+        "or use:  xvfb-run -a mira",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="mira",
@@ -78,11 +109,16 @@ def main() -> None:
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
+    # Fail early with a clear Python-level message when no display server is
+    # reachable.  Without this check Qt would call qFatal() → abort(), which
+    # terminates the process at the C level and shows no Python traceback.
+    _check_display_available()
+
     # Import here so the module is importable without PySide6 installed
     # (useful for running tests)
     try:
         from PySide6.QtWidgets import QApplication
-    except ImportError as exc:
+    except (ImportError, OSError) as exc:
         print(f"Error: PySide6 is required to run MIRA. {exc}", file=sys.stderr)
         sys.exit(1)
 

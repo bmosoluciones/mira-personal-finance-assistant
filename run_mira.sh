@@ -11,4 +11,11 @@ fi
 
 export PYTHONPATH="$SCRIPT_DIR/src"
 
-exec xvfb-run -a -s '-screen 0 1280x800x24' python3 "$SCRIPT_DIR/mira_launcher.py" "$@"
+# Use a virtual framebuffer only when no display server is available.
+# This keeps the window on the user's real screen in desktop sessions while
+# still allowing headless CI runs to function.
+if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ] && [ -z "$QT_QPA_PLATFORM" ]; then
+    exec xvfb-run -a -s '-screen 0 1280x800x24' python3 "$SCRIPT_DIR/mira_launcher.py" "$@"
+else
+    exec python3 "$SCRIPT_DIR/mira_launcher.py" "$@"
+fi

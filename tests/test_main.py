@@ -110,6 +110,9 @@ def _install_fake_runtime(
         "cleanup_events": [],
     }
 
+    # Skip the display-availability check so unit tests can run headless.
+    monkeypatch.setattr(main_module, "_check_display_available", lambda: None)
+
     class FakeQApplication:
         def __init__(self, _argv: list[str]) -> None:
             self.name = ""
@@ -331,6 +334,7 @@ def test_main_exits_early_when_initial_setup_is_cancelled(
 
 
 def test_main_exits_when_pyside_is_missing(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.setattr(main_module, "_check_display_available", lambda: None)
     monkeypatch.delitem(sys.modules, "PySide6", raising=False)
     monkeypatch.delitem(sys.modules, "PySide6.QtWidgets", raising=False)
 
@@ -358,6 +362,92 @@ def test_main_exits_when_pyside_is_missing(monkeypatch: pytest.MonkeyPatch, caps
     assert exc_info.value.code == 1
     stderr = capsys.readouterr().err
     assert "PySide6 is required to run MIRA" in stderr
+
+
+# ---------------------------------------------------------------------------
+# Tests for _check_display_available()
+# ---------------------------------------------------------------------------
+
+
+def test_check_display_skipped_on_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(main_module.sys, "platform", "win32")
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("QT_QPA_PLATFORM", raising=False)
+    # Should not raise or exit
+    main_module._check_display_available()
+
+
+def test_check_display_skipped_on_macos(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(main_module.sys, "platform", "darwin")
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("QT_QPA_PLATFORM", raising=False)
+    main_module._check_display_available()
+
+
+def test_check_display_passes_with_display_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(main_module.sys, "platform", "linux")
+    monkeypatch.setenv("DISPLAY", ":0")
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("QT_QPA_PLATFORM", raising=False)
+    main_module._check_display_available()
+
+
+def test_check_display_passes_with_wayland_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(main_module.sys, "platform", "linux")
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+    monkeypatch.delenv("QT_QPA_PLATFORM", raising=False)
+    main_module._check_display_available()
+
+
+def test_check_display_passes_with_qt_qpa_platform_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(main_module.sys, "platform", "linux")
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    main_module._check_display_available()
+
+
+def test_check_display_exits_when_no_display_on_linux(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(main_module.sys, "platform", "linux")
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("QT_QPA_PLATFORM", raising=False)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main_module._check_display_available()
+
+    assert exc_info.value.code == 1
+    stderr = capsys.readouterr().err
+    assert "No display server detected" in stderr
+    assert "DISPLAY" in stderr
+    assert "QT_QPA_PLATFORM" in stderr
+
+
+def test_main_exits_with_no_display_message(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """main() surfaces the display error before any Qt code runs."""
+    monkeypatch.setattr(main_module.sys, "platform", "linux")
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("QT_QPA_PLATFORM", raising=False)
+    monkeypatch.setattr(
+        main_module,
+        "_parse_args",
+        lambda: argparse.Namespace(model=None, db=None, debug=False),
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main_module.main()
+
+    assert exc_info.value.code == 1
+    stderr = capsys.readouterr().err
+    assert "No display server detected" in stderr
 
 
 def test_set_windows_app_user_model_id_ignores_oserror(
