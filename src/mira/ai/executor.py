@@ -464,12 +464,16 @@ def _find_best_category_match(
 ) -> dict[str, Any] | None:
     """Return the best-matching category from *all_categories* for *input_name*.
 
+    This function implements a multi-stage fuzzy matching strategy to resolve
+    natural language category mentions to canonical database categories.
+
     Resolution order:
-    1. Exact normalised-name match.
-    2. Synonym-table lookup: if the folded input appears in
-       :data:`_CATEGORY_SYNONYMS`, check whether any DB category's folded name
-       is in the associated canonical-name set.
-    3. Fuzzy string-similarity scoring against all category names.
+    1. Exact normalised-name match (case-folded and stripped).
+    2. Synonym-table lookup: utilizes a predefined map of common keywords and
+       multilingual synonyms (_CATEGORY_SYNONYMS) to bridge the gap between
+       user input and formal category names.
+    3. Fuzzy string-similarity scoring: uses a combination of containment
+       and word-overlap heuristics to find the closest match among all categories.
 
     Returns ``None`` when no candidate reaches :data:`_CATEGORY_MATCH_THRESHOLD`.
     """

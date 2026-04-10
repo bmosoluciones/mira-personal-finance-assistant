@@ -11,6 +11,7 @@ from typing import Any, cast
 
 from mira.db.database import Database
 from mira.db.money import MONEY_ZERO, Money, money_to_decimal
+from mira.transaction_kinds import TransactionType
 
 
 @dataclass(frozen=True)
@@ -433,10 +434,10 @@ class ExecutorSummaryTools:
     def compute_summary(db: Database, transactions: list[dict[str, Any]]) -> dict[str, Money]:
         summary = db.report.summarize_financials(transactions)
         return {
-            "total_income": summary["income"],
-            "total_expenses": summary["expense"],
-            "savings": summary["savings"],
-            "net": summary["net"],
+            "total_income": summary.income,
+            "total_expenses": summary.expense,
+            "savings": summary.savings,
+            "net": summary.net,
         }
 
 
@@ -472,7 +473,7 @@ class ExecutorTransactionRecorder:
         stored_amount = money_to_decimal(cast(Any, amount_value)) or MONEY_ZERO
         tx = self._db.transaction.create(
             account_id=account["id"],
-            tx_type="income",
+            tx_type=TransactionType.INCOME,
             amount=stored_amount,
             description=action.get("description"),
             category=category_name,
@@ -510,7 +511,7 @@ class ExecutorTransactionRecorder:
         stored_amount = money_to_decimal(cast(Any, amount_value)) or MONEY_ZERO
         tx = self._db.transaction.create(
             account_id=account["id"],
-            tx_type="expense",
+            tx_type=TransactionType.EXPENSE,
             amount=stored_amount,
             description=action.get("description"),
             category=category_name,

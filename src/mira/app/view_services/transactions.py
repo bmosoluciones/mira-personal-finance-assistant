@@ -64,7 +64,10 @@ class TransactionsViewService:
         return TransactionsViewState(
             options=options,
             transactions=transactions,
-            summary={key: float(value) for key, value in self._db.report.summarize_financials(transactions).items()},
+            summary={
+                key: float(value)
+                for key, value in self._db.report.summarize_financials(transactions, as_dict=True).items()
+            },
             tags_by_transaction=self._db.tag.list_bulk_for_transactions(tx_ids),
             savings_categories=build_savings_lookup(options.categories)[1],
         )

@@ -60,7 +60,7 @@ def test_report_summarize_financials_uses_category_metadata(db: Database) -> Non
     )
 
     transactions = db.transaction.list(limit=10, since_date=today, until_date=today)
-    summary = db.report.summarize_financials(transactions)
+    summary = db.report.summarize_financials(transactions, as_dict=True)
 
     assert summary == {
         "income": 2500.0,
@@ -163,7 +163,7 @@ def test_report_aggregates_exclude_balance_adjustments(db: Database) -> None:
     db.tag.set_for_transaction(int(adjustment["id"]), [int(tag["id"])])
 
     transactions = db.transaction.list(limit=10, since_date="2026-04-01", until_date="2026-04-30")
-    summary = db.report.summarize_financials(transactions)
+    summary = db.report.summarize_financials(transactions, as_dict=True)
     tag_counts = db.report.tag_transaction_counts(since_date="2026-04-01", until_date="2026-04-30")
     category_counts = db.report.category_transaction_counts(since_date="2026-04-01", until_date="2026-04-30")
 

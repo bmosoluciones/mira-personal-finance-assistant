@@ -173,8 +173,7 @@ class Pipeline:
             words = set(re.findall(r"\w+", normalized_input, flags=re.UNICODE))
             if re.search(r"[áéíóúñ¿¡]", normalized_input) or _SPANISH_HINT_WORDS.intersection(words):
                 return "es"
-        language = str(self._db.setting.get("language") or "en").strip().lower()
-        return "es" if language == "es" else "en"
+        return "es" if str(self._db.setting.get("language") or "en").strip().lower() == "es" else "en"
 
     def _parser_error_message(self, user_input: str | None = None) -> str:
         return _PARSER_ERROR_MESSAGES[self._chat_language(user_input)]

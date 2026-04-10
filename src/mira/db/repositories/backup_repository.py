@@ -59,7 +59,17 @@ class BackupRepository:
         return target
 
     def restore(self, filepath: str | Path) -> RestoreResult:
-        """Restore database content from another SQLite file."""
+        """Restore database content from another SQLite file.
+
+        This implementation ensures atomicity and data integrity by:
+        1. Validating the backup file's schema and version before attempting restore.
+        2. Restoring into a temporary staging file first.
+        3. Applying any necessary migrations on the staged file.
+        4. Normalizing the staged file (checkpoints and journal mode) to make it
+           self-contained.
+        5. Atomically replacing the live database file with the staged one only
+           after all validation and preparation steps succeed.
+        """
         self._require_connection()
         source = Path(filepath).expanduser()
         if not source.exists():

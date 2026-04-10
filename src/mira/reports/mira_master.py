@@ -11,8 +11,17 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any, cast
 
-from mira.finance_summary import build_savings_lookup, is_savings_transaction, summarize_financial_kpis
-from mira.transaction_kinds import is_balance_adjustment_transaction
+from mira.finance_summary import (
+    FinancialSummary,
+    build_savings_lookup,
+    is_savings_transaction,
+    summarize_financial_kpis,
+)
+from mira.transaction_kinds import TransactionType, is_balance_adjustment_transaction
+
+# Financial analysis helper functions utilize Python 3.12 structural pattern
+# matching (match/case) for better readability of range-based classifications
+# and multi-signal trends.
 
 _REFUND_KEYWORDS = ("reembolso", "refund", "devolucion", "devolución")
 _DEBT_KEYWORDS = ("deuda", "prestamo", "préstamo", "loan", "tarjeta", "credit")
@@ -301,7 +310,7 @@ def _tx_text(tx: dict[str, Any]) -> str:
 
 
 def _month_summary(transactions: list[dict[str, Any]], savings_lookup) -> SummaryMetrics:
-    summary = summarize_financial_kpis(transactions, savings_lookup)
+    summary: FinancialSummary = summarize_financial_kpis(transactions, savings_lookup)
     debt_payment_total = 0.0
     refunds_total = 0.0
 
@@ -310,12 +319,12 @@ def _month_summary(transactions: list[dict[str, Any]], savings_lookup) -> Summar
         amount = float(tx.get("amount") or 0.0)
         text = _tx_text(tx)
 
-        if tx_type == "income":
+        if tx_type == TransactionType.INCOME:
             if any(keyword in text for keyword in _REFUND_KEYWORDS):
                 refunds_total += amount
             continue
 
-        if tx_type != "expense":
+        if tx_type != TransactionType.EXPENSE:
             continue
 
         if is_savings_transaction(tx, savings_lookup):
@@ -324,12 +333,12 @@ def _month_summary(transactions: list[dict[str, Any]], savings_lookup) -> Summar
         if any(keyword in text for keyword in _DEBT_KEYWORDS):
             debt_payment_total += amount
     return SummaryMetrics(
-        income=float(summary["income"]),
-        expense_operational=float(summary["expense"]),
-        savings=float(summary["savings"]),
+        income=float(summary.income),
+        expense_operational=float(summary.expense),
+        savings=float(summary.savings),
         debt_payment=round(debt_payment_total, 2),
         refunds=round(refunds_total, 2),
-        net=float(summary["net"]),
+        net=float(summary.net),
     )
 
 
@@ -439,18 +448,20 @@ def _build_freedom_margin_metrics(income_total: float, total_expense: float) -> 
         return FreedomMarginMetrics(pct=None, zone=None, label=None, is_red_alert=False)
 
     freedom_margin_pct = ((income_total - total_expense) / income_total) * 100.0
-    if freedom_margin_pct >= 30.0:
-        zone = "fast_track"
-        label = "via_rapida"
-    elif freedom_margin_pct >= 10.0:
-        zone = "construction_zone"
-        label = "zona_de_construccion"
-    elif freedom_margin_pct >= 1.0:
-        zone = "balance_point"
-        label = "punto_de_equilibrio"
-    else:
-        zone = "red_alert"
-        label = "alerta_roja"
+
+    match freedom_margin_pct:
+        case p if p >= 30.0:
+            zone = "fast_track"
+            label = "via_rapida"
+        case p if p >= 10.0:
+            zone = "construction_zone"
+            label = "zona_de_construccion"
+        case p if p >= 1.0:
+            zone = "balance_point"
+            label = "punto_de_equilibrio"
+        case _:
+            zone = "red_alert"
+            label = "alerta_roja"
 
     return FreedomMarginMetrics(
         pct=round(freedom_margin_pct, 2),
@@ -561,14 +572,17 @@ def _build_spending_efficiency_metric(income_total: float, total_expense: float)
         return {"classification": "insufficient_income", "spent_pct": None, "retained_pct": None}
     spent_pct = (total_expense / income_total) * 100.0
     retained_pct = max(-9999.0, 100.0 - spent_pct)
-    if spent_pct >= 100.0:
-        classification = "strained"
-    elif spent_pct >= 90.0:
-        classification = "fragile"
-    elif spent_pct >= 70.0:
-        classification = "watch"
-    else:
-        classification = "efficient"
+
+    match spent_pct:
+        case p if p >= 100.0:
+            classification = "strained"
+        case p if p >= 90.0:
+            classification = "fragile"
+        case p if p >= 70.0:
+            classification = "watch"
+        case _:
+            classification = "efficient"
+
     return {
         "classification": classification,
         "spent_pct": round(spent_pct, 2),
@@ -605,12 +619,15 @@ def _build_deficit_risk_metric(
         score += 20.0
     if projected_net is not None and projected_net < 0:
         score += 25.0
-    if score >= 70.0:
-        classification = "high"
-    elif score >= 40.0:
-        classification = "medium"
-    else:
-        classification = "low"
+
+    match score:
+        case s if s >= 70.0:
+            classification = "high"
+        case s if s >= 40.0:
+            classification = "medium"
+        case _:
+            classification = "low"
+
     return {"classification": classification, "score": round(min(score, 100.0), 2)}
 
 
@@ -624,12 +641,15 @@ def _build_income_fragility_metric(income_series: list[float], income_trend: dic
     score = volatility_pct
     if str(income_trend.get("direction") or "") == "down":
         score += 25.0
-    if score >= 35.0:
-        classification = "high"
-    elif score >= 18.0:
-        classification = "medium"
-    else:
-        classification = "low"
+
+    match score:
+        case s if s >= 35.0:
+            classification = "high"
+        case s if s >= 18.0:
+            classification = "medium"
+        case _:
+            classification = "low"
+
     return {"classification": classification, "volatility_pct": round(volatility_pct, 2)}
 
 
@@ -639,14 +659,24 @@ def _build_financial_momentum_metric(
     income_trend: dict[str, Any],
     expense_trend: dict[str, Any],
 ) -> dict[str, Any]:
-    if str(gap_trend.get("direction") or "") == "up" and str(expense_trend.get("direction") or "") != "up":
-        direction = "positive"
-    elif str(gap_trend.get("direction") or "") == "down" or (
-        str(expense_trend.get("direction") or "") == "up" and str(income_trend.get("direction") or "") != "up"
-    ):
-        direction = "negative"
-    else:
-        direction = "neutral"
+    gap_dir = str(gap_trend.get("direction") or "")
+    income_dir = str(income_trend.get("direction") or "")
+    expense_dir = str(expense_trend.get("direction") or "")
+
+    match (gap_dir, income_dir, expense_dir):
+        case ("up", "up", "up"):
+            direction = "neutral"
+        case ("up", _, "up") if income_dir != "up":
+            direction = "negative"
+        case ("up", _, _):
+            direction = "positive"
+        case ("down", _, _):
+            direction = "negative"
+        case (_, _, "up") if income_dir != "up":
+            direction = "negative"
+        case _:
+            direction = "neutral"
+
     return {"direction": direction}
 
 
@@ -718,12 +748,15 @@ def _build_expense_control_metric(
     pattern = str(spending_pattern.get("classification") or "")
     trend = str(expense_trend.get("direction") or "")
     drift = str(expense_drift.get("direction") or "")
-    if trend == "up" and (drift == "up" or pattern == "impulsive"):
-        classification = "out_of_control"
-    elif trend == "down" and pattern == "consistent":
-        classification = "in_control"
-    else:
-        classification = "watch"
+
+    match (trend, drift, pattern):
+        case ("up", "up", _) | ("up", _, "impulsive"):
+            classification = "out_of_control"
+        case ("down", _, "consistent"):
+            classification = "in_control"
+        case _:
+            classification = "watch"
+
     return {"classification": classification}
 
 
@@ -981,10 +1014,10 @@ class ReportMetricsCalculator:
             tx_type = str(tx.get("type") or "")
             amount = float(tx.get("amount") or 0.0)
             is_transfer = int(tx.get("is_transfer") or 0) == 1
-            if tx_type == "expense" and not is_transfer:
+            if tx_type == TransactionType.EXPENSE and not is_transfer:
                 expense_count += 1
                 expense_amount += amount
-            elif tx_type == "income" and is_transfer:
+            elif tx_type == TransactionType.INCOME and is_transfer:
                 payment_count += 1
                 payment_amount += amount
         return CreditCardStats(
@@ -1151,11 +1184,11 @@ class ReportMetricsCalculator:
             root_meta = self._resolve_tx_root_meta(tx, by_id, roots_meta)
             root_name = str(root_meta.get("root") or self._uncategorized_label)
 
-            if tx_type == "income":
+            if tx_type == TransactionType.INCOME:
                 income_by_root[root_name] += amount
                 continue
 
-            if tx_type != "expense":
+            if tx_type != TransactionType.EXPENSE:
                 continue
 
             if is_savings_transaction(tx, self._savings_lookup):
@@ -1247,9 +1280,9 @@ class ReportMetricsCalculator:
             acc: dict[str, float] = defaultdict(float)
             for tx in monthly_txs:
                 tx_type = str(tx.get("type") or "")
-                if section == "income" and tx_type != "income":
+                if section == "income" and tx_type != TransactionType.INCOME:
                     continue
-                if section == "expense" and tx_type != "expense":
+                if section == "expense" and tx_type != TransactionType.EXPENSE:
                     continue
                 cat_name = str(tx.get("category") or "").strip()
                 root_meta = roots_meta.get(
@@ -1300,9 +1333,9 @@ class ReportMetricsCalculator:
                 continue
             cat_id = int(cat_id_raw)
             amount = float(tx.get("amount") or 0.0)
-            if tx_type == "income":
+            if tx_type == TransactionType.INCOME:
                 actual_income_by_cat_id[cat_id] += amount
-            if tx_type == "expense" and not is_savings_transaction(tx, self._savings_lookup):
+            if tx_type == TransactionType.EXPENSE and not is_savings_transaction(tx, self._savings_lookup):
                 actual_expense_by_cat_id[cat_id] += amount
         if self._inputs.budget_category_rows:
             mi_set: set[str] = set()
@@ -1315,9 +1348,9 @@ class ReportMetricsCalculator:
                 if row_amount <= 0 or not row_name or row_cat_id is None:
                     continue
                 cat_id = int(row_cat_id)
-                if row_type == "income" and actual_income_by_cat_id.get(cat_id, 0.0) <= 0:
+                if row_type == TransactionType.INCOME and actual_income_by_cat_id.get(cat_id, 0.0) <= 0:
                     mi_set.add(row_name)
-                if row_type == "expense" and actual_expense_by_cat_id.get(cat_id, 0.0) <= 0:
+                if row_type == TransactionType.EXPENSE and actual_expense_by_cat_id.get(cat_id, 0.0) <= 0:
                     me_set.add(row_name)
             missing_income = sorted(mi_set)
             missing_expense = sorted(me_set)

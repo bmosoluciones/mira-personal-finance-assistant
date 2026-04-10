@@ -5,19 +5,30 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from mira.db.money import MONEY_ZERO, Money, money_to_decimal, round_money
-from mira.transaction_kinds import is_analytics_excluded_transaction
+from mira.transaction_kinds import TransactionType, is_analytics_excluded_transaction
 
 SavingsLookup = tuple[set[int], set[str]]
+
+
+@dataclass(frozen=True, slots=True)
+class FinancialSummary:
+    """Aggregated financial KPIs for a period or set of transactions."""
+
+    income: Money
+    expense: Money
+    savings: Money
+    net: Money
 
 
 def build_savings_lookup(categories: list[dict[str, Any]]) -> SavingsLookup:
     savings_ids: set[int] = set()
     savings_names: set[str] = set()
     for category in categories:
-        if str(category.get("type") or "").strip().casefold() != "expense":
+        if str(category.get("type") or "").strip().casefold() != TransactionType.EXPENSE:
             continue
         if int(category.get("is_savings") or 0) != 1:
             continue
@@ -34,7 +45,7 @@ def build_savings_lookup(categories: list[dict[str, Any]]) -> SavingsLookup:
 
 
 def is_savings_transaction(tx: dict[str, Any], savings_lookup: SavingsLookup) -> bool:
-    if str(tx.get("type") or "").strip().casefold() != "expense":
+    if str(tx.get("type") or "").strip().casefold() != TransactionType.EXPENSE:
         return False
 
     savings_ids, savings_names = savings_lookup
@@ -53,7 +64,7 @@ def is_savings_transaction(tx: dict[str, Any], savings_lookup: SavingsLookup) ->
 def summarize_financial_kpis(
     transactions: list[dict[str, Any]],
     savings_lookup: SavingsLookup,
-) -> dict[str, Money]:
+) -> FinancialSummary:
     income = MONEY_ZERO
     expense = MONEY_ZERO
     savings = MONEY_ZERO
@@ -64,10 +75,10 @@ def summarize_financial_kpis(
 
         amount = money_to_decimal(tx.get("amount")) or MONEY_ZERO
         tx_type = str(tx.get("type") or "").strip().casefold()
-        if tx_type == "income":
+        if tx_type == TransactionType.INCOME:
             income += amount
             continue
-        if tx_type != "expense":
+        if tx_type != TransactionType.EXPENSE:
             continue
 
         if is_savings_transaction(tx, savings_lookup):
@@ -78,9 +89,23 @@ def summarize_financial_kpis(
     income = round_money(income)
     expense = round_money(expense)
     savings = round_money(savings)
+    return FinancialSummary(
+        income=income,
+        expense=expense,
+        savings=savings,
+        net=round_money(income - expense),
+    )
+
+
+def summarize_financial_kpis_as_dict(
+    transactions: list[dict[str, Any]],
+    savings_lookup: SavingsLookup,
+) -> dict[str, Money]:
+    """Compatibility wrapper that returns KPIs as a dictionary."""
+    summary = summarize_financial_kpis(transactions, savings_lookup)
     return {
-        "income": income,
-        "expense": expense,
-        "savings": savings,
-        "net": round_money(income - expense),
+        "income": summary.income,
+        "expense": summary.expense,
+        "savings": summary.savings,
+        "net": summary.net,
     }

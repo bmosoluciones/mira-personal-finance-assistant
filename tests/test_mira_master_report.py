@@ -8,7 +8,12 @@ from datetime import date
 
 from mira.db.database import Database
 from tests.db_inspection import execute_sql
-from mira.reports.mira_master import _project_next_value, _stddev, shift_month
+from mira.reports.mira_master import (
+    _build_financial_momentum_metric,
+    _project_next_value,
+    _stddev,
+    shift_month,
+)
 
 
 def test_stddev_handles_empty_and_non_empty_series() -> None:
@@ -21,6 +26,16 @@ def test_project_next_value_handles_empty_and_linear_series() -> None:
     assert _project_next_value([]) is None
     assert _project_next_value([5.0]) == 5.0
     assert _project_next_value([10.0, 13.0, 16.0]) == pytest.approx(19.0)
+
+
+def test_financial_momentum_marks_expense_led_uptrend_as_negative_when_income_not_up() -> None:
+    metric = _build_financial_momentum_metric(
+        gap_trend={"direction": "up"},
+        income_trend={"direction": "flat"},
+        expense_trend={"direction": "up"},
+    )
+
+    assert metric["direction"] == "negative"
 
 
 @pytest.fixture

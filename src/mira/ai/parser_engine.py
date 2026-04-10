@@ -302,6 +302,15 @@ def _extract_amount(text: str) -> float | None:
 def _extract_currency(text: str, default_currency: str | None = None) -> str | None:
     """Detect the currency mentioned in *text*.
 
+    Workflow summary:
+    1. Check for nationality-qualified pesos (e.g., "pesos colombianos") which
+       are highly specific.
+    2. Scan explicit currency patterns. If USD is NOT the default, slang like
+       "$" or "bucks" is ignored to avoid false positives with local currencies.
+    3. Apply ARS-specific heuristic phrases for common Argentine slang.
+    4. Handle bare "peso" with regional fallbacks (defaulting to MXN).
+    5. Apply US-centric heuristic phrases ONLY if USD is the default currency.
+
     Priority rules
     --------------
     1. Nationality-qualified peso phrases win over all other hints.

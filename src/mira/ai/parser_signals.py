@@ -19,9 +19,10 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 import mira.ai.parser_vocab as _vocab
+from mira.transaction_kinds import TransactionType
 
 # Re-export Intent so callers only need one import.
-Intent = Literal["income", "expense", "report", "analysis", "unknown"]
+Intent = Literal["income", "expense", "report", "analysis", "unknown"] | TransactionType
 
 # Patterns that live here because they belong to the signal-collection layer.
 _SAVINGS_EXPENSE_PATTERN = re.compile(
@@ -177,32 +178,32 @@ def resolve_intent(signals: ParseSignals) -> Intent:
             return "analysis"
 
         case ParseSignals(savings_transfer=True):
-            return "expense"
+            return TransactionType.EXPENSE
 
         case ParseSignals(income_strong=True, expense_strong=False):
-            return "income"
+            return TransactionType.INCOME
 
         case ParseSignals(expense_strong=True, income_strong=False):
-            return "expense"
+            return TransactionType.EXPENSE
 
         case ParseSignals(income_strong=True, expense_strong=True, account=str()):
             # Moving money *into* an account is treated as income in this domain.
-            return "income"
+            return TransactionType.INCOME
 
         case ParseSignals(income_strong=True, expense_strong=True, category="salary" | "freelance"):
-            return "income"
+            return TransactionType.INCOME
 
         case ParseSignals(income_strong=True, expense_strong=True):
-            return "expense"
+            return TransactionType.EXPENSE
 
         case ParseSignals(income_weak=True, expense_weak=False):
-            return "income"
+            return TransactionType.INCOME
 
         case ParseSignals(income_context=True):
-            return "income"
+            return TransactionType.INCOME
 
         case ParseSignals(expense_weak=True, income_weak=False):
-            return "expense"
+            return TransactionType.EXPENSE
 
         case ParseSignals(amount=float() | int()):
             return "unknown"

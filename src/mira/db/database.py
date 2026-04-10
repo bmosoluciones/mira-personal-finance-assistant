@@ -17,6 +17,7 @@ from typing import Any
 from mira.db import helpers as db_helpers
 from mira.db.backend import DatabaseBackend as _DatabaseBackend
 from mira.db.money import Money, MoneyLike
+from mira.finance_summary import FinancialSummary
 from mira.db.repositories.backup_repository import RestoreResult
 from mira.services.database_io import DatabaseIOService
 
@@ -617,8 +618,9 @@ class ReportFacade(_DatabaseFacade):
         transactions: list[dict[str, Any]],
         *,
         categories: list[dict[str, Any]] | None = None,
-    ) -> dict[str, Money]:
-        return self._db.summarize_financials(transactions, categories=categories)
+        as_dict: bool = False,
+    ) -> FinancialSummary | dict[str, Money]:
+        return self._db.summarize_financials(transactions, categories=categories, as_dict=as_dict)
 
     def summarize_financials_filtered(
         self,
@@ -771,8 +773,29 @@ class FeedbackFacade(_DatabaseFacade):
         source: str | None = None,
         persist: bool = True,
     ) -> dict[str, Any] | None:
+        from mira.db.repositories.feedback_repository import MessageCandidate
+
+        typed_candidates = []
+        for c in candidates:
+            if isinstance(c, dict):
+                typed_candidates.append(
+                    MessageCandidate(
+                        code=str(c.get("code") or ""),
+                        message_type=str(c.get("message_type") or ""),
+                        message=str(c.get("message") or ""),
+                        priority=int(c.get("priority") or 0),
+                        specificity=int(c.get("specificity") or 0),
+                        cooldown_scope=c.get("cooldown_scope"),
+                        category_id=c.get("category_id"),
+                        amount=c.get("amount"),
+                        counter_updates=c.get("counter_updates"),
+                    )
+                )
+            else:
+                typed_candidates.append(c)
+
         return self._db.resolve_single_message(
-            candidates,
+            typed_candidates,
             source_event_type=source_event_type,
             source_event_id=source_event_id,
             period_key=period_key,

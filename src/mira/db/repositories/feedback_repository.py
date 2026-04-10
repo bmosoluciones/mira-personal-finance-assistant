@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import dataclass, asdict
 from datetime import date
 from typing import TYPE_CHECKING, Any, cast
 
@@ -26,8 +27,31 @@ from mira.db.model import (
     Transaction,
 )
 from mira.reports.mira_master import shift_month
-from mira.transaction_kinds import analytics_included_expr, is_analytics_excluded_transaction
+from mira.transaction_kinds import TransactionType, analytics_included_expr, is_analytics_excluded_transaction
 from mira.ui.i18n import tr
+
+
+@dataclass(frozen=True, slots=True)
+class MessageCandidate:
+    """A candidate message to be shown to the user.
+
+    Encapsulates the data needed to evaluate, prioritize, and display
+    insights and achievements.
+    """
+
+    code: str  # Unique message identifier (e.g., 'income_goal_80')
+    message_type: str  # 'realtime_insight' or 'achievement'
+    message: str  # The localized text to display
+    priority: int = 0  # Higher values are selected first
+    specificity: int = 0  # Tie-breaker for same-priority messages
+    cooldown_scope: str | None = None  # 'day', 'period', or 'period_category'
+    category_id: int | None = None  # Optional context for category-specific messages
+    amount: float | None = None  # Optional numeric amount for the event
+    counter_updates: list[tuple[str, int]] | None = None  # Achievement counters to increment
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
 
 logger = logging.getLogger(__name__)
 
@@ -62,46 +86,48 @@ class FeedbackRepository:
             return None
 
         language = self._database_language()
-        candidates: list[dict[str, Any]] = []
+        candidates: list[MessageCandidate] = []
         current_year = int(today.year)
 
         if self.get_default_budget_for_year(current_year) is None:
             candidates.append(
-                {
-                    "code": "daily_budget_missing",
-                    "message_type": "daily_context",
-                    "priority": 90,
-                    "message": tr("feedback.daily_budget_missing", language),
-                }
+                MessageCandidate(
+                    code="daily_budget_missing",
+                    message_type="daily_context",
+                    priority=90,
+                    message=tr("feedback.daily_budget_missing", language),
+                )
             )
 
         if today.day > 10 and not self.get_savings_goals():
             candidates.append(
-                {
-                    "code": "daily_no_savings_goal",
-                    "message_type": "daily_context",
-                    "priority": 70,
-                    "message": tr("feedback.daily_no_savings_goal", language),
-                }
+                MessageCandidate(
+                    code="daily_no_savings_goal",
+                    message_type="daily_context",
+                    priority=70,
+                    message=tr("feedback.daily_no_savings_goal", language),
+                )
             )
 
         month_start = today.replace(day=1)
         month_tx_total = int(
             Transaction.select(fn.COUNT(Transaction.id))
             .where(
-                analytics_included_expr(Transaction) & (Transaction.date >= month_start) & (Transaction.date <= today)
+                analytics_included_expr(Transaction)
+                & (Transaction.date >= month_start)
+                & (Transaction.date <= today)
             )
             .scalar()
             or 0
         )
         if today.day > 20 and month_tx_total == 0:
             candidates.append(
-                {
-                    "code": "daily_no_transactions",
-                    "message_type": "daily_context",
-                    "priority": 80,
-                    "message": tr("feedback.daily_no_transactions", language),
-                }
+                MessageCandidate(
+                    code="daily_no_transactions",
+                    message_type="daily_context",
+                    priority=80,
+                    message=tr("feedback.daily_no_transactions", language),
+                )
             )
 
         if not candidates:
@@ -163,63 +189,60 @@ class FeedbackRepository:
 
     def _message_in_cooldown(
         self,
-        candidate: dict[str, Any],
+        candidate: MessageCandidate,
         *,
         period_key: str | None = None,
         reference_date: str | None = None,
     ) -> bool:
-        cooldown_scope = str(candidate.get("cooldown_scope") or "").strip().lower()
-        if not cooldown_scope:
+        if not (cooldown_scope := str(candidate.cooldown_scope or "").strip().lower()):
             return False
 
         query = MessageEvent.select(MessageEvent.id).where(
-            (MessageEvent.message_code == str(candidate["code"]))
-            & (MessageEvent.message_type == str(candidate["message_type"]))
+            (MessageEvent.message_code == candidate.code) & (MessageEvent.message_type == candidate.message_type)
         )
-        if cooldown_scope == "day" and reference_date:
-            query = query.where(MessageEvent.reference_date == reference_date)
-        elif cooldown_scope == "period" and period_key:
-            query = query.where(MessageEvent.period_key == period_key)
-        elif cooldown_scope == "period_category" and period_key:
-            query = query.where(MessageEvent.period_key == period_key)
-            category_id = candidate.get("category_id")
-            if category_id is not None:
-                query = query.where(MessageEvent.context_category_id == int(category_id))
+
+        match cooldown_scope:
+            case "day" if reference_date:
+                query = query.where(MessageEvent.reference_date == reference_date)
+            case "period" if period_key:
+                query = query.where(MessageEvent.period_key == period_key)
+            case "period_category" if period_key:
+                query = query.where(MessageEvent.period_key == period_key)
+                if (category_id := candidate.category_id) is not None:
+                    query = query.where(MessageEvent.context_category_id == int(category_id))
+            case _:
+                return False
+
         return query.limit(1).exists()
 
     def _build_message_context_fields(
         self,
-        candidate: dict[str, Any],
+        candidate: MessageCandidate,
         *,
         source: str | None = None,
         reference_date: str | None = None,
     ) -> dict[str, Any]:
-        raw_category_id = candidate.get("category_id")
-        raw_amount = candidate.get("amount")
         raw_source = str(source).strip() if source is not None else ""
         raw_reference_date = str(reference_date).strip() if reference_date is not None else ""
         return {
-            "context_category_id": int(raw_category_id) if raw_category_id is not None else None,
-            "context_amount": self._money_to_cents(raw_amount, allow_none=True),
+            "context_category_id": candidate.category_id,
+            "context_amount": self._money_to_cents(candidate.amount, allow_none=True),
             "context_source": raw_source or None,
             "reference_date": raw_reference_date or None,
         }
 
     def resolve_candidate(
         self,
-        candidates: list[dict[str, Any]],
+        candidates: list[MessageCandidate],
         *,
         period_key: str | None = None,
         reference_date: str | None = None,
-    ) -> dict[str, Any] | None:
+    ) -> MessageCandidate | None:
         if len(candidates) > 20:
             logger.warning("message resolver received %s candidates; expected a smaller set", len(candidates))
-        valid_candidates: list[dict[str, Any]] = []
+        valid_candidates: list[MessageCandidate] = []
         for candidate in candidates:
-            code = str(candidate.get("code") or "").strip()
-            message_type = str(candidate.get("message_type") or "").strip()
-            message = str(candidate.get("message") or "").strip()
-            if not code or not message_type or not message:
+            if not (candidate.code.strip() and candidate.message_type.strip() and candidate.message.strip()):
                 continue
             if self._message_in_cooldown(candidate, period_key=period_key, reference_date=reference_date):
                 continue
@@ -228,16 +251,16 @@ class FeedbackRepository:
             return None
         valid_candidates.sort(
             key=lambda item: (
-                int(item.get("priority") or 0),
-                int(item.get("specificity") or 0),
+                item.priority,
+                item.specificity,
             ),
             reverse=True,
         )
-        return dict(valid_candidates[0])
+        return valid_candidates[0]
 
     def persist_message_event(
         self,
-        selected: dict[str, Any],
+        selected: MessageCandidate,
         *,
         source_event_type: str,
         source_event_id: int | None,
@@ -248,13 +271,13 @@ class FeedbackRepository:
         inserted = (
             MessageEvent.insert(
                 user_id=1,
-                message_code=str(selected["code"]),
-                message_type=str(selected["message_type"]),
+                message_code=selected.code,
+                message_type=selected.message_type,
                 source_event_type=source_event_type,
                 source_event_id=source_event_id,
                 period_key=period_key,
-                priority=int(selected.get("priority") or 0),
-                message_text=str(selected["message"]),
+                priority=selected.priority,
+                message_text=selected.message,
                 **self._build_message_context_fields(
                     selected,
                     source=source,
@@ -267,8 +290,8 @@ class FeedbackRepository:
         if not inserted:
             logger.info(
                 "message event ignored by deduplication: code=%s type=%s source_event_type=%s source_event_id=%s",
-                selected.get("code"),
-                selected.get("message_type"),
+                selected.code,
+                selected.message_type,
                 source_event_type,
                 source_event_id,
             )
@@ -277,7 +300,7 @@ class FeedbackRepository:
 
     def resolve_single_message(
         self,
-        candidates: list[dict[str, Any]],
+        candidates: list[MessageCandidate],
         *,
         source_event_type: str,
         source_event_id: int | None,
@@ -285,7 +308,7 @@ class FeedbackRepository:
         reference_date: str | None = None,
         source: str | None = None,
         persist: bool = True,
-    ) -> dict[str, Any] | None:
+    ) -> MessageCandidate | None:
         selected = self.resolve_candidate(
             candidates,
             period_key=period_key,
@@ -302,71 +325,71 @@ class FeedbackRepository:
             source=source,
         ):
             return None
-        return dict(selected)
+        return selected.to_dict()
 
-    def evaluate_income_kpis(self, tx: dict[str, Any], context: dict[str, Any]) -> list[dict[str, Any]]:
+    def evaluate_income_kpis(self, tx: dict[str, Any], context: dict[str, Any]) -> list[MessageCandidate]:
         amount = float(tx.get("amount") or 0.0)
         goal = float(context["income_goal"])
         prev_income = float(context["income_actual_prev"])
         current_income = float(context["income_actual"])
         language = self._database_language()
-        candidates: list[dict[str, Any]] = []
+        candidates: list[MessageCandidate] = []
 
         if goal > 0 and self._crossed_up(prev_income, current_income, goal):
             candidates.append(
-                {
-                    "code": "income_goal_100",
-                    "message_type": "realtime_insight",
-                    "message": tr("feedback.income_goal_100", language),
-                    "priority": MESSAGE_PRIORITY["INSIGHT_CRITICAL"] - 5,
-                    "specificity": 50,
-                }
+                MessageCandidate(
+                    code="income_goal_100",
+                    message_type="realtime_insight",
+                    message=tr("feedback.income_goal_100", language),
+                    priority=MESSAGE_PRIORITY["INSIGHT_CRITICAL"] - 5,
+                    specificity=50,
+                )
             )
         if goal > 0 and self._crossed_up((prev_income / goal) * 100.0, (current_income / goal) * 100.0, 80.0):
             candidates.append(
-                {
-                    "code": "income_goal_80",
-                    "message_type": "realtime_insight",
-                    "message": tr("feedback.income_goal_80", language),
-                    "priority": MESSAGE_PRIORITY["INSIGHT_WARNING"] - 10,
-                    "specificity": 40,
-                }
+                MessageCandidate(
+                    code="income_goal_80",
+                    message_type="realtime_insight",
+                    message=tr("feedback.income_goal_80", language),
+                    priority=MESSAGE_PRIORITY["INSIGHT_WARNING"] - 10,
+                    specificity=40,
+                )
             )
         if goal > 0 and self._crossed_up((prev_income / goal) * 100.0, (current_income / goal) * 100.0, 110.0):
             candidates.append(
-                {
-                    "code": "income_goal_110",
-                    "message_type": "realtime_insight",
-                    "message": tr("feedback.income_goal_110", language),
-                    "priority": MESSAGE_PRIORITY["INSIGHT_WARNING"] + 5,
-                    "specificity": 45,
-                }
+                MessageCandidate(
+                    code="income_goal_110",
+                    message_type="realtime_insight",
+                    message=tr("feedback.income_goal_110", language),
+                    priority=MESSAGE_PRIORITY["INSIGHT_WARNING"] + 5,
+                    specificity=45,
+                )
             )
         if goal > 0 and ((prev_income / goal) * 100.0) < 50.0 and ((current_income / goal) * 100.0) >= 60.0:
             candidates.append(
-                {
-                    "code": "income_recovery",
-                    "message_type": "realtime_insight",
-                    "message": tr("feedback.income_recovery", language),
-                    "priority": MESSAGE_PRIORITY["INSIGHT_INFO"],
-                    "specificity": 35,
-                }
+                MessageCandidate(
+                    code="income_recovery",
+                    message_type="realtime_insight",
+                    message=tr("feedback.income_recovery", language),
+                    priority=MESSAGE_PRIORITY["INSIGHT_INFO"],
+                    specificity=35,
+                )
             )
         income_avg_prev = context.get("income_avg_prev")
         if income_avg_prev is not None and float(income_avg_prev) > 0 and amount > (float(income_avg_prev) * 2.0):
             candidates.append(
-                {
-                    "code": "income_unusual_high",
-                    "message_type": "realtime_insight",
-                    "message": tr("feedback.income_unusual_high", language),
-                    "priority": MESSAGE_PRIORITY["INSIGHT_INFO"] - 5,
-                    "specificity": 20,
-                    "cooldown_scope": "day",
-                }
+                MessageCandidate(
+                    code="income_unusual_high",
+                    message_type="realtime_insight",
+                    message=tr("feedback.income_unusual_high", language),
+                    priority=MESSAGE_PRIORITY["INSIGHT_INFO"] - 5,
+                    specificity=20,
+                    cooldown_scope="day",
+                )
             )
         return candidates
 
-    def evaluate_expense_kpis(self, tx: dict[str, Any], context: dict[str, Any]) -> list[dict[str, Any]]:
+    def evaluate_expense_kpis(self, tx: dict[str, Any], context: dict[str, Any]) -> list[MessageCandidate]:
         amount = float(tx.get("amount") or 0.0)
         language = self._database_language()
         category_name = context.get("category_name") or (tx.get("category") or "esta categoría")
@@ -376,41 +399,41 @@ class FeedbackRepository:
         expense_budget = float(context["expense_budget"])
         expense_prev = float(context["expense_actual_prev"])
         expense_current = float(context["expense_actual"])
-        candidates: list[dict[str, Any]] = []
+        candidates: list[MessageCandidate] = []
 
         if category_budget > 0 and self._crossed_up(category_prev, category_current, category_budget):
             candidates.append(
-                {
-                    "code": "expense_category_100",
-                    "message_type": "realtime_insight",
-                    "message": tr("feedback.expense_category_100", language, params={"category_name": category_name}),
-                    "priority": MESSAGE_PRIORITY["INSIGHT_CRITICAL"],
-                    "specificity": 50,
-                }
+                MessageCandidate(
+                    code="expense_category_100",
+                    message_type="realtime_insight",
+                    message=tr("feedback.expense_category_100", language, params={"category_name": category_name}),
+                    priority=MESSAGE_PRIORITY["INSIGHT_CRITICAL"],
+                    specificity=50,
+                )
             )
         if category_budget > 0 and self._crossed_up(
             (category_prev / category_budget) * 100.0, (category_current / category_budget) * 100.0, 90.0
         ):
             candidates.append(
-                {
-                    "code": "expense_category_90",
-                    "message_type": "realtime_insight",
-                    "message": tr("feedback.expense_category_90", language, params={"category_name": category_name}),
-                    "priority": MESSAGE_PRIORITY["INSIGHT_WARNING"],
-                    "specificity": 40,
-                    "cooldown_scope": "period_category",
-                    "category_id": context.get("category_id"),
-                }
+                MessageCandidate(
+                    code="expense_category_90",
+                    message_type="realtime_insight",
+                    message=tr("feedback.expense_category_90", language, params={"category_name": category_name}),
+                    priority=MESSAGE_PRIORITY["INSIGHT_WARNING"],
+                    specificity=40,
+                    cooldown_scope="period_category",
+                    category_id=context.get("category_id"),
+                )
             )
         if expense_budget > 0 and self._crossed_up(expense_prev, expense_current, expense_budget):
             candidates.append(
-                {
-                    "code": "expense_total_100",
-                    "message_type": "realtime_insight",
-                    "message": tr("feedback.expense_total_100", language),
-                    "priority": MESSAGE_PRIORITY["INSIGHT_CRITICAL"] - 2,
-                    "specificity": 45,
-                }
+                MessageCandidate(
+                    code="expense_total_100",
+                    message_type="realtime_insight",
+                    message=tr("feedback.expense_total_100", language),
+                    priority=MESSAGE_PRIORITY["INSIGHT_CRITICAL"] - 2,
+                    specificity=45,
+                )
             )
         month_progress = float(context["day_of_month"]) / float(context["month_days"])
         if (
@@ -420,25 +443,25 @@ class FeedbackRepository:
             and ((expense_current / expense_budget) * 100.0) >= 70.0
         ):
             candidates.append(
-                {
-                    "code": "expense_high_pace",
-                    "message_type": "realtime_insight",
-                    "message": tr("feedback.expense_high_pace", language),
-                    "priority": MESSAGE_PRIORITY["INSIGHT_WARNING"] - 5,
-                    "specificity": 30,
-                }
+                MessageCandidate(
+                    code="expense_high_pace",
+                    message_type="realtime_insight",
+                    message=tr("feedback.expense_high_pace", language),
+                    priority=MESSAGE_PRIORITY["INSIGHT_WARNING"] - 5,
+                    specificity=30,
+                )
             )
         expense_avg_prev = context.get("expense_category_avg_prev")
         if expense_avg_prev is not None and float(expense_avg_prev) > 0 and amount > (float(expense_avg_prev) * 2.0):
             candidates.append(
-                {
-                    "code": "expense_unusual_high",
-                    "message_type": "realtime_insight",
-                    "message": tr("feedback.expense_unusual_high", language, params={"category_name": category_name}),
-                    "priority": MESSAGE_PRIORITY["INSIGHT_INFO"],
-                    "specificity": 20,
-                    "cooldown_scope": "day",
-                }
+                MessageCandidate(
+                    code="expense_unusual_high",
+                    message_type="realtime_insight",
+                    message=tr("feedback.expense_unusual_high", language, params={"category_name": category_name}),
+                    priority=MESSAGE_PRIORITY["INSIGHT_INFO"],
+                    specificity=20,
+                    cooldown_scope="day",
+                )
             )
         return candidates
 
@@ -471,14 +494,14 @@ class FeedbackRepository:
         context: dict[str, Any],
         *,
         source: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[MessageCandidate]:
         if is_analytics_excluded_transaction(tx):
             return []
         language = self._database_language()
         tx_type = str(tx.get("type") or "")
         amount = float(tx.get("amount") or 0.0)
         period_key = str(context["period_key"])
-        candidates: list[dict[str, Any]] = []
+        candidates: list[MessageCandidate] = []
 
         # --- Usage and learning achievements ---
         if source == "nl_assistant":
@@ -487,17 +510,17 @@ class FeedbackRepository:
             for milestone in _MILESTONES_NL_TRANSACTIONS:
                 if nl_prev < milestone <= nl_current:
                     candidates.append(
-                        {
-                            "code": f"achievement_nl_transactions_{milestone}",
-                            "message_type": "achievement",
-                            "message": tr(
+                        MessageCandidate(
+                            code=f"achievement_nl_transactions_{milestone}",
+                            message_type="achievement",
+                            message=tr(
                                 "feedback.achievement_nl_transactions",
                                 language,
                                 params={"milestone": milestone},
                             ),
-                            "priority": MESSAGE_PRIORITY["ACHIEVEMENT_LOW"] + 10,
-                            "cooldown_scope": "period",
-                        }
+                            priority=MESSAGE_PRIORITY["ACHIEVEMENT_LOW"] + 10,
+                            cooldown_scope="period",
+                        )
                     )
 
         report_views = self.get_achievement_counter("mira_report_views")
@@ -506,62 +529,62 @@ class FeedbackRepository:
                 f"achievement_mira_report_views_{milestone}"
             ):
                 candidates.append(
-                    {
-                        "code": f"achievement_mira_report_views_{milestone}",
-                        "message_type": "achievement",
-                        "message": tr(
+                    MessageCandidate(
+                        code=f"achievement_mira_report_views_{milestone}",
+                        message_type="achievement",
+                        message=tr(
                             "feedback.achievement_mira_report_views",
                             language,
                             params={"milestone": milestone},
                         ),
-                        "priority": MESSAGE_PRIORITY["ACHIEVEMENT_LOW"],
-                        "cooldown_scope": "period",
-                    }
+                        priority=MESSAGE_PRIORITY["ACHIEVEMENT_LOW"],
+                        cooldown_scope="period",
+                    )
                 )
 
-        savings_lookup = build_savings_lookup(self.get_categories("expense"))
-        if tx_type == "expense" and is_savings_transaction(tx, savings_lookup):
+        savings_lookup = build_savings_lookup(self.get_categories(TransactionType.EXPENSE))
+        if tx_type == TransactionType.EXPENSE and is_savings_transaction(tx, savings_lookup):
             savings_prev = self.get_achievement_counter("savings_contributions")
             savings_current = savings_prev + 1
             for milestone in _MILESTONES_SAVINGS_CONTRIBUTIONS:
                 if savings_prev < milestone <= savings_current:
                     candidates.append(
-                        {
-                            "code": f"achievement_savings_contributions_{milestone}",
-                            "message_type": "achievement",
-                            "message": tr(
+                        MessageCandidate(
+                            code=f"achievement_savings_contributions_{milestone}",
+                            message_type="achievement",
+                            message=tr(
                                 "feedback.achievement_savings_contributions",
                                 language,
                                 params={"milestone": milestone},
                             ),
-                            "priority": MESSAGE_PRIORITY["ACHIEVEMENT_MEDIUM"],
-                            "cooldown_scope": "period",
-                            "counter_updates": [("savings_contributions", 1)],
-                        }
+                            priority=MESSAGE_PRIORITY["ACHIEVEMENT_MEDIUM"],
+                            cooldown_scope="period",
+                            counter_updates=[("savings_contributions", 1)],
+                        )
                     )
 
         # --- Financial improvement achievements (conservative) ---
         goal = float(context["income_goal"])
         prev_income = float(context["income_actual_prev"])
         current_income = float(context["income_actual"])
-        if tx_type == "income" and goal > 0 and self._crossed_up(prev_income, current_income, goal):
+        if tx_type == TransactionType.INCOME and goal > 0 and self._crossed_up(prev_income, current_income, goal):
             candidates.append(
-                {
-                    "code": "achievement_income_goal_met",
-                    "message_type": "achievement",
-                    "message": tr("feedback.achievement_income_goal_met", language),
-                    "priority": MESSAGE_PRIORITY["ACHIEVEMENT_CRITICAL"],
-                    "cooldown_scope": "period",
-                }
+                MessageCandidate(
+                    code="achievement_income_goal_met",
+                    message_type="achievement",
+                    message=tr("feedback.achievement_income_goal_met", language),
+                    priority=MESSAGE_PRIORITY["ACHIEVEMENT_CRITICAL"],
+                    cooldown_scope="period",
+                )
             )
 
-        if tx_type == "income":
+        if tx_type == TransactionType.INCOME:
             historical_avg = float(
                 self._cents_to_money(
                     Transaction.select(fn.COALESCE(fn.AVG(Transaction.amount), 0.0))
                     .where(
                         analytics_included_expr(Transaction)
-                        & (Transaction.type == "income")
+                        & (Transaction.type == TransactionType.INCOME)
                         & (Transaction.id != int(tx["id"]))
                     )
                     .scalar()
@@ -570,26 +593,26 @@ class FeedbackRepository:
             )
             if historical_avg > 0 and amount > historical_avg * 1.3:
                 candidates.append(
-                    {
-                        "code": "achievement_income_above_historical_avg",
-                        "message_type": "achievement",
-                        "message": tr("feedback.achievement_income_above_historical_avg", language),
-                        "priority": MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"] + 5,
-                        "cooldown_scope": "day",
-                    }
+                    MessageCandidate(
+                        code="achievement_income_above_historical_avg",
+                        message_type="achievement",
+                        message=tr("feedback.achievement_income_above_historical_avg", language),
+                        priority=MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"] + 5,
+                        cooldown_scope="day",
+                    )
                 )
 
         current_savings = float(context["savings_actual"])
-        previous_savings = max(0.0, current_savings - amount) if tx_type == "expense" else current_savings
-        if tx_type == "expense" and self._crossed_up(previous_savings, current_savings, 0.01):
+        previous_savings = max(0.0, current_savings - amount) if tx_type == TransactionType.EXPENSE else current_savings
+        if tx_type == TransactionType.EXPENSE and self._crossed_up(previous_savings, current_savings, 0.01):
             candidates.append(
-                {
-                    "code": "achievement_saved_this_month",
-                    "message_type": "achievement",
-                    "message": tr("feedback.achievement_saved_this_month", language),
-                    "priority": MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"],
-                    "cooldown_scope": "period",
-                }
+                MessageCandidate(
+                    code="achievement_saved_this_month",
+                    message_type="achievement",
+                    message=tr("feedback.achievement_saved_this_month", language),
+                    priority=MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"],
+                    cooldown_scope="period",
+                )
             )
 
         year = int(context["year"])
@@ -602,13 +625,13 @@ class FeedbackRepository:
             "achievement_savings_vs_previous_month", period_key=period_key
         ):
             candidates.append(
-                {
-                    "code": "achievement_savings_vs_previous_month",
-                    "message_type": "achievement",
-                    "message": tr("feedback.achievement_savings_vs_previous_month", language),
-                    "priority": MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"] + 15,
-                    "cooldown_scope": "period",
-                }
+                MessageCandidate(
+                    code="achievement_savings_vs_previous_month",
+                    message_type="achievement",
+                    message=tr("feedback.achievement_savings_vs_previous_month", language),
+                    priority=MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"] + 15,
+                    cooldown_scope="period",
+                )
             )
         if (
             current_savings > 0
@@ -617,13 +640,13 @@ class FeedbackRepository:
             and not self._achievement_already_emitted("achievement_savings_three_month_streak", period_key=period_key)
         ):
             candidates.append(
-                {
-                    "code": "achievement_savings_three_month_streak",
-                    "message_type": "achievement",
-                    "message": tr("feedback.achievement_savings_three_month_streak", language),
-                    "priority": MESSAGE_PRIORITY["ACHIEVEMENT_CRITICAL"] + 5,
-                    "cooldown_scope": "period",
-                }
+                MessageCandidate(
+                    code="achievement_savings_three_month_streak",
+                    message_type="achievement",
+                    message=tr("feedback.achievement_savings_three_month_streak", language),
+                    priority=MESSAGE_PRIORITY["ACHIEVEMENT_CRITICAL"] + 5,
+                    cooldown_scope="period",
+                )
             )
 
         return candidates
@@ -641,7 +664,9 @@ class FeedbackRepository:
         achievement_candidates = self.evaluate_operation_achievements(tx, context, source=source)
         tx_type = str(tx.get("type") or "")
         insight_candidates = (
-            self.evaluate_income_kpis(tx, context) if tx_type == "income" else self.evaluate_expense_kpis(tx, context)
+            self.evaluate_income_kpis(tx, context)
+            if tx_type == TransactionType.INCOME
+            else self.evaluate_expense_kpis(tx, context)
         )
         all_candidates = achievement_candidates + insight_candidates
         selected = self.resolve_single_message(

@@ -259,7 +259,7 @@ class ReportsViewService:
         return self._build_loaded_state(txs, comparisons=None, year=year)
 
     def _summary_from_transactions(self, txs: list[dict[str, Any]]) -> dict[str, float]:
-        summary = self._db.report.summarize_financials(txs)
+        summary = self._db.report.summarize_financials(txs, as_dict=True)
         return {
             "income": float(summary["income"]),
             "expense": float(summary["expense"]),

@@ -5,11 +5,32 @@
 
 from __future__ import annotations
 
+import logging
+
+from enum import StrEnum
 from typing import Any
 
 from peewee import fn
 
 BALANCE_ADJUSTMENT_PAYMENT_METHOD = "balance_adjustment"
+
+
+class TransactionType(StrEnum):
+    """Canonical transaction types in MIRA."""
+
+    INCOME = "income"
+    EXPENSE = "expense"
+
+
+def try_parse_transaction_type(value: object) -> TransactionType | None:
+    """Attempt to parse a transaction type string into a TransactionType enum."""
+    if not value:
+        return None
+    try:
+        return TransactionType(str(value).strip().lower())
+    except ValueError:
+        logging.getLogger(__name__).warning("Invalid transaction type: %r", value)
+        return None
 
 
 def normalize_payment_method(value: object) -> str:

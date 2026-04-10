@@ -8,8 +8,14 @@ from typing import TYPE_CHECKING, Any
 from peewee import JOIN, Case, fn
 
 from mira.db.money import MONEY_ZERO
+from mira.transaction_kinds import TransactionType
 from mira.db.model import Category, Transaction, TransactionTag
-from mira.finance_summary import build_savings_lookup, summarize_financial_kpis
+from mira.finance_summary import (
+    FinancialSummary,
+    build_savings_lookup,
+    summarize_financial_kpis,
+    summarize_financial_kpis_as_dict,
+)
 from mira.reports import mira_master_backend
 from mira.transaction_kinds import analytics_included_expr
 
@@ -52,18 +58,22 @@ class ReportRepository:
         transactions: list[dict[str, Any]],
         *,
         categories: list[dict[str, Any]] | None = None,
-    ) -> dict[str, Any]:
+        as_dict: bool = False,
+    ) -> FinancialSummary | dict[str, Any]:
         category_rows = categories if categories is not None else self.get_categories()
-        return summarize_financial_kpis(transactions, build_savings_lookup(category_rows))
+        lookup = build_savings_lookup(category_rows)
+        if as_dict:
+            return summarize_financial_kpis_as_dict(transactions, lookup)
+        return summarize_financial_kpis(transactions, lookup)
 
     def get_summary(self, since_date: str | None = None) -> dict[str, Any]:
         transactions = self.get_transactions(limit=1_000_000, since_date=since_date)
-        summary = self.summarize_financials(transactions)
+        summary: FinancialSummary = self.summarize_financials(transactions)
         return {
-            "total_income": summary["income"],
-            "total_expenses": summary["expense"],
-            "savings": summary["savings"],
-            "net": summary["net"],
+            "total_income": summary.income,
+            "total_expenses": summary.expense,
+            "savings": summary.savings,
+            "net": summary.net,
         }
 
     def summarize_financials_filtered(
@@ -83,8 +93,8 @@ class ReportRepository:
         joined_on = ((tx.category_id.is_null(False)) & (tx.category_id == linked_category.id)) | (
             (tx.category_id.is_null(True)) & (linked_category.type == tx.type) & legacy_name_match
         )
-        reportable_expense = (tx.type == "expense") & (fn.COALESCE(linked_category.is_savings, 0) == 0)
-        income_sum = fn.COALESCE(fn.SUM(Case(None, ((tx.type == "income", tx.amount),), 0.0)), 0.0)
+        reportable_expense = (tx.type == TransactionType.EXPENSE) & (fn.COALESCE(linked_category.is_savings, 0) == 0)
+        income_sum = fn.COALESCE(fn.SUM(Case(None, ((tx.type == TransactionType.INCOME, tx.amount),), 0.0)), 0.0)
         expense_sum = fn.COALESCE(fn.SUM(Case(None, ((reportable_expense, tx.amount),), 0.0)), 0.0)
 
         query = tx.select(income_sum.alias("income"), expense_sum.alias("expense")).join(
@@ -137,10 +147,10 @@ class ReportRepository:
         legacy_name_match = fn.LOWER(fn.TRIM(fn.COALESCE(tx.category, ""))) == fn.LOWER(fn.TRIM(linked_category.name))
         category_expr = fn.COALESCE(linked_category.name, tx.category, "")
         income_sum = fn.COALESCE(
-            fn.SUM(Case(None, ((tx.type == "income", tx.amount),), 0.0)),
+            fn.SUM(Case(None, ((tx.type == TransactionType.INCOME, tx.amount),), 0.0)),
             0.0,
         )
-        reportable_expense = (tx.type == "expense") & (fn.COALESCE(linked_category.is_savings, 0) == 0)
+        reportable_expense = (tx.type == TransactionType.EXPENSE) & (fn.COALESCE(linked_category.is_savings, 0) == 0)
         expense_sum = fn.COALESCE(
             fn.SUM(Case(None, ((reportable_expense, tx.amount),), 0.0)),
             0.0,

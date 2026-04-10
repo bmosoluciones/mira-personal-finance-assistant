@@ -14,6 +14,7 @@ from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.db.model import Account, BudgetDetail, Category, Transaction, TransactionTag
 from mira.transaction_kinds import (
     BALANCE_ADJUSTMENT_PAYMENT_METHOD,
+    TransactionType,
     analytics_included_expr,
     is_analytics_excluded_transaction,
     is_balance_adjustment_transaction,
@@ -104,7 +105,7 @@ class TransactionRepository:
         if normalized_signed_amount == MONEY_ZERO:
             raise ValueError("Balance adjustment amount cannot be zero.")
         normalized_date = self._validate_tx_date(tx_date or date.today().isoformat())
-        tx_type = "income" if normalized_signed_amount > MONEY_ZERO else "expense"
+        tx_type = TransactionType.INCOME if normalized_signed_amount > MONEY_ZERO else TransactionType.EXPENSE
         absolute_amount = abs(normalized_signed_amount)
         description = localized_balance_adjustment_description(self.get_setting("language"))
         return tx_type, absolute_amount, normalized_date, description
@@ -153,11 +154,11 @@ class TransactionRepository:
         totals = (
             Transaction.select(
                 fn.COALESCE(
-                    fn.SUM(Case(None, (((Transaction.type == "income"), Transaction.amount),), 0)),
+                    fn.SUM(Case(None, (((Transaction.type == TransactionType.INCOME), Transaction.amount),), 0)),
                     0,
                 ).alias("income_actual"),
                 fn.COALESCE(
-                    fn.SUM(Case(None, (((Transaction.type == "expense"), Transaction.amount),), 0)),
+                    fn.SUM(Case(None, (((Transaction.type == TransactionType.EXPENSE), Transaction.amount),), 0)),
                     0,
                 ).alias("expense_actual"),
                 fn.COALESCE(
@@ -166,7 +167,8 @@ class TransactionRepository:
                             None,
                             (
                                 (
-                                    (Transaction.type == "expense") & (fn.COALESCE(Category.is_savings, 0) == 1),
+                                    (Transaction.type == TransactionType.EXPENSE)
+                                    & (fn.COALESCE(Category.is_savings, 0) == 1),
                                     Transaction.amount,
                                 ),
                             ),
@@ -175,10 +177,10 @@ class TransactionRepository:
                     ),
                     0,
                 ).alias("savings_actual"),
-                fn.COALESCE(fn.AVG(Case(None, (((Transaction.type == "income"), Transaction.amount),), None)), 0).alias(
-                    "income_avg_amount"
-                ),
-                fn.COALESCE(fn.SUM(Case(None, (((Transaction.type == "income"), 1),), 0)), 0).alias(
+                fn.COALESCE(
+                    fn.AVG(Case(None, (((Transaction.type == TransactionType.INCOME), Transaction.amount),), None)), 0
+                ).alias("income_avg_amount"),
+                fn.COALESCE(fn.SUM(Case(None, (((Transaction.type == TransactionType.INCOME), 1),), 0)), 0).alias(
                     "income_total_count"
                 ),
             )
@@ -212,7 +214,7 @@ class TransactionRepository:
             )
             for row in budget_rows:
                 amount = self._cents_to_decimal(row["amount"]) or MONEY_ZERO
-                if row["type"] == "income":
+                if row["type"] == TransactionType.INCOME:
                     income_goal += amount
                 else:
                     expense_budget += amount
@@ -233,7 +235,7 @@ class TransactionRepository:
                 )
                 .where(
                     analytics_included_expr(Transaction)
-                    & (Transaction.type == "expense")
+                    & (Transaction.type == TransactionType.EXPENSE)
                     & (Transaction.category_id == category_id)
                     & (Transaction.date.between(date_start, date_end))
                 )
@@ -248,11 +250,15 @@ class TransactionRepository:
         income_actual = self._cents_to_decimal(totals["income_actual"]) or MONEY_ZERO
         expense_actual = self._cents_to_decimal(totals["expense_actual"]) or MONEY_ZERO
 
-        prev_income_actual = max(MONEY_ZERO, income_actual - tx_amount) if tx_type == "income" else income_actual
-        prev_expense_actual = max(MONEY_ZERO, expense_actual - tx_amount) if tx_type == "expense" else expense_actual
+        prev_income_actual = (
+            max(MONEY_ZERO, income_actual - tx_amount) if tx_type == TransactionType.INCOME else income_actual
+        )
+        prev_expense_actual = (
+            max(MONEY_ZERO, expense_actual - tx_amount) if tx_type == TransactionType.EXPENSE else expense_actual
+        )
         prev_category_spent = (
             max(MONEY_ZERO, category_spent_current - tx_amount)
-            if tx_type == "expense" and category_id is not None
+            if tx_type == TransactionType.EXPENSE and category_id is not None
             else category_spent_current
         )
 
@@ -260,17 +266,17 @@ class TransactionRepository:
         expense_count = expense_total_count
         income_avg_prev = (
             ((income_actual - tx_amount) / max(1, income_count - 1))
-            if tx_type == "income" and income_count > 1
+            if tx_type == TransactionType.INCOME and income_count > 1
             else (
                 self._cents_to_decimal(totals["income_avg_amount"]) or MONEY_ZERO
-                if income_count > 0 and tx_type != "income"
+                if income_count > 0 and tx_type != TransactionType.INCOME
                 else None
             )
         )
         expense_avg_prev = (
             ((category_spent_current - tx_amount) / max(1, expense_count - 1))
-            if tx_type == "expense" and expense_count > 1
-            else (expense_avg_amount if expense_count > 0 and tx_type != "expense" else None)
+            if tx_type == TransactionType.EXPENSE and expense_count > 1
+            else (expense_avg_amount if expense_count > 0 and tx_type != TransactionType.EXPENSE else None)
         )
 
         day_of_month = int(tx_date[8:10]) if len(tx_date) >= 10 else date.today().day
@@ -343,7 +349,7 @@ class TransactionRepository:
                 exchange_rate=exchange_rate,
                 converted_amount=self._money_to_cents(converted_amount, allow_none=True),
             )
-            delta = normalized_amount if tx_type == "income" else -normalized_amount
+            delta = normalized_amount if tx_type == TransactionType.INCOME else -normalized_amount
             self.update_account_balance(account_id, delta)
             tx_data = self._serialize_transaction_row(tx)
             self._apply_savings_goal_delta_for_transaction(tx_data, sign=1)
@@ -370,7 +376,7 @@ class TransactionRepository:
             self._apply_savings_goal_delta_for_transaction(tx, sign=-1)
             if tx["account_id"] is not None:
                 amount_value = self._money_to_decimal(tx.get("amount")) or MONEY_ZERO
-                delta = amount_value if tx["type"] == "income" else -amount_value
+                delta = amount_value if tx["type"] == TransactionType.INCOME else -amount_value
                 self.update_account_balance(tx["account_id"], -delta)
             Transaction.delete().where(Transaction.id == tx_id).execute()
 
@@ -411,10 +417,10 @@ class TransactionRepository:
             self._apply_savings_goal_delta_for_transaction(old, sign=-1)
             if old["account_id"] is not None:
                 old_amount = self._money_to_decimal(old.get("amount")) or MONEY_ZERO
-                old_delta = old_amount if old["type"] == "income" else -old_amount
+                old_delta = old_amount if old["type"] == TransactionType.INCOME else -old_amount
                 self.update_account_balance(int(old["account_id"]), -old_delta)
             if new_account_id is not None:
-                new_delta = new_amount if new_type == "income" else -new_amount
+                new_delta = new_amount if new_type == TransactionType.INCOME else -new_amount
                 self.update_account_balance(new_account_id, new_delta)
             (
                 Transaction.update(
@@ -569,7 +575,7 @@ class TransactionRepository:
         with self._atomic():
             expense_tx = Transaction.create(
                 account=from_account_id,
-                type="expense",
+                type=TransactionType.EXPENSE,
                 amount=self._money_to_cents(normalized_amount),
                 description=debit_desc,
                 category=None,
@@ -585,7 +591,7 @@ class TransactionRepository:
 
             income_tx = Transaction.create(
                 account=to_account_id,
-                type="income",
+                type=TransactionType.INCOME,
                 amount=self._money_to_cents(credit_amount),
                 description=credit_desc,
                 category=None,
