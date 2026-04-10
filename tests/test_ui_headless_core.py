@@ -762,43 +762,38 @@ def test_card_widget_menu_builder_and_report_types(monkeypatch) -> None:
     ] == list(range(7))
 
 
-def test_refresh_sidebar_style_regenerates_nav_stylesheet_from_qt_material_env(monkeypatch) -> None:
-    """_refresh_sidebar_style must rebuild sidebar colours from qt-material env vars."""
+def test_refresh_sidebar_style_cycles_stylesheet_to_force_palette_re_evaluation(monkeypatch) -> None:
+    """_refresh_sidebar_style must clear then restore each sidebar widget's stylesheet
+    so that palette() colour references are re-evaluated after a theme change."""
     install_fake_pyside(monkeypatch)
     module = fresh_import(monkeypatch, "mira.ui.main_window_shell")
-    monkeypatch.setenv("QTMATERIAL_SECONDARYDARKCOLOR", "#101820")
-    monkeypatch.setenv("QTMATERIAL_SECONDARYLIGHTCOLOR", "#1f3a4a")
-    monkeypatch.setenv("QTMATERIAL_SECONDARYTEXTCOLOR", "#f7fafc")
-    monkeypatch.setenv("QTMATERIAL_PRIMARYCOLOR", "#ffbf00")
-    monkeypatch.setenv("QTMATERIAL_PRIMARYTEXTCOLOR", "#111111")
 
     class _FakeWidget:
-        def __init__(self) -> None:
+        def __init__(self, ss: str = "") -> None:
+            self._ss = ss
             self.history: list[str] = []
+
+        def styleSheet(self) -> str:
+            return self._ss
 
         def setStyleSheet(self, ss: str) -> None:
             self.history.append(ss)
 
-    nav_list = _FakeWidget()
+    nav_list = _FakeWidget("color:palette(text);")
+    sidebar_panel = _FakeWidget("background:palette(window);")
 
-    class DummyWindow(module.MainWindowShellMixin):
+    class DummyWindow:
         _nav_list = nav_list
+        _sidebar_panel = sidebar_panel
 
     module.MainWindowShellMixin._refresh_sidebar_style(DummyWindow())
-    first_stylesheet = nav_list.history[-1]
 
-    assert "palette(" not in first_stylesheet
-    assert "background-color:#101820;" in first_stylesheet
-    assert "background-color:#1f3a4a;" in first_stylesheet
-    assert "color:#f7fafc;" in first_stylesheet
-    assert "background-color:#ffbf00;" in first_stylesheet
-    assert "color:#111111;" in first_stylesheet
-
-    monkeypatch.setenv("QTMATERIAL_PRIMARYCOLOR", "#1de9b6")
-    module.MainWindowShellMixin._refresh_sidebar_style(DummyWindow())
-
-    assert nav_list.history[-1] != first_stylesheet
-    assert "background-color:#1de9b6;" in nav_list.history[-1]
+    assert nav_list.history == ["", "color:palette(text);"], (
+        "nav_list should be cleared then restored with original stylesheet"
+    )
+    assert sidebar_panel.history == ["", "background:palette(window);"], (
+        "sidebar_panel should be cleared then restored with original stylesheet"
+    )
 
 
 def test_refresh_sidebar_style_skips_missing_widgets(monkeypatch) -> None:
