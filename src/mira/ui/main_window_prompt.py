@@ -40,10 +40,29 @@ class MainWindowPromptMixin:
 
     def _append_chat_assistant(self, text: str, title: str | None = None) -> None:
         del title
-        self._chat_presenter.append_assistant(text)
+        presenter = getattr(self, "_chat_presenter", None)
+        if presenter is not None:
+            presenter.append_assistant(text)
+            return
+
+        block = text.strip()
+        if not block:
+            return
+        started_new_batch = self._chat_state.append_block(block)
+        if started_new_batch:
+            from mira.ui import main_window as main_window_module
+
+            main_window_module.QTimer.singleShot(0, self._clear_pending_chat_batch)
+        self._show_chat_message()
 
     def notify_user_message(self, *args: object, level: str = "info") -> None:
-        self._notification_proxy.notify(*args, level=level)
+        proxy = getattr(self, "_notification_proxy", None)
+        if proxy is None:
+            from mira.ui.main_window_support import MainWindowNotificationProxy
+
+            proxy = MainWindowNotificationProxy(self)
+            self._notification_proxy = proxy
+        proxy.notify(*args, level=level)
 
     def _notification_handler(self) -> NotificationService:
         service = getattr(self, "_notification_service", None)
@@ -62,13 +81,38 @@ class MainWindowPromptMixin:
         self.notify_user_message(*args, level="error")
 
     def _notify_exception(self, title: str, exc: Exception, *, prefix: str | None = None) -> None:
-        self._notification_proxy.notify_exception(title, exc, prefix=prefix)
+        proxy = getattr(self, "_notification_proxy", None)
+        if proxy is None:
+            from mira.ui.main_window_support import MainWindowNotificationProxy
+
+            proxy = MainWindowNotificationProxy(self)
+            self._notification_proxy = proxy
+        proxy.notify_exception(title, exc, prefix=prefix)
 
     def _clear_pending_chat_batch(self) -> None:
         self._chat_state.reset_pending_batch()
 
     def _show_chat_message(self) -> None:
-        self._chat_presenter.show_current_message()
+        presenter = getattr(self, "_chat_presenter", None)
+        if presenter is not None:
+            presenter.show_current_message()
+            return
+
+        current_message = self._chat_state.current_message()
+        browser = getattr(self, "_response_browser", None)
+        if current_message is None:
+            if hasattr(browser, "setHtml") and hasattr(self, "_placeholder_chat_html"):
+                browser.setHtml(self._placeholder_chat_html())
+            elif hasattr(browser, "clear"):
+                browser.clear()
+        elif hasattr(browser, "setPlainText"):
+            browser.setPlainText(current_message)
+        elif hasattr(browser, "setHtml"):
+            escaped_message = current_message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            browser.setHtml(f'<div style="white-space:pre-wrap;">{escaped_message}</div>')
+        update_navigation = getattr(self, "_update_chat_navigation", None)
+        if callable(update_navigation):
+            update_navigation()
 
     def _placeholder_chat_html(self) -> str:
         placeholder_color = self._chat_theme_primary_color()
@@ -117,7 +161,7 @@ class MainWindowPromptMixin:
             set_requested_period = getattr(self._view_mira_analysis, "set_requested_period", None)
             if callable(set_requested_period):
                 set_requested_period(directive.analysis_period)
-            self._navigate(self.VIEW_MIRA_ANALYSIS)
+            self._navigate(getattr(self, "VIEW_MIRA_ANALYSIS", 8))
             self._view_mira_analysis.run_report(emit_to_assistant=True)
 
         if directive.refresh_all:

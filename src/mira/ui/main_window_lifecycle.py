@@ -209,7 +209,7 @@ class MainWindowLifecycleMixin:
         currency = "USD" if db is None else db.setting.get("default_currency") or "USD"
         dialog = dialog_cls(self._language, currency, self)
         if dialog.exec() == QDialog.DialogCode.Accepted and dialog.should_open_goal_form:
-            self._navigate(self.VIEW_GOALS)
+            self._navigate(getattr(self, "VIEW_GOALS", 9))
             self._view_goals.open_add_dialog(prefill=dialog.goal_prefill)
 
     def _on_open_documentation(self) -> None:
@@ -340,6 +340,7 @@ class MainWindowLifecycleMixin:
     def _on_theme_changed(self, theme: str) -> None:
         self._theme = self._normalize_theme(theme)
         self._apply_theme(self._theme)
+        self._refresh_sidebar_style()
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
         self._pipeline.shutdown()

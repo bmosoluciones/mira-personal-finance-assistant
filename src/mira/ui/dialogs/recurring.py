@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFormLayout,
 
 from mira.db.database import Database
 from mira.ui.dialogs._shared import _TagMultiSelectButton, _make_amount_spin, _notify_warning
-from mira.ui.i18n import normalize_language
+from mira.ui.i18n import normalize_language, tr
 
 
 class RecurringDialog(QDialog):
@@ -19,7 +19,14 @@ class RecurringDialog(QDialog):
         super().__init__(parent)
         self._db = db
         self._recurring = recurring
-        self.setWindowTitle("Edit Recurring" if recurring else "Add Recurring")
+        self._language = normalize_language(self._db.setting.get("language"))
+        self.setWindowTitle(
+            tr(
+                "dialog.recurring.title.edit" if recurring else "dialog.recurring.title.add",
+                self._language,
+                default="Edit Recurring" if recurring else "Add Recurring",
+            )
+        )
         self.setMinimumWidth(400)
         self._build_ui()
         if recurring:
@@ -32,26 +39,35 @@ class RecurringDialog(QDialog):
         self._account_combo = QComboBox()
         for acc in self._db.account.list():
             self._account_combo.addItem(acc["name"], acc["id"])
-        form.addRow("Account:", self._account_combo)
+        form.addRow(tr("dialog.recurring.account", self._language, default="Account:"), self._account_combo)
         self._type_combo = QComboBox()
-        self._type_combo.addItems(["income", "expense"])
-        form.addRow("Type:", self._type_combo)
+        self._type_combo.addItem(
+            tr("dialog.recurring.type.income", self._language, default="Income"),
+            "income",
+        )
+        self._type_combo.addItem(
+            tr("dialog.recurring.type.expense", self._language, default="Expense"),
+            "expense",
+        )
+        form.addRow(tr("dialog.recurring.type", self._language, default="Type:"), self._type_combo)
         self._amount_spin = _make_amount_spin(self._db)
-        form.addRow("Amount:", self._amount_spin)
+        form.addRow(tr("dialog.recurring.amount", self._language, default="Amount:"), self._amount_spin)
         self._desc_edit = QLineEdit()
-        self._desc_edit.setPlaceholderText("Description…")
-        form.addRow("Description:", self._desc_edit)
+        self._desc_edit.setPlaceholderText(
+            tr("dialog.recurring.description.placeholder", self._language, default="Description…")
+        )
+        form.addRow(tr("dialog.recurring.description", self._language, default="Description:"), self._desc_edit)
         self._category_combo = QComboBox()
-        form.addRow("Category:", self._category_combo)
-        self._tag_selector = _TagMultiSelectButton(self, lang=normalize_language(self._db.setting.get("language")))
-        form.addRow("Tags:", self._tag_selector)
+        form.addRow(tr("dialog.recurring.category", self._language, default="Category:"), self._category_combo)
+        self._tag_selector = _TagMultiSelectButton(self, lang=self._language)
+        form.addRow(tr("dialog.recurring.tags", self._language, default="Tags:"), self._tag_selector)
         self._note_edit = QLineEdit()
-        self._note_edit.setPlaceholderText("Note…")
-        form.addRow("Note:", self._note_edit)
+        self._note_edit.setPlaceholderText(tr("dialog.recurring.note.placeholder", self._language, default="Note…"))
+        form.addRow(tr("dialog.recurring.note", self._language, default="Note:"), self._note_edit)
         self._day_spin = QSpinBox()
         self._day_spin.setRange(1, 28)
         self._day_spin.setValue(1)
-        form.addRow("Day of Month:", self._day_spin)
+        form.addRow(tr("dialog.recurring.day_of_month", self._language, default="Day of month:"), self._day_spin)
         layout.addLayout(form)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self._on_accept)
@@ -67,7 +83,7 @@ class RecurringDialog(QDialog):
             if self._account_combo.itemData(i) == acc_id:
                 self._account_combo.setCurrentIndex(i)
                 break
-        if (idx := self._type_combo.findText(rec.get("type", "expense"))) >= 0:
+        if (idx := self._type_combo.findData(rec.get("type", "expense"))) >= 0:
             self._type_combo.setCurrentIndex(idx)
         self._amount_spin.setValue(float(rec.get("amount", 0)))
         self._desc_edit.setText(rec.get("description") or "")
@@ -84,7 +100,7 @@ class RecurringDialog(QDialog):
 
     def _populate_categories(self) -> None:
         current_category_id = self._category_combo.currentData()
-        current_type = self._type_combo.currentText()
+        current_type = str(self._type_combo.currentData() or "expense")
         self._category_combo.clear()
         self._category_combo.addItem("", None)
         for category in self._db.category.list(current_type):
@@ -97,14 +113,22 @@ class RecurringDialog(QDialog):
 
     def _on_accept(self) -> None:
         if self._amount_spin.value() <= 0:
-            _notify_warning(self, "Validation", "Amount must be greater than zero.")
+            _notify_warning(
+                self,
+                tr("dialog.common.validation", self._language, default="Validation"),
+                tr(
+                    "dialog.recurring.validation.amount_positive",
+                    self._language,
+                    default="Amount must be greater than zero.",
+                ),
+            )
             return
         self.accept()
 
     def get_data(self) -> dict:
         return {
             "account_id": self._account_combo.currentData(),
-            "tx_type": self._type_combo.currentText(),
+            "tx_type": str(self._type_combo.currentData() or "expense"),
             "amount": self._amount_spin.value(),
             "description": self._desc_edit.text().strip() or None,
             "category_id": self._category_combo.currentData(),

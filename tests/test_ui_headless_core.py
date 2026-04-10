@@ -760,3 +760,54 @@ def test_card_widget_menu_builder_and_report_types(monkeypatch) -> None:
         report_types.REPORT_BUDGET,
         report_types.REPORT_ACCOUNT_BALANCE,
     ] == list(range(7))
+
+
+def test_refresh_sidebar_style_regenerates_nav_stylesheet_from_qt_material_env(monkeypatch) -> None:
+    """_refresh_sidebar_style must rebuild sidebar colours from qt-material env vars."""
+    install_fake_pyside(monkeypatch)
+    module = fresh_import(monkeypatch, "mira.ui.main_window_shell")
+    monkeypatch.setenv("QTMATERIAL_SECONDARYDARKCOLOR", "#101820")
+    monkeypatch.setenv("QTMATERIAL_SECONDARYLIGHTCOLOR", "#1f3a4a")
+    monkeypatch.setenv("QTMATERIAL_SECONDARYTEXTCOLOR", "#f7fafc")
+    monkeypatch.setenv("QTMATERIAL_PRIMARYCOLOR", "#ffbf00")
+    monkeypatch.setenv("QTMATERIAL_PRIMARYTEXTCOLOR", "#111111")
+
+    class _FakeWidget:
+        def __init__(self) -> None:
+            self.history: list[str] = []
+
+        def setStyleSheet(self, ss: str) -> None:
+            self.history.append(ss)
+
+    nav_list = _FakeWidget()
+
+    class DummyWindow(module.MainWindowShellMixin):
+        _nav_list = nav_list
+
+    module.MainWindowShellMixin._refresh_sidebar_style(DummyWindow())
+    first_stylesheet = nav_list.history[-1]
+
+    assert "palette(" not in first_stylesheet
+    assert "background-color:#101820;" in first_stylesheet
+    assert "background-color:#1f3a4a;" in first_stylesheet
+    assert "color:#f7fafc;" in first_stylesheet
+    assert "background-color:#ffbf00;" in first_stylesheet
+    assert "color:#111111;" in first_stylesheet
+
+    monkeypatch.setenv("QTMATERIAL_PRIMARYCOLOR", "#1de9b6")
+    module.MainWindowShellMixin._refresh_sidebar_style(DummyWindow())
+
+    assert nav_list.history[-1] != first_stylesheet
+    assert "background-color:#1de9b6;" in nav_list.history[-1]
+
+
+def test_refresh_sidebar_style_skips_missing_widgets(monkeypatch) -> None:
+    """_refresh_sidebar_style must silently skip sidebar attributes that are absent."""
+    install_fake_pyside(monkeypatch)
+    module = fresh_import(monkeypatch, "mira.ui.main_window_shell")
+
+    class DummyWindow:
+        pass  # no _nav_list or _sidebar_panel attributes
+
+    # Should not raise
+    module.MainWindowShellMixin._refresh_sidebar_style(DummyWindow())

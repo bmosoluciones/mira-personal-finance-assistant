@@ -503,6 +503,126 @@ def test_budget_view_accepts_formula_and_persists_numeric_result(
         view.close()
 
 
+def test_budget_view_accepts_grouped_formula_and_persists_numeric_result(
+    monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.budget")
+
+    db.category.create("Food", "expense")
+    budget = db.budget.create("GROUPED_FORMULA_BUDGET_2026", 2026, "USD")
+
+    view = views_module.BudgetView(db)
+    try:
+        view.show()
+        view.refresh()
+        view._load_budget()
+        app.processEvents()
+
+        row = _find_row_by_text(view._budget_table, "Food")
+        assert row >= 0
+
+        _set_table_item_text(view._budget_table, row, 1, "=(50*2)*20")
+        view._on_budget_cell_changed(row, 1)
+        app.processEvents()
+
+        assert view._budget_table.item(row, 1).text() == "2,000.00"
+        matrix = db.budget.get_matrix(int(budget["id"]))
+        assert float(matrix["rows"][0]["months"][0]) == pytest.approx(2000.0)
+    finally:
+        view.close()
+
+
+def test_budget_view_rejects_formula_with_non_parentheses_groupers_and_keeps_previous_value(
+    monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.budget")
+
+    food = db.category.create("Food", "expense")
+    budget = db.budget.create("GROUPER_BUDGET_2026", 2026, "USD")
+    db.budget.upsert_amount(int(budget["id"]), int(food["id"]), 2026, 1, 125.0)
+
+    captured: list[tuple[str, str]] = []
+    upsert_calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+    monkeypatch.setattr(
+        views_module,
+        "_notify_warning",
+        lambda _parent, title, message: captured.append((str(title), str(message))),
+    )
+    monkeypatch.setattr(db.budget, "upsert_amount", lambda *args, **kwargs: upsert_calls.append((args, kwargs)))
+
+    view = views_module.BudgetView(db)
+    try:
+        view.show()
+        view.refresh()
+        view._load_budget()
+        app.processEvents()
+
+        row = _find_row_by_text(view._budget_table, "Food")
+        assert row >= 0
+
+        _set_table_item_text(view._budget_table, row, 1, "=[100+200]*2")
+        view._on_budget_cell_changed(row, 1)
+        app.processEvents()
+
+        expected_message = "Grouping symbol not allowed: '['. Only parentheses '()' are supported for grouping."
+        assert captured == [("Budgets", expected_message)]
+        assert upsert_calls == []
+        assert view._budget_table.item(row, 1).text() == "125.00"
+        assert view._budget_table.item(row, 1).toolTip() in ("", expected_message)
+    finally:
+        view.close()
+
+
+def test_budget_view_rejects_invalid_grouped_formula_and_keeps_persisted_value(
+    monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.budget")
+
+    food = db.category.create("Food", "expense")
+    budget = db.budget.create("INVALID_GROUPED_FORMULA_BUDGET_2026", 2026, "USD")
+    db.budget.upsert_amount(int(budget["id"]), int(food["id"]), 2026, 1, 125.0)
+
+    captured: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(
+        views_module,
+        "_notify_warning",
+        lambda _parent, title, message: captured.append((str(title), str(message))),
+    )
+
+    view = views_module.BudgetView(db)
+    try:
+        view.show()
+        view.refresh()
+        view._load_budget()
+        app.processEvents()
+
+        row = _find_row_by_text(view._budget_table, "Food")
+        assert row >= 0
+
+        _set_table_item_text(view._budget_table, row, 1, "=(50*2")
+        view._on_budget_cell_changed(row, 1)
+        app.processEvents()
+
+        expected_message = (
+            "Invalid formula: '(50*2'. Check that the formula contains only numbers and the operators +, -, *, /."
+        )
+        assert captured == [("Budgets", expected_message)]
+        assert view._budget_table.item(row, 1).text() == "125.00"
+
+        matrix = db.budget.get_matrix(int(budget["id"]))
+        assert float(matrix["rows"][0]["months"][0]) == pytest.approx(125.0)
+    finally:
+        view.close()
+
+
 def test_budget_view_accepts_localized_number_format_when_editing_cells(
     monkeypatch: pytest.MonkeyPatch,
     db: Database,

@@ -5,10 +5,13 @@
 
 from __future__ import annotations
 
+import webbrowser
+
 try:
     from PySide6.QtCore import QThread, Qt, QTimer
     from PySide6.QtGui import QAction, QKeyEvent
     from PySide6.QtWidgets import (
+        QDialog,
         QLineEdit,
         QMainWindow,
         QProgressDialog,
@@ -34,11 +37,11 @@ from mira.ui.coordinators.model_download_coordinator import ModelDownloadCoordin
 from mira.ui.coordinators.model_download_flow import ModelDownloadFlow, ModelDownloadSession
 from mira.ui.notification_service import NotificationService
 from mira.ui.notifications import show_user_message
-from mira.ui.main_window_layout import MainWindowLayoutMixin
+from mira.ui.main_window_layout import MainWindowLayoutMixin, _SIDEBAR_WIDTH
 from mira.ui.main_window_navigation import MainWindowNavigationMixin
 from mira.ui.main_window_prompt import MainWindowPromptMixin
 from mira.ui.main_window_shell import MainWindowShellMixin
-from mira.ui.main_window_lifecycle import MainWindowLifecycleMixin
+from mira.ui.main_window_lifecycle import MainWindowLifecycleMixin, _DOCS_URL
 from mira.ui.main_window_support import (
     MainWindowChatPresenter,
     MainWindowFileActions,

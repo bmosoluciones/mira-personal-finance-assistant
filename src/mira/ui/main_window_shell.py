@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import os
+
 from PySide6.QtWidgets import QApplication
 
 from mira.ui.i18n import tr
@@ -69,3 +71,45 @@ class MainWindowShellMixin:
         import qt_material  # noqa: PLC0415
 
         qt_material.apply_stylesheet(app, theme=theme)
+
+    @staticmethod
+    def _qt_material_color(name: str, fallback: str) -> str:
+        return os.environ.get(f"QTMATERIAL_{name.upper()}", fallback)
+
+    def _sidebar_nav_stylesheet(self) -> str:
+        background = self._qt_material_color("secondaryDarkColor", "#31363b")
+        hover_background = self._qt_material_color("secondaryLightColor", "#4f5b62")
+        text = self._qt_material_color("secondaryTextColor", "#ffffff")
+        selected_background = self._qt_material_color("primaryColor", "#1de9b6")
+        selected_text = self._qt_material_color("primaryTextColor", "#000000")
+        return f"""
+            QListWidget {{
+                background-color:{background};
+                border:none;
+                color:{text};
+                font-size:12px;
+                outline:none;
+            }}
+            QListWidget::item {{
+                color:{text};
+                padding:7px 12px;
+                border-left:3px solid transparent;
+            }}
+            QListWidget::item:selected {{
+                background-color:{selected_background};
+                selection-background-color:{selected_background};
+                color:{selected_text};
+                selection-color:{selected_text};
+                border-left:3px solid {selected_text};
+            }}
+            QListWidget::item:hover:!selected {{
+                background-color:{hover_background};
+                color:{text};
+            }}
+            """
+
+    def _refresh_sidebar_style(self) -> None:
+        """Regenerate sidebar colors from the active qt-material theme."""
+        nav_list = getattr(self, "_nav_list", None)
+        if nav_list is not None:
+            nav_list.setStyleSheet(self._sidebar_nav_stylesheet())

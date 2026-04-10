@@ -107,6 +107,10 @@ def test_formula_nested_parentheses():
     assert process_budget_value("=((50+50)*2)/2") == 100.0
 
 
+def test_formula_parentheses_grouping_multiplication_chain():
+    assert process_budget_value("=(50*2)*20") == 2000.0
+
+
 def test_formula_uses_grouped_numbers_with_default_number_format():
     assert process_budget_value("=1,200.50+9.5", number_format=US_NUMBER_FORMAT) == pytest.approx(1210.0)
 
@@ -140,6 +144,16 @@ def test_formula_disallowed_xor_operator_raises():
         process_budget_value("=100^2")
 
 
+def test_formula_disallowed_square_brackets_grouping_raises():
+    with pytest.raises(ValueError, match="Only parentheses"):
+        process_budget_value("=[100+200]*2")
+
+
+def test_formula_disallowed_curly_braces_grouping_raises():
+    with pytest.raises(ValueError, match="Only parentheses"):
+        process_budget_value("={100+200}*2")
+
+
 def test_formula_disallowed_function_raises():
     with pytest.raises(ValueError, match="supported"):
         process_budget_value("=abs(-16)")
@@ -153,6 +167,11 @@ def test_formula_empty_after_equal_raises():
 def test_formula_syntax_error_raises():
     with pytest.raises(ValueError, match="[Ii]nvalid"):
         process_budget_value("=100+*200")
+
+
+def test_formula_unbalanced_parentheses_raises():
+    with pytest.raises(ValueError, match="[Ii]nvalid"):
+        process_budget_value("=(50*2")
 
 
 def test_formula_invalid_localized_number_raises():

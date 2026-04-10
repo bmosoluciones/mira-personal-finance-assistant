@@ -872,3 +872,29 @@ def test_help_assets_resolve_and_documentation_opens(
     main_window_module.MainWindow._on_open_documentation(dummy)
 
     assert opened_urls == [main_window_module._DOCS_URL]
+
+
+def test_on_theme_changed_refreshes_sidebar() -> None:
+    """_on_theme_changed must refresh the sidebar after the new theme is applied."""
+    main_window_module = _import_main_window_or_xfail_headless()
+
+    applied_themes: list[str] = []
+    refreshed: list[bool] = []
+
+    class DummyWindow:
+        _theme = "dark_teal.xml"
+
+        def _normalize_theme(self, theme: str) -> str:
+            return theme
+
+        def _apply_theme(self, theme: str) -> None:
+            applied_themes.append(theme)
+
+        def _refresh_sidebar_style(self) -> None:
+            refreshed.append(True)
+
+    window = DummyWindow()
+    main_window_module.MainWindow._on_theme_changed(window, "light_blue.xml")
+
+    assert applied_themes == ["light_blue.xml"]
+    assert refreshed == [True], "_refresh_sidebar_style was not called by _on_theme_changed"

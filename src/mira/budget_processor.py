@@ -39,6 +39,7 @@ _UNARY_OPS: dict[type, object] = {
 
 _OPERATOR_CHARS = "+-*/()"
 _UNSUPPORTED_OPERATOR_CHARS = {"^", "%", "\\"}
+_UNSUPPORTED_GROUPER_CHARS = {"[", "]", "{", "}"}
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +106,10 @@ def _normalise_formula(expr: str, number_format: NumberFormatConfig) -> str:
 
         if char in _UNSUPPORTED_OPERATOR_CHARS:
             raise ValueError(f"Operation not allowed: '{char}'. Only basic operations (+, -, *, /) are supported.")
+        if char in _UNSUPPORTED_GROUPER_CHARS:
+            raise ValueError(
+                f"Grouping symbol not allowed: '{char}'. Only parentheses '()' are supported for grouping."
+            )
 
         if char not in allowed_chars:
             raise ValueError(

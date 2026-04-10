@@ -12,6 +12,7 @@ from .setup import InitialSetupDialog
 from .tags import TagDialog
 from .transactions import BalanceAdjustmentDialog, TransactionDialog, TransferDialog
 from . import financial as _financial
+from PySide6.QtWidgets import QColorDialog
 
 CompoundInterestDialog = _financial.CompoundInterestDialog
 GoalScenarioDialog = _financial.GoalScenarioDialog
@@ -22,6 +23,7 @@ __all__ = [
     "BalanceAdjustmentDialog",
     "BudgetCreateDialog",
     "CategoryDialog",
+    "QColorDialog",
     "CompoundInterestDialog",
     "ContributeGoalDialog",
     "GoalScenarioDialog",

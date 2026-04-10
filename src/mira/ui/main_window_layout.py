@@ -110,28 +110,7 @@ class MainWindowLayoutMixin:
         layout.addWidget(header)
 
         self._nav_list = QListWidget()
-        self._nav_list.setStyleSheet("""
-            QListWidget {
-                background:palette(window);
-                border:none;
-                color:palette(text);
-                font-size:12px;
-                outline:none;
-            }
-            QListWidget::item {
-                padding:7px 12px;
-                border-left:3px solid transparent;
-            }
-            QListWidget::item:selected {
-                background:palette(highlight);
-                color:palette(highlighted-text);
-                border-left:3px solid palette(text);
-            }
-            QListWidget::item:hover:!selected {
-                background:palette(button);
-                color:palette(button-text);
-            }
-            """)
+        self._nav_list.setStyleSheet(self._sidebar_nav_stylesheet())
         self._nav_list.setSpacing(1)
         for label in [
             tr("nav.dashboard", self._language, default="🏠  Dashboard"),

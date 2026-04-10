@@ -553,6 +553,40 @@ def test_tag_dialog_icon_dropdown_localizes_labels_to_english(monkeypatch: pytes
         dialog.close()
 
 
+def test_tag_dialog_localizes_visible_labels_to_english(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    db.setting.set("language", "en")
+    dialog = dialogs_module.TagDialog(db)
+
+    try:
+        assert dialog.windowTitle() == "Add Tag"
+        assert dialog._name_edit.placeholderText() == "Tag name…"
+        assert dialog._color_btn.text() == "Choose color"
+    finally:
+        dialog.close()
+
+
+def test_recurring_dialog_localizes_visible_labels_to_english(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    db.setting.set("language", "en")
+    db.account.get_or_create("General")
+    dialog = dialogs_module.RecurringDialog(db)
+
+    try:
+        assert dialog.windowTitle() == "Add Recurring"
+        assert dialog._desc_edit.placeholderText() == "Description…"
+        assert dialog._note_edit.placeholderText() == "Note…"
+        assert dialog._type_combo.itemText(0) == "Income"
+        assert dialog._type_combo.itemData(0) == "income"
+        assert dialog._type_combo.itemData(1) == "expense"
+    finally:
+        dialog.close()
+
+
 def test_tags_view_shows_color_swatch_instead_of_hex(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
     _get_qapplication_or_xfail(monkeypatch)
     views_module = importlib.import_module("mira.ui.views.tags")
