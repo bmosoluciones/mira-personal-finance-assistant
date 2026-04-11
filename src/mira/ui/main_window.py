@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-
 try:
     from PySide6.QtCore import QThread, Qt, QTimer
     from PySide6.QtGui import QAction, QKeyEvent
