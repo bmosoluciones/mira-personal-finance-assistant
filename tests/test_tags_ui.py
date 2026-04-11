@@ -265,6 +265,43 @@ def test_tags_view_edit_shows_validation_warning_for_value_error(monkeypatch: py
         view.close()
 
 
+def test_tags_view_delete_confirmation_warns_that_action_is_irreversible(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.tags")
+    qtwidgets = importlib.import_module("PySide6.QtWidgets")
+
+    tag = db.tag.create("Fijo", color="#336699")
+    prompts: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(
+        qtwidgets.QMessageBox,
+        "question",
+        lambda _parent, title, message, *_args, **_kwargs: prompts.append((str(title), str(message)))
+        or qtwidgets.QMessageBox.StandardButton.No,
+    )
+
+    view = views_module.TagsView(db)
+    try:
+        view.refresh()
+        row = _find_row_by_user_role(view._table, int(tag["id"]))
+        assert row >= 0
+        view._table.selectRow(row)
+        view._table.setCurrentCell(row, 0)
+        view._on_delete()
+
+        assert prompts == [
+            (
+                "Eliminar etiqueta",
+                "¿Eliminar la etiqueta 'Fijo'?\n\nEsta acción no se puede revertir.",
+            )
+        ]
+        assert db.tag.get(int(tag["id"])) is not None
+    finally:
+        view.close()
+
+
 def test_transaction_dialog_uses_existing_tags_dropdown(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
     app = _get_qapplication_or_xfail(monkeypatch)
     dialogs_module = importlib.import_module("mira.ui.dialogs")
@@ -426,6 +463,35 @@ def test_recurring_dialog_uses_existing_tags_dropdown(monkeypatch: pytest.Monkey
         app.processEvents()
 
         assert set(dialog.get_data()["tag_ids"]) == {int(home["id"]), int(fixed["id"])}
+    finally:
+        dialog.close()
+
+
+def test_recurring_dialog_edit_mode_shows_irreversible_change_notice(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    account = db.account.get_or_create("General")
+    category = db.category.create("Servicios", "expense")
+    dialog = dialogs_module.RecurringDialog(
+        db,
+        recurring={
+            "account_id": account["id"],
+            "type": "expense",
+            "amount": 25.0,
+            "description": "Internet",
+            "category_id": category["id"],
+            "tag_ids": [],
+            "note": "mensual",
+            "day_of_month": 10,
+        },
+    )
+
+    try:
+        assert dialog._notice_lbl.isHidden() is False
+        assert "no se puede revertir" in dialog._notice_lbl.text()
     finally:
         dialog.close()
 

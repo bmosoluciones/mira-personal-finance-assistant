@@ -275,6 +275,41 @@ def test_budget_view_open_create_dialog_maps_duplicate_code_error(
         view.close()
 
 
+def test_budget_view_delete_confirmation_warns_that_action_is_irreversible(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.budget")
+    qtwidgets = importlib.import_module("PySide6.QtWidgets")
+
+    budget = db.budget.create("B-2026", 2026, "USD")
+    prompts: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(
+        qtwidgets.QMessageBox,
+        "question",
+        lambda _parent, title, message, *_args, **_kwargs: prompts.append((str(title), str(message)))
+        or qtwidgets.QMessageBox.StandardButton.No,
+    )
+
+    view = views_module.BudgetView(db)
+    try:
+        view.refresh()
+        if (idx := view._budget_combo.findData(int(budget["id"]))) >= 0:
+            view._budget_combo.setCurrentIndex(idx)
+        view._on_delete_budget()
+
+        assert prompts == [
+            (
+                "Budgets",
+                "Delete budget 'B-2026'?\n\nThis action cannot be undone.",
+            )
+        ]
+        assert db.budget.get(int(budget["id"])) is not None
+    finally:
+        view.close()
+
+
 def test_budget_view_open_create_dialog_maps_invalid_year_error(
     monkeypatch: pytest.MonkeyPatch,
     db: Database,

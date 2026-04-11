@@ -136,3 +136,84 @@ def test_transactions_view_service_create_duplicate_transfer_and_quick_actions(d
 
     transfers = [tx for tx in db.transaction.list(limit=50) if int(tx.get("is_transfer") or 0) == 1]
     assert len(transfers) == 4
+
+
+def test_transactions_view_service_update_delete_and_balance_adjustment(db: Database) -> None:
+    service = TransactionsViewService(db)
+    source = db.account.create("Source Headless", "bank", 300.0, "USD")
+    destination = db.account.create("Destination Headless", "bank", 0.0, "USD")
+    food = db.category.create("Food Headless", "expense")
+    utilities = db.category.create("Utilities Headless", "expense")
+    tag = db.tag.create("Home Headless", color="#228833")
+    other_tag = db.tag.create("Bills Headless", color="#3355AA")
+
+    created = service.create(
+        {
+            "account_id": source["id"],
+            "tx_type": "expense",
+            "amount": 40.0,
+            "stored_amount": 40.0,
+            "description": "Dinner",
+            "category": food["name"],
+            "tx_date": "2026-03-18",
+            "note": "family",
+            "subcategory": None,
+            "payment_method": "cash",
+            "receipt_path": None,
+            "exchange_rate": None,
+            "converted_amount": None,
+            "tags": [int(tag["id"])],
+        }
+    )
+
+    updated = service.update(
+        int(created.selected_id),
+        {
+            "account_id": destination["id"],
+            "tx_type": "expense",
+            "amount": 42.0,
+            "stored_amount": 42.0,
+            "description": "Utilities",
+            "category": utilities["name"],
+            "tx_date": "2026-03-20",
+            "note": "updated",
+            "subcategory": "Monthly",
+            "payment_method": "debit_card",
+            "receipt_path": "/tmp/receipt.pdf",
+            "exchange_rate": None,
+            "converted_amount": None,
+            "tags": [int(other_tag["id"])],
+        },
+    )
+    tx = db.transaction.get(int(created.selected_id))
+
+    assert updated.selected_id == int(created.selected_id)
+    assert tx is not None
+    assert int(tx["account_id"]) == int(destination["id"])
+    assert tx["description"] == "Utilities"
+    assert tx["category"] == "Utilities Headless"
+    assert tx["payment_method"] == "debit_card"
+    assert {int(item["id"]) for item in db.tag.list_for_transaction(int(created.selected_id))} == {int(other_tag["id"])}
+
+    adjustment = db.transaction.record_balance_adjustment(int(source["id"]), 20.0, tx_date="2026-04-01", note="initial")
+    adjusted = service.update_balance_adjustment(
+        int(adjustment["id"]),
+        {
+            "account_id": int(destination["id"]),
+            "signed_amount": -5.0,
+            "tx_date": "2026-04-02",
+            "note": "revised",
+        },
+    )
+    updated_adjustment = db.transaction.get(int(adjustment["id"]))
+
+    assert adjusted.selected_id == int(adjustment["id"])
+    assert updated_adjustment is not None
+    assert int(updated_adjustment["account_id"]) == int(destination["id"])
+    assert updated_adjustment["type"] == "expense"
+    assert float(updated_adjustment["amount"]) == pytest.approx(5.0)
+    assert updated_adjustment["note"] == "revised"
+
+    deleted = service.delete(int(created.selected_id))
+    assert deleted.selected_id is None
+    assert db.transaction.get(int(created.selected_id)) is None

@@ -788,12 +788,14 @@ def test_refresh_sidebar_style_cycles_stylesheet_to_force_palette_re_evaluation(
 
     module.MainWindowShellMixin._refresh_sidebar_style(DummyWindow())
 
-    assert nav_list.history == ["", "color:palette(text);"], (
-        "nav_list should be cleared then restored with original stylesheet"
-    )
-    assert sidebar_panel.history == ["", "background:palette(window);"], (
-        "sidebar_panel should be cleared then restored with original stylesheet"
-    )
+    assert nav_list.history == [
+        "",
+        "color:palette(text);",
+    ], "nav_list should be cleared then restored with original stylesheet"
+    assert sidebar_panel.history == [
+        "",
+        "background:palette(window);",
+    ], "sidebar_panel should be cleared then restored with original stylesheet"
 
 
 def test_refresh_sidebar_style_skips_missing_widgets(monkeypatch) -> None:

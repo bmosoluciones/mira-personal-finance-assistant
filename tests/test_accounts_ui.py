@@ -71,6 +71,7 @@ def test_accounts_view_add_edit_set_default_and_delete_keep_table_in_sync(
     views_module = importlib.import_module("mira.ui.views.accounts")
     dialogs_module = importlib.import_module("mira.ui.dialogs")
     qtwidgets = importlib.import_module("PySide6.QtWidgets")
+    prompts: list[tuple[str, str]] = []
 
     class FakeAccountDialog:
         class DialogCode:
@@ -108,7 +109,8 @@ def test_accounts_view_add_edit_set_default_and_delete_keep_table_in_sync(
     monkeypatch.setattr(
         qtwidgets.QMessageBox,
         "question",
-        lambda *_args, **_kwargs: qtwidgets.QMessageBox.StandardButton.Yes,
+        lambda _parent, title, message, *_args, **_kwargs: prompts.append((str(title), str(message)))
+        or qtwidgets.QMessageBox.StandardButton.Yes,
     )
 
     view = views_module.AccountsView(db)
@@ -148,6 +150,60 @@ def test_accounts_view_add_edit_set_default_and_delete_keep_table_in_sync(
         assert _find_row_by_user_role(view._table, int(updated["id"])) == -1
         assert view._table.rowCount() == len(db.account.list())
         assert FakeAccountDialog.seen_accounts == [None, wallet]
+        assert prompts == [
+            ("Eliminar cuenta", "¿Eliminar la cuenta 'Wallet Premium'?\n\nEsta acción no se puede revertir.")
+        ]
+    finally:
+        view.close()
+
+
+def test_accounts_view_transfer_shortcuts_reuse_existing_transfer_dialog(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.accounts")
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    source = db.account.create("Banco", "bank", 500.0, "USD")
+    destination = db.account.create("Ahorro", "bank", 50.0, "USD")
+    credit = db.account.create("Visa", "credit", -25.0, "USD")
+    dialog_calls: list[bool] = []
+
+    class FakeTransferDialog:
+        class DialogCode:
+            Accepted = 1
+
+        def __init__(self, _db: Database, parent=None, *, credit_payment: bool = False) -> None:
+            del parent
+            self._credit_payment = credit_payment
+            dialog_calls.append(credit_payment)
+
+        def exec(self) -> int:
+            return self.DialogCode.Accepted
+
+        def get_data(self) -> dict:
+            return {
+                "from_account_id": source["id"],
+                "to_account_id": credit["id"] if self._credit_payment else destination["id"],
+                "amount": 20.0,
+                "exchange_rate": 1.0,
+                "converted_amount": 20.0,
+                "tx_date": "2026-04-10",
+                "description": "shortcut",
+                "note": "nota",
+            }
+
+    monkeypatch.setattr(dialogs_module, "TransferDialog", FakeTransferDialog)
+
+    view = views_module.AccountsView(db)
+    try:
+        view.refresh()
+        view.open_transfer_dialog()
+        view.open_credit_payment_dialog()
+
+        transfers = [tx for tx in db.transaction.list(limit=20) if int(tx.get("is_transfer") or 0) == 1]
+        assert dialog_calls == [False, True]
+        assert len(transfers) == 4
     finally:
         view.close()
 

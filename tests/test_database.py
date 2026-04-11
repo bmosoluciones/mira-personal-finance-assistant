@@ -116,8 +116,7 @@ def test_atomic_rolls_back_on_unexpected_exception(db) -> None:
 def _create_legacy_float_database(path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE accounts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -127,8 +126,7 @@ def _create_legacy_float_database(path) -> None:
                 is_default INTEGER DEFAULT 0,
                 created_at TEXT
             )
-            """
-        )
+            """)
         conn.commit()
 
 

@@ -212,6 +212,40 @@ def test_savings_goals_view_shows_warning_when_delete_is_blocked(monkeypatch: py
         view.close()
 
 
+def test_savings_goals_view_delete_confirmation_warns_that_action_is_irreversible(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.savings_goals")
+    qtwidgets = importlib.import_module("PySide6.QtWidgets")
+
+    goal = db.savings_goal.create("Vacation", 800.0)
+    prompts: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(
+        qtwidgets.QMessageBox,
+        "question",
+        lambda _parent, title, message, *_args, **_kwargs: prompts.append((str(title), str(message)))
+        or qtwidgets.QMessageBox.StandardButton.No,
+    )
+
+    view = views_module.SavingsGoalsView(db)
+    try:
+        view.refresh()
+        view._selected_id = int(goal["id"])
+        view._on_delete()
+
+        assert prompts == [
+            (
+                "Delete Goal",
+                "¿Eliminar la meta de ahorro 'Vacation'?\n\nEsta acción no se puede revertir.",
+            )
+        ]
+        assert db.savings_goal.get(int(goal["id"])) is not None
+    finally:
+        view.close()
+
+
 def test_categories_view_shows_warning_when_linked_category_delete_is_blocked(
     monkeypatch: pytest.MonkeyPatch, db: Database
 ) -> None:

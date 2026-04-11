@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import sys
+from types import ModuleType, SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -32,6 +34,19 @@ def test_is_llama_cpp_available_uses_module_lookup(monkeypatch: pytest.MonkeyPat
     )
 
     assert is_llama_cpp_available() is True
+
+    is_llama_cpp_available.cache_clear()
+
+
+def test_is_llama_cpp_available_returns_false_when_lookup_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    is_llama_cpp_available.cache_clear()
+    monkeypatch.setattr(
+        engine_module.importlib.util,
+        "find_spec",
+        lambda _name: (_ for _ in ()).throw(ValueError("boom")),
+    )
+
+    assert is_llama_cpp_available() is False
 
     is_llama_cpp_available.cache_clear()
 
@@ -68,6 +83,28 @@ def test_get_chat_engine_uses_llama_cpp_engine_when_available(monkeypatch, tmp_p
     assert isinstance(engine, DummyLlamaEngine)
     assert engine.model_path == model
     assert engine.prompts is not None
+
+
+def test_get_chat_engine_forwards_language_and_tuned_kwargs(monkeypatch, tmp_path: Path) -> None:
+    model = tmp_path / "model.gguf"
+    model.write_text("stub", encoding="utf-8")
+
+    class DummyLlamaEngine:
+        def __init__(self, model_path: str | Path, prompts=None, **kwargs: object) -> None:
+            self.model_path = Path(model_path)
+            self.prompts = prompts
+            self.kwargs = kwargs
+
+    monkeypatch.setattr(engine_module.chat_engine_module, "LlamaCppEngine", DummyLlamaEngine)
+    monkeypatch.setattr(engine_module, "is_llama_cpp_available", lambda: True)
+    monkeypatch.setattr(engine_module, "_recommended_llama_kwargs", lambda kwargs: {"n_ctx": 2048, **kwargs})
+
+    engine = get_chat_engine(model_path=model, language="es", temperature=0.3)
+
+    assert isinstance(engine, DummyLlamaEngine)
+    assert engine.kwargs["language"] == "es"
+    assert engine.kwargs["n_ctx"] == 2048
+    assert engine.kwargs["temperature"] == 0.3
 
 
 def test_get_chat_engine_returns_none_when_llama_init_fails(monkeypatch, tmp_path: Path) -> None:
@@ -139,3 +176,65 @@ def test_recommended_llama_kwargs_invalid_gpu_override_falls_back(monkeypatch: p
     kwargs = _recommended_llama_kwargs({})
 
     assert kwargs["n_gpu_layers"] in {0, -1}
+
+
+def test_looks_like_raspberry_pi_detects_known_device_tree_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MIRA_LLAMA_PROFILE", raising=False)
+    monkeypatch.setattr(engine_module.platform, "machine", lambda: "aarch64")
+
+    class _FakePath:
+        def __init__(self, *_args, **_kwargs) -> None:
+            pass
+
+        def is_file(self) -> bool:
+            return True
+
+        def read_text(self, **_kwargs) -> str:
+            return "Raspberry Pi 5\x00"
+
+    monkeypatch.setattr(engine_module, "Path", _FakePath)
+
+    assert engine_module._looks_like_raspberry_pi() is True
+
+
+def test_looks_like_raspberry_pi_returns_false_when_model_file_cannot_be_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MIRA_LLAMA_PROFILE", raising=False)
+    monkeypatch.setattr(engine_module.platform, "machine", lambda: "arm64")
+
+    class _FakePath:
+        def __init__(self, *_args, **_kwargs) -> None:
+            pass
+
+        def is_file(self) -> bool:
+            return True
+
+        def read_text(self, **_kwargs) -> str:
+            raise OSError("unavailable")
+
+    monkeypatch.setattr(engine_module, "Path", _FakePath)
+
+    assert engine_module._looks_like_raspberry_pi() is False
+
+
+def test_detect_gpu_layers_respects_forced_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MIRA_LLAMA_GPU_LAYERS", "7")
+
+    assert engine_module._detect_gpu_layers_for_llama() == 7
+
+
+def test_detect_gpu_layers_uses_llama_gpu_probe_when_available(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MIRA_LLAMA_GPU_LAYERS", raising=False)
+    fake_module = ModuleType("llama_cpp")
+    fake_module.llama_cpp = SimpleNamespace(llama_supports_gpu_offload=lambda: True)
+    monkeypatch.setitem(sys.modules, "llama_cpp", fake_module)
+
+    assert engine_module._detect_gpu_layers_for_llama() == -1
+
+
+def test_detect_gpu_layers_returns_cpu_when_llama_probe_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MIRA_LLAMA_GPU_LAYERS", raising=False)
+    fake_module = ModuleType("llama_cpp")
+    fake_module.llama_cpp = SimpleNamespace(llama_supports_gpu_offload=lambda: False)
+    monkeypatch.setitem(sys.modules, "llama_cpp", fake_module)
+
+    assert engine_module._detect_gpu_layers_for_llama() == 0

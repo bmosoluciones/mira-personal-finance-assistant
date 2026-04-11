@@ -251,6 +251,7 @@ def test_category_dialog_filters_parent_options_by_type_and_excludes_current_cat
     dialogs_module = importlib.import_module("mira.ui.dialogs")
 
     expense_parent = db.category.create("Housing", "expense")
+    expense_child = db.category.create("Rent", "expense", parent_id=expense_parent["id"])
     expense_current = db.category.create("Food", "expense")
     income_parent = db.category.create("Salary", "income")
 
@@ -270,6 +271,7 @@ def test_category_dialog_filters_parent_options_by_type_and_excludes_current_cat
         expense_parent_ids = {dialog._parent_combo.itemData(index) for index in range(dialog._parent_combo.count())}
         assert None in expense_parent_ids
         assert int(expense_parent["id"]) in expense_parent_ids
+        assert int(expense_child["id"]) not in expense_parent_ids
         assert int(income_parent["id"]) not in expense_parent_ids
         assert int(expense_current["id"]) not in expense_parent_ids
 
@@ -282,9 +284,67 @@ def test_category_dialog_filters_parent_options_by_type_and_excludes_current_cat
         assert None in income_parent_ids
         assert int(income_parent["id"]) in income_parent_ids
         assert int(expense_parent["id"]) not in income_parent_ids
+        assert int(expense_child["id"]) not in income_parent_ids
         assert int(expense_current["id"]) not in income_parent_ids
     finally:
         dialog.close()
+
+
+def test_category_dialog_create_only_lists_root_categories_as_parents(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    parent = db.category.create("Utilities", "expense")
+    child = db.category.create("Power", "expense", parent_id=parent["id"])
+
+    dialog = dialogs_module.CategoryDialog(db, default_type="expense")
+
+    try:
+        parent_ids = {dialog._parent_combo.itemData(index) for index in range(dialog._parent_combo.count())}
+        assert int(parent["id"]) in parent_ids
+        assert int(child["id"]) not in parent_ids
+    finally:
+        dialog.close()
+
+
+def test_categories_view_delete_confirmation_warns_that_action_is_irreversible(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.categories")
+    qtwidgets = importlib.import_module("PySide6.QtWidgets")
+
+    category = db.category.create("Food", "expense")
+    prompts: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(
+        qtwidgets.QMessageBox,
+        "question",
+        lambda _parent, title, message, *_args, **_kwargs: prompts.append((str(title), str(message)))
+        or qtwidgets.QMessageBox.StandardButton.No,
+    )
+
+    view = views_module.CategoriesView(db)
+    try:
+        view.refresh()
+        app.processEvents()
+
+        item = _find_item_by_category_id(view._expense_table, int(category["id"]))
+        assert item is not None
+        view._expense_table.setCurrentItem(item)
+        view._on_delete("expense")
+
+        assert prompts == [
+            (
+                "Eliminar categoría",
+                "¿Eliminar la categoría 'Food'?\n\nEsta acción no se puede revertir.",
+            )
+        ]
+        assert db.category.get(int(category["id"])) is not None
+    finally:
+        view.close()
 
 
 def test_categories_view_add_maps_duplicate_domain_error(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:

@@ -994,3 +994,30 @@ def test_on_theme_changed_refreshes_sidebar(monkeypatch: pytest.MonkeyPatch) -> 
 
     assert applied_themes == ["light_blue.xml"]
     assert refreshed == [True], "_refresh_sidebar_style was not called by _on_theme_changed"
+
+
+def test_on_language_changed_warns_about_restart_only_when_language_changes(monkeypatch: pytest.MonkeyPatch) -> None:
+    main_window_module = _import_main_window_or_xfail_headless()
+
+    class DummyWindow:
+        def __init__(self, language: str) -> None:
+            self._language = language
+            self.menu_rebuilds = 0
+            self.messages: list[tuple[str, str]] = []
+
+        def _build_menu(self) -> None:
+            self.menu_rebuilds += 1
+
+        def notify_user_info(self, _widget, title: str, message: str) -> None:
+            self.messages.append((title, message))
+
+    changed = DummyWindow("es")
+    unchanged = DummyWindow("en")
+
+    main_window_module.MainWindow._on_language_changed(changed, "en")
+    main_window_module.MainWindow._on_language_changed(unchanged, "en")
+
+    assert changed.menu_rebuilds == 1
+    assert changed.messages == [("MIRA", "Language change was saved. Close and reopen MIRA to apply it completely.")]
+    assert unchanged.menu_rebuilds == 1
+    assert unchanged.messages == [("MIRA", "Configuration was saved successfully.")]

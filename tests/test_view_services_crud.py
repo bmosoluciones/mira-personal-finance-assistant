@@ -10,12 +10,14 @@ import pytest
 from mira.app.view_services import (
     AccountsViewService,
     CategoriesViewService,
+    PresentationContext,
     RecurringViewService,
     SavingsGoalsViewService,
     SettingsViewService,
     TagsViewService,
 )
 from mira.db.database import Database
+from mira.number_format import NumberFormatConfig
 
 
 @pytest.fixture
@@ -45,6 +47,74 @@ def test_accounts_view_service_roundtrip(db: Database) -> None:
     assert db.account.get(created.selected_id) is None
 
 
+def test_accounts_view_service_balance_adjustment_preview_and_commands(db: Database) -> None:
+    service = AccountsViewService(db)
+    db.setting.set("default_currency", "crc")
+    bank = db.account.create("Bank", "bank", 100.0, "USD")
+    db.account.create("Cash", "cash", 20.0, "USD")
+    credit = db.account.create("Card", "credit", -50.0, "USD")
+
+    adjustable_ids = {int(item["id"]) for item in service.list_balance_adjustment_accounts()}
+    assert int(bank["id"]) in adjustable_ids
+    assert int(credit["id"]) in adjustable_ids
+    assert all(db.account.get(account_id)["account_type"] in {"bank", "credit"} for account_id in adjustable_ids)
+
+    draft_preview = service.preview_balance_adjustment(None, "2026-04-01", 15.0)
+    assert draft_preview.account_id is None
+    assert draft_preview.currency == "CRC"
+    assert draft_preview.projected_balance == pytest.approx(15.0)
+
+    account_preview = service.preview_balance_adjustment(int(bank["id"]), "2000-01-01", 25.0)
+    assert account_preview.currency == "USD"
+    assert account_preview.balance_as_of == pytest.approx(100.0)
+    assert account_preview.projected_balance == pytest.approx(125.0)
+    assert account_preview.warn_before_creation_date is True
+
+    recorded = service.record_balance_adjustment(
+        {
+            "account_id": int(bank["id"]),
+            "signed_amount": 25.0,
+            "tx_date": "2026-04-12",
+            "note": "initial",
+        }
+    )
+    transaction_id = int(recorded.payload["transaction_id"])
+    assert recorded.selected_id == int(bank["id"])
+
+    updated = service.update_balance_adjustment(
+        transaction_id,
+        {
+            "account_id": int(credit["id"]),
+            "signed_amount": -10.0,
+            "tx_date": "2026-04-13",
+            "note": "moved",
+        },
+    )
+    tx = db.transaction.get(transaction_id)
+
+    assert updated.selected_id == int(credit["id"])
+    assert int(updated.payload["transaction_id"]) == transaction_id
+    assert tx is not None
+    assert int(tx["account_id"]) == int(credit["id"])
+    assert tx["type"] == "expense"
+    assert float(tx["amount"]) == pytest.approx(10.0)
+    assert tx["note"] == "moved"
+
+
+def test_presentation_context_formats_amounts_and_maps_card_alias() -> None:
+    context = PresentationContext(
+        language="en",
+        number_format=NumberFormatConfig(thousands_sep=",", decimal_sep="."),
+        default_currency="USD",
+        account_type_labels={"bank": "Bank", "cash": "Cash", "credit": "Credit"},
+    )
+
+    assert context.format_amount(1234.5) == "1,234.50"
+    assert context.format_amount_with_currency(1234.5, " usd ") == "USD 1,234.50"
+    assert context.account_type_label("card") == "Credit"
+    assert context.account_type_label("investment") == "investment"
+
+
 def test_tags_view_service_load_state_uses_report_counts(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
     service = TagsViewService(db)
     tag = db.tag.create("Fixed", color="#336699")
@@ -60,6 +130,22 @@ def test_tags_view_service_load_state_uses_report_counts(monkeypatch: pytest.Mon
 
     assert state.monthly_counts[int(tag["id"])] == 3
     assert any(int(item["id"]) == int(tag["id"]) for item in state.tags)
+
+
+def test_tags_view_service_roundtrip(db: Database) -> None:
+    service = TagsViewService(db)
+
+    created = service.create(name="Fixed", color="#336699", icon="F")
+    service.update(created.selected_id, name="Fixed+", color="#335577", icon="N")
+    state = service.load_state()
+    tag = next(item for item in state.tags if int(item["id"]) == int(created.selected_id))
+
+    assert tag["name"] == "Fixed+"
+    assert tag["color"] == "#335577"
+    assert tag["icon"] == "N"
+
+    service.delete(int(created.selected_id))
+    assert db.tag.get(int(created.selected_id)) is None
 
 
 def test_settings_view_service_save_roundtrip(db: Database) -> None:
@@ -185,3 +271,48 @@ def test_recurring_view_service_apply_returns_created_count(db: Database) -> Non
     assert int(applied.payload["created_count"]) == 1
     transactions = db.transaction.list(limit=50, since_date="2026-03-01", until_date="2026-03-31")
     assert any(tx.get("description") == "Home Internet" for tx in transactions)
+
+
+def test_recurring_view_service_load_update_and_delete(db: Database) -> None:
+    service = RecurringViewService(db)
+    account = db.account.get_or_create("General")
+    category = db.category.create("Salary", "income")
+    created = service.create(
+        {
+            "account_id": account["id"],
+            "tx_type": "income",
+            "amount": 80.0,
+            "description": "Bonus",
+            "category_id": category["id"],
+            "tag_ids": [],
+            "note": None,
+            "day_of_month": 15,
+        }
+    )
+
+    state = service.load_state()
+    assert any(int(item["id"]) == int(created.selected_id) for item in state.recurring)
+
+    updated = service.update(
+        int(created.selected_id),
+        {
+            "account_id": account["id"],
+            "tx_type": "income",
+            "amount": 90.0,
+            "description": "Bonus+",
+            "category_id": category["id"],
+            "tag_ids": [],
+            "note": "updated",
+            "day_of_month": 16,
+        },
+    )
+    assert updated.selected_id == int(created.selected_id)
+    assert (
+        next(item for item in service.load_state().recurring if int(item["id"]) == int(created.selected_id))[
+            "description"
+        ]
+        == "Bonus+"
+    )
+
+    service.delete(int(created.selected_id))
+    assert all(int(item["id"]) != int(created.selected_id) for item in service.load_state().recurring)
