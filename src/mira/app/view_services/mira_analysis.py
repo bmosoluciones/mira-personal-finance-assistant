@@ -8,43 +8,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, cast
 
-from mira.app.view_services._common import PresentationContext
+from mira.app.view_services._common import (
+    ANALYTICS_PALETTE,
+    AnalyticsSemanticRole,
+    PresentationContext,
+    WaterfallStepKind,
+    try_parse_waterfall_step_kind,
+)
 from mira.db.database import Database
 from mira.ui.i18n import tr
-
-_MULTICOLOR_PALETTE: tuple[str, ...] = (
-    "#2EC4B6",
-    "#4D96FF",
-    "#FF6B6B",
-    "#F4A261",
-    "#8AC926",
-    "#00B8D9",
-    "#FF9F1C",
-    "#FF4D8D",
-)
-
-_SEMANTIC_COLORS = {
-    "income": "#2EC4B6",
-    "expense": "#FF6B6B",
-    "net": "#4D96FF",
-    "secondary": "#00B8D9",
-    "budget": "#4D96FF",
-    "actual": "#FF6B6B",
-    "financing": "#F4A261",
-    "savings": "#8AC926",
-    "flow_total": "#00B8D9",
-}
-
-_WATERFALL_COLORS = {
-    "income_total": "#2EC4B6",
-    "expense": "#FF6B6B",
-    "financing": "#F4A261",
-    "savings_allocation": "#8AC926",
-    "deficit_total": "#FF9F1C",
-    "surplus_total": "#4D96FF",
-    "month_balance": "#4D96FF",
-    "final_total": "#00B8D9",
-}
 
 
 @dataclass(frozen=True)
@@ -435,10 +407,11 @@ class MiraAnalysisViewStateBuilder:
         waterfall = cast(dict[str, Any], payload.get("waterfall") or {})
         summary = cast(dict[str, Any], waterfall.get("summary") or {})
         steps: list[MiraAnalysisWaterfallStep] = []
-        present_kinds: set[str] = set()
+        present_kinds: set[WaterfallStepKind] = set()
         for raw_step in list(waterfall.get("steps") or []):
             kind = str(raw_step.get("kind") or "")
-            present_kinds.add(kind)
+            if (parsed_kind := try_parse_waterfall_step_kind(kind)) is not None:
+                present_kinds.add(parsed_kind)
             steps.append(
                 MiraAnalysisWaterfallStep(
                     label=self._waterfall_label(raw_step, context),
@@ -452,34 +425,36 @@ class MiraAnalysisViewStateBuilder:
             )
 
         legend_entries: list[str] = []
-        if "income_total" in present_kinds:
+        if WaterfallStepKind.INCOME_TOTAL in present_kinds:
             legend_entries.append(
-                f"<span style='color:{_WATERFALL_COLORS['income_total']};'>●</span> "
+                f"<span style='color:{ANALYTICS_PALETTE.waterfall_hex(WaterfallStepKind.INCOME_TOTAL)};'>●</span> "
                 f"{context.translate('dashboard.card.income', 'Ingreso')}"
             )
-        if "expense" in present_kinds:
+        if WaterfallStepKind.EXPENSE in present_kinds:
             legend_entries.append(
-                f"<span style='color:{_WATERFALL_COLORS['expense']};'>●</span> "
+                f"<span style='color:{ANALYTICS_PALETTE.waterfall_hex(WaterfallStepKind.EXPENSE)};'>●</span> "
                 f"{context.translate('dashboard.card.expense', 'Gasto')}"
             )
-        if "financing" in present_kinds:
+        if WaterfallStepKind.FINANCING in present_kinds:
             legend_entries.append(
-                f"<span style='color:{_WATERFALL_COLORS['financing']};'>●</span> "
+                f"<span style='color:{ANALYTICS_PALETTE.waterfall_hex(WaterfallStepKind.FINANCING)};'>●</span> "
                 f"{context.translate('mira.analysis.waterfall.legend.financing', 'Financiamiento')}"
             )
-        if "savings_allocation" in present_kinds:
+        if WaterfallStepKind.SAVINGS_ALLOCATION in present_kinds:
             legend_entries.append(
-                f"<span style='color:{_WATERFALL_COLORS['savings_allocation']};'>●</span> "
+                f"<span style='color:{ANALYTICS_PALETTE.waterfall_hex(WaterfallStepKind.SAVINGS_ALLOCATION)};'>●</span> "
                 f"{context.translate('dashboard.card.savings', 'Ahorro')}"
             )
-        if "month_balance" in present_kinds:
+        if WaterfallStepKind.MONTH_BALANCE in present_kinds:
             legend_entries.append(
-                f"<span style='color:{_WATERFALL_COLORS['month_balance']};'>●</span> "
+                f"<span style='color:{ANALYTICS_PALETTE.waterfall_hex(WaterfallStepKind.MONTH_BALANCE)};'>●</span> "
                 f"{context.translate('dashboard.card.net', 'Balance')}"
             )
-        elif present_kinds.intersection({"deficit_total", "surplus_total", "final_total"}):
+        elif present_kinds.intersection(
+            {WaterfallStepKind.DEFICIT_TOTAL, WaterfallStepKind.SURPLUS_TOTAL, WaterfallStepKind.FINAL_TOTAL}
+        ):
             legend_entries.append(
-                f"<span style='color:{_WATERFALL_COLORS['final_total']};'>●</span> "
+                f"<span style='color:{ANALYTICS_PALETTE.waterfall_hex(WaterfallStepKind.FINAL_TOTAL)};'>●</span> "
                 f"{context.translate('mira.analysis.waterfall.legend.flow_total', 'Totales del flujo')}"
             )
 
@@ -518,29 +493,33 @@ class MiraAnalysisViewStateBuilder:
         )
 
     def _waterfall_label(self, step: dict[str, Any], context: PresentationContext) -> str:
-        kind = str(step.get("kind") or "")
-        if kind == "income_total":
-            return context.translate("mira.analysis.waterfall.label.income_total", "Ingreso total neto")
-        if kind == "deficit_total":
-            return context.translate("mira.analysis.waterfall.label.deficit", "Déficit mensual")
-        if kind == "surplus_total":
-            return context.translate("mira.analysis.waterfall.label.surplus", "Superávit mensual")
-        if kind == "month_balance":
-            return context.translate("mira.analysis.waterfall.label.month_balance", "Balance del mes")
-        if kind == "financing":
-            return context.translate("mira.analysis.waterfall.label.financing", "Deuda / uso de ahorro")
-        if kind == "savings_allocation":
-            return context.translate("mira.analysis.waterfall.label.savings_allocation", "Ahorro asignado")
-        if kind == "final_total":
-            return context.translate("mira.analysis.waterfall.label.final_flow", "Cierre del flujo mensual")
-        if kind == "expense" and bool(step.get("is_grouped")):
-            return context.translate("mira.analysis.waterfall.label.other_expenses", "Otros gastos")
-        if kind == "expense" and str(step.get("label") or "") == "Gastos con categoría inconsistente":
-            return context.translate(
-                "mira.analysis.waterfall.label.inconsistent_expense",
-                "Gastos con categoría inconsistente",
-            )
-        return str(step.get("label") or "")
+        kind = try_parse_waterfall_step_kind(step.get("kind"))
+        label = str(step.get("label") or "")
+
+        match kind:
+            case WaterfallStepKind.INCOME_TOTAL:
+                return context.translate("mira.analysis.waterfall.label.income_total", "Ingreso total neto")
+            case WaterfallStepKind.DEFICIT_TOTAL:
+                return context.translate("mira.analysis.waterfall.label.deficit", "Déficit mensual")
+            case WaterfallStepKind.SURPLUS_TOTAL:
+                return context.translate("mira.analysis.waterfall.label.surplus", "Superávit mensual")
+            case WaterfallStepKind.MONTH_BALANCE:
+                return context.translate("mira.analysis.waterfall.label.month_balance", "Balance del mes")
+            case WaterfallStepKind.FINANCING:
+                return context.translate("mira.analysis.waterfall.label.financing", "Deuda / uso de ahorro")
+            case WaterfallStepKind.SAVINGS_ALLOCATION:
+                return context.translate("mira.analysis.waterfall.label.savings_allocation", "Ahorro asignado")
+            case WaterfallStepKind.FINAL_TOTAL:
+                return context.translate("mira.analysis.waterfall.label.final_flow", "Cierre del flujo mensual")
+            case WaterfallStepKind.EXPENSE if bool(step.get("is_grouped")):
+                return context.translate("mira.analysis.waterfall.label.other_expenses", "Otros gastos")
+            case WaterfallStepKind.EXPENSE if label == "Gastos con categoría inconsistente":
+                return context.translate(
+                    "mira.analysis.waterfall.label.inconsistent_expense",
+                    "Gastos con categoría inconsistente",
+                )
+            case _:
+                return label
 
     def _build_ytd_chart(
         self,
@@ -555,24 +534,24 @@ class MiraAnalysisViewStateBuilder:
             series=(
                 MiraAnalysisLineSeries(
                     name=context.translate("dashboard.card.income", "Ingreso"),
-                    color=_SEMANTIC_COLORS["income"],
+                    color=ANALYTICS_PALETTE.semantic_hex(AnalyticsSemanticRole.INCOME),
                     points=tuple((float(idx), float(item.get("income") or 0.0)) for idx, item in enumerate(ytd)),
                 ),
                 MiraAnalysisLineSeries(
                     name=context.translate("dashboard.card.expense", "Gasto"),
-                    color=_SEMANTIC_COLORS["expense"],
+                    color=ANALYTICS_PALETTE.semantic_hex(AnalyticsSemanticRole.EXPENSE),
                     points=tuple(
                         (float(idx), float(item.get("expense_operational") or 0.0)) for idx, item in enumerate(ytd)
                     ),
                 ),
                 MiraAnalysisLineSeries(
                     name=context.translate("dashboard.card.net", "Balance"),
-                    color=_SEMANTIC_COLORS["net"],
+                    color=ANALYTICS_PALETTE.semantic_hex(AnalyticsSemanticRole.NET),
                     points=tuple((float(idx), float(item.get("net") or 0.0)) for idx, item in enumerate(ytd)),
                 ),
                 MiraAnalysisLineSeries(
                     name=context.translate("dashboard.card.savings", "Ahorro"),
-                    color=_SEMANTIC_COLORS["savings"],
+                    color=ANALYTICS_PALETTE.semantic_hex(AnalyticsSemanticRole.SAVINGS),
                     points=tuple((float(idx), float(item.get("savings") or 0.0)) for idx, item in enumerate(ytd)),
                 ),
             ),
@@ -599,7 +578,7 @@ class MiraAnalysisViewStateBuilder:
                 series.append(
                     MiraAnalysisBarSeries(
                         name=seg_name,
-                        color=_MULTICOLOR_PALETTE[idx % len(_MULTICOLOR_PALETTE)],
+                        color=ANALYTICS_PALETTE.palette_hex(idx),
                         values=tuple(float((row.get("segments") or {}).get(seg_name) or 0.0) for row in rows),
                     )
                 )

@@ -8,13 +8,15 @@ from __future__ import annotations
 import os
 import re
 import sys
-from pathlib import Path
 import unicodedata
+from dataclasses import dataclass
+from enum import IntEnum, StrEnum
+from pathlib import Path
+from types import MappingProxyType
+from typing import Mapping
 
 _UNSET = object()  # sentinel for "parameter not provided"
 _ICON_MAX_LENGTH = 32
-_ACCOUNT_TYPE_ALIASES = {"card": "credit"}
-_VALID_ACCOUNT_TYPES = frozenset({"bank", "cash", "credit"})
 _ACCOUNT_ALIAS_STOPWORDS = frozenset(
     {
         "account",
@@ -38,57 +40,112 @@ _ACCOUNT_ALIAS_STOPWORDS = frozenset(
 )
 
 
-_CURRENCY_SEED: list[tuple[str, str, str]] = [
-    ("USD", "US Dollar", "americas"),
-    ("CAD", "Canadian Dollar", "americas"),
-    ("MXN", "Mexican Peso", "americas"),
-    ("GTQ", "Guatemalan Quetzal", "americas"),
-    ("BZD", "Belize Dollar", "americas"),
-    ("HNL", "Honduran Lempira", "americas"),
-    ("SVC", "Salvadoran Colon", "americas"),
-    ("NIO", "Nicaraguan Cordoba", "americas"),
-    ("CRC", "Costa Rican Colon", "americas"),
-    ("PAB", "Panamanian Balboa", "americas"),
-    ("CUP", "Cuban Peso", "americas"),
-    ("DOP", "Dominican Peso", "americas"),
-    ("HTG", "Haitian Gourde", "americas"),
-    ("JMD", "Jamaican Dollar", "americas"),
-    ("BSD", "Bahamian Dollar", "americas"),
-    ("BBD", "Barbadian Dollar", "americas"),
-    ("TTD", "Trinidad and Tobago Dollar", "americas"),
-    ("XCD", "East Caribbean Dollar", "americas"),
-    ("COP", "Colombian Peso", "americas"),
-    ("VES", "Venezuelan Bolivar", "americas"),
-    ("GYD", "Guyanese Dollar", "americas"),
-    ("SRD", "Surinamese Dollar", "americas"),
-    ("BRL", "Brazilian Real", "americas"),
-    ("ARS", "Argentine Peso", "americas"),
-    ("CLP", "Chilean Peso", "americas"),
-    ("PYG", "Paraguayan Guarani", "americas"),
-    ("UYU", "Uruguayan Peso", "americas"),
-    ("BOB", "Bolivian Boliviano", "americas"),
-    ("PEN", "Peruvian Sol", "americas"),
-    ("EUR", "Euro", "europe"),
-]
+class AccountType(StrEnum):
+    BANK = "bank"
+    CASH = "cash"
+    CREDIT = "credit"
 
-CURRENCY_CODES = tuple(code for code, _name, _region in _CURRENCY_SEED)
-_SAVINGS_GOALS_PARENT_NAMES = {
-    "es": "Metas de ahorro",
-    "en": "Savings Goals",
-}
-_SAVINGS_GOALS_PARENT_COLOR = "#2E8B57"
-_MILESTONES_NL_TRANSACTIONS = (100, 500, 1000, 3000, 5000)
-_MILESTONES_MIRA_REPORT_VIEWS = (10, 100, 500, 1000)
-_MILESTONES_SAVINGS_CONTRIBUTIONS = (1, 10, 50, 100)
-MESSAGE_PRIORITY = {
-    "ACHIEVEMENT_CRITICAL": 320,
-    "ACHIEVEMENT_HIGH": 300,
-    "ACHIEVEMENT_MEDIUM": 230,
-    "ACHIEVEMENT_LOW": 210,
-    "INSIGHT_CRITICAL": 100,
-    "INSIGHT_WARNING": 80,
-    "INSIGHT_INFO": 60,
-}
+
+class CurrencyRegion(StrEnum):
+    AMERICAS = "americas"
+    EUROPE = "europe"
+
+
+class MessagePriority(IntEnum):
+    ACHIEVEMENT_CRITICAL = 320
+    ACHIEVEMENT_HIGH = 300
+    ACHIEVEMENT_MEDIUM = 230
+    ACHIEVEMENT_LOW = 210
+    INSIGHT_CRITICAL = 100
+    INSIGHT_WARNING = 80
+    INSIGHT_INFO = 60
+
+
+@dataclass(frozen=True, slots=True)
+class CurrencySeedEntry:
+    code: str
+    name: str
+    region: CurrencyRegion
+
+
+@dataclass(frozen=True, slots=True)
+class SavingsGoalsDefaults:
+    names: Mapping[str, str]
+    color: str
+
+    def name_for(self, language: str | None) -> str:
+        return self.names[normalize_language(language)]
+
+    def all_names(self) -> tuple[str, ...]:
+        return tuple(self.names.values())
+
+
+@dataclass(frozen=True, slots=True)
+class FeedbackMilestones:
+    nl_transactions: tuple[int, ...]
+    mira_report_views: tuple[int, ...]
+    savings_contributions: tuple[int, ...]
+
+
+_ACCOUNT_TYPE_ALIASES = MappingProxyType({"card": AccountType.CREDIT})
+
+CURRENCY_SEED: tuple[CurrencySeedEntry, ...] = (
+    CurrencySeedEntry("USD", "US Dollar", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("CAD", "Canadian Dollar", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("MXN", "Mexican Peso", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("GTQ", "Guatemalan Quetzal", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("BZD", "Belize Dollar", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("HNL", "Honduran Lempira", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("SVC", "Salvadoran Colon", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("NIO", "Nicaraguan Cordoba", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("CRC", "Costa Rican Colon", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("PAB", "Panamanian Balboa", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("CUP", "Cuban Peso", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("DOP", "Dominican Peso", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("HTG", "Haitian Gourde", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("JMD", "Jamaican Dollar", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("BSD", "Bahamian Dollar", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("BBD", "Barbadian Dollar", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("TTD", "Trinidad and Tobago Dollar", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("XCD", "East Caribbean Dollar", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("COP", "Colombian Peso", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("VES", "Venezuelan Bolivar", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("GYD", "Guyanese Dollar", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("SRD", "Surinamese Dollar", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("BRL", "Brazilian Real", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("ARS", "Argentine Peso", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("CLP", "Chilean Peso", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("PYG", "Paraguayan Guarani", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("UYU", "Uruguayan Peso", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("BOB", "Bolivian Boliviano", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("PEN", "Peruvian Sol", CurrencyRegion.AMERICAS),
+    CurrencySeedEntry("EUR", "Euro", CurrencyRegion.EUROPE),
+)
+_CURRENCY_SEED = CURRENCY_SEED
+
+CURRENCY_CODES = tuple(entry.code for entry in CURRENCY_SEED)
+
+SAVINGS_GOALS_DEFAULTS = SavingsGoalsDefaults(
+    names=MappingProxyType(
+        {
+            "es": "Metas de ahorro",
+            "en": "Savings Goals",
+        }
+    ),
+    color="#2E8B57",
+)
+_SAVINGS_GOALS_PARENT_NAMES = SAVINGS_GOALS_DEFAULTS.names
+_SAVINGS_GOALS_PARENT_COLOR = SAVINGS_GOALS_DEFAULTS.color
+
+FEEDBACK_MILESTONES = FeedbackMilestones(
+    nl_transactions=(100, 500, 1000, 3000, 5000),
+    mira_report_views=(10, 100, 500, 1000),
+    savings_contributions=(1, 10, 50, 100),
+)
+_MILESTONES_NL_TRANSACTIONS = FEEDBACK_MILESTONES.nl_transactions
+_MILESTONES_MIRA_REPORT_VIEWS = FEEDBACK_MILESTONES.mira_report_views
+_MILESTONES_SAVINGS_CONTRIBUTIONS = FEEDBACK_MILESTONES.savings_contributions
+MESSAGE_PRIORITY = MessagePriority
 
 _FLATPAK_DB_DIRNAME = "mira"
 _DEFAULT_DB_FILENAME = "mira.db"
@@ -115,12 +172,19 @@ def default_db_path_for_display() -> Path:
     return _resolve_data_home() / _FLATPAK_DB_DIRNAME / _DEFAULT_DB_FILENAME
 
 
+def parse_account_type(account_type: str | None) -> AccountType:
+    normalized = str(account_type or AccountType.BANK.value).strip().lower() or AccountType.BANK.value
+    resolved = _ACCOUNT_TYPE_ALIASES.get(normalized, normalized)
+    if isinstance(resolved, AccountType):
+        return resolved
+    try:
+        return AccountType(resolved)
+    except ValueError as exc:
+        raise ValueError(f"Unsupported account type: {account_type!r}") from exc
+
+
 def canonical_account_type(account_type: str | None) -> str:
-    normalized = str(account_type or "bank").strip().lower() or "bank"
-    normalized = _ACCOUNT_TYPE_ALIASES.get(normalized, normalized)
-    if normalized not in _VALID_ACCOUNT_TYPES:
-        raise ValueError(f"Unsupported account type: {account_type!r}")
-    return normalized
+    return parse_account_type(account_type).value
 
 
 def normalize_language(language: str | None) -> str:

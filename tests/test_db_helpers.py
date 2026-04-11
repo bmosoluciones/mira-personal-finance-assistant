@@ -7,11 +7,31 @@ from pathlib import Path
 
 import pytest
 
-from mira.db.helpers import canonical_account_type, delete_database_file, fold_text, get_default_db_path
+from mira.db.helpers import (
+    CURRENCY_CODES,
+    CURRENCY_SEED,
+    FEEDBACK_MILESTONES,
+    SAVINGS_GOALS_DEFAULTS,
+    AccountType,
+    CurrencyRegion,
+    MessagePriority,
+    canonical_account_type,
+    delete_database_file,
+    fold_text,
+    get_default_db_path,
+    parse_account_type,
+)
 
 
 def test_canonical_account_type_maps_card_to_credit() -> None:
     assert canonical_account_type("card") == "credit"
+    assert parse_account_type("cash") is AccountType.CASH
+
+
+def test_parse_account_type_accepts_enum_and_defaults_to_bank() -> None:
+    assert parse_account_type(AccountType.CREDIT) is AccountType.CREDIT
+    assert parse_account_type("") is AccountType.BANK
+    assert canonical_account_type(None) == AccountType.BANK.value
 
 
 def test_canonical_account_type_rejects_invalid_values() -> None:
@@ -21,6 +41,26 @@ def test_canonical_account_type_rejects_invalid_values() -> None:
 
 def test_fold_text_normalizes_case_accents_and_spacing() -> None:
     assert fold_text("  Crédito   Débito ") == "credito debito"
+
+
+def test_currency_codes_are_derived_from_typed_currency_seed() -> None:
+    assert CURRENCY_SEED
+    assert CURRENCY_SEED[0].code == "USD"
+    assert CURRENCY_SEED[0].region is CurrencyRegion.AMERICAS
+    assert CURRENCY_SEED[-1].region is CurrencyRegion.EUROPE
+    assert CURRENCY_CODES == tuple(entry.code for entry in CURRENCY_SEED)
+
+
+def test_savings_defaults_and_feedback_enums_preserve_expected_values() -> None:
+    assert SAVINGS_GOALS_DEFAULTS.name_for("es") == "Metas de ahorro"
+    assert SAVINGS_GOALS_DEFAULTS.name_for("fr") == "Savings Goals"
+    assert SAVINGS_GOALS_DEFAULTS.all_names() == ("Metas de ahorro", "Savings Goals")
+    assert SAVINGS_GOALS_DEFAULTS.color == "#2E8B57"
+    assert int(MessagePriority.ACHIEVEMENT_CRITICAL) == 320
+    assert int(MessagePriority.INSIGHT_WARNING) == 80
+    assert FEEDBACK_MILESTONES.nl_transactions == (100, 500, 1000, 3000, 5000)
+    assert FEEDBACK_MILESTONES.mira_report_views == (10, 100, 500, 1000)
+    assert FEEDBACK_MILESTONES.savings_contributions == (1, 10, 50, 100)
 
 
 def test_get_default_db_path_uses_xdg_data_home(monkeypatch, tmp_path) -> None:

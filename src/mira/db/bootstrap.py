@@ -9,7 +9,7 @@ from datetime import date
 from typing import Any, Protocol, cast
 
 from mira.db.helpers import (
-    _CURRENCY_SEED,
+    CURRENCY_SEED,
     canonical_account_type,
     localized_default_account_name,
     localized_default_savings_name,
@@ -419,8 +419,8 @@ class _BootstrapDatabaseProtocol(Protocol):
 
 
 def seed_currencies() -> None:
-    for code, name, region in _CURRENCY_SEED:
-        Currency.insert(code=code, name=name, region=region).on_conflict_ignore().execute()
+    for entry in CURRENCY_SEED:
+        Currency.insert(code=entry.code, name=entry.name, region=entry.region.value).on_conflict_ignore().execute()
 
 
 def seed_default_settings() -> None:

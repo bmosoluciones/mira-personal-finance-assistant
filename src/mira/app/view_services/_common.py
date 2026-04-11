@@ -6,7 +6,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from enum import StrEnum
+from types import MappingProxyType
+from typing import Any, Mapping
 
 from mira.db.database import Database
 from mira.number_format import (
@@ -15,6 +17,99 @@ from mira.number_format import (
     get_number_format_config as _get_number_format_config,
 )
 from mira.ui.i18n import normalize_language, tr
+
+
+class AnalyticsSemanticRole(StrEnum):
+    """Semantic roles used across analytics charts and legends."""
+
+    INCOME = "income"
+    EXPENSE = "expense"
+    NET = "net"
+    SECONDARY = "secondary"
+    BUDGET = "budget"
+    ACTUAL = "actual"
+    FINANCING = "financing"
+    SAVINGS = "savings"
+    FLOW_TOTAL = "flow_total"
+
+
+class WaterfallStepKind(StrEnum):
+    """Known step kinds emitted by the MIRA waterfall payload."""
+
+    INCOME_TOTAL = "income_total"
+    EXPENSE = "expense"
+    FINANCING = "financing"
+    SAVINGS_ALLOCATION = "savings_allocation"
+    DEFICIT_TOTAL = "deficit_total"
+    SURPLUS_TOTAL = "surplus_total"
+    MONTH_BALANCE = "month_balance"
+    FINAL_TOTAL = "final_total"
+
+
+@dataclass(frozen=True)
+class AnalyticsPalette:
+    """Immutable analytics palette with typed lookup helpers."""
+
+    multicolor: tuple[str, ...]
+    semantic: Mapping[AnalyticsSemanticRole, str]
+    waterfall: Mapping[WaterfallStepKind, str]
+
+    def palette_hex(self, index: int) -> str:
+        return self.multicolor[index % len(self.multicolor)]
+
+    def semantic_hex(self, role: AnalyticsSemanticRole) -> str:
+        return self.semantic[role]
+
+    def waterfall_hex(self, kind: WaterfallStepKind) -> str:
+        return self.waterfall[kind]
+
+
+def try_parse_waterfall_step_kind(value: object) -> WaterfallStepKind | None:
+    if not value:
+        return None
+    try:
+        return WaterfallStepKind(str(value).strip().lower())
+    except ValueError:
+        return None
+
+
+ANALYTICS_PALETTE = AnalyticsPalette(
+    multicolor=(
+        "#2EC4B6",
+        "#4D96FF",
+        "#FF6B6B",
+        "#F4A261",
+        "#8AC926",
+        "#00B8D9",
+        "#FF9F1C",
+        "#FF4D8D",
+    ),
+    semantic=MappingProxyType(
+        {
+            AnalyticsSemanticRole.INCOME: "#2EC4B6",
+            AnalyticsSemanticRole.EXPENSE: "#FF6B6B",
+            AnalyticsSemanticRole.NET: "#4D96FF",
+            AnalyticsSemanticRole.SECONDARY: "#00B8D9",
+            AnalyticsSemanticRole.BUDGET: "#4D96FF",
+            AnalyticsSemanticRole.ACTUAL: "#FF6B6B",
+            AnalyticsSemanticRole.FINANCING: "#F4A261",
+            AnalyticsSemanticRole.SAVINGS: "#8AC926",
+            AnalyticsSemanticRole.FLOW_TOTAL: "#00B8D9",
+        }
+    ),
+    waterfall=MappingProxyType(
+        {
+            WaterfallStepKind.INCOME_TOTAL: "#2EC4B6",
+            WaterfallStepKind.EXPENSE: "#FF6B6B",
+            WaterfallStepKind.FINANCING: "#F4A261",
+            WaterfallStepKind.SAVINGS_ALLOCATION: "#8AC926",
+            WaterfallStepKind.DEFICIT_TOTAL: "#FF9F1C",
+            WaterfallStepKind.SURPLUS_TOTAL: "#4D96FF",
+            WaterfallStepKind.MONTH_BALANCE: "#4D96FF",
+            WaterfallStepKind.FINAL_TOTAL: "#00B8D9",
+        }
+    ),
+)
 
 
 @dataclass(frozen=True)

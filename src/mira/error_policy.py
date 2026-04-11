@@ -21,18 +21,53 @@ class ErrorDescriptor:
 def describe(error: Exception) -> ErrorDescriptor:
     """Convert internal exceptions into consistent UI copy."""
 
-    if isinstance(error, BudgetError):
-        return ErrorDescriptor(title="Budget Error", message=str(error), level="warning")
-    if isinstance(error, Error):
-        return ErrorDescriptor(title="Database Error", message=str(error))
-    if isinstance(error, csv.Error):
-        return ErrorDescriptor(title="CSV Error", message=str(error))
-    if isinstance(error, UnicodeError):
-        return ErrorDescriptor(title="Encoding Error", message=str(error))
-    if isinstance(error, OSError):
-        return ErrorDescriptor(title="File Error", message=str(error))
-    if isinstance(error, ValueError):
-        return ErrorDescriptor(title="Invalid Data", message=str(error), level="warning")
-    if isinstance(error, RuntimeError):
-        return ErrorDescriptor(title="Operation Failed", message=str(error))
-    return ErrorDescriptor(title="Unexpected Error", message=str(error))
+    match error:
+        case BudgetError():
+            return ErrorDescriptor(
+                title="Budget Error",
+                message=str(error),
+                level="warning",
+            )
+
+        case Error():
+            return ErrorDescriptor(
+                title="Database Error",
+                message=str(error),
+            )
+
+        case csv.Error():
+            return ErrorDescriptor(
+                title="CSV Error",
+                message=str(error),
+            )
+
+        case UnicodeError():
+            return ErrorDescriptor(
+                title="Encoding Error",
+                message=str(error),
+            )
+
+        case OSError():
+            return ErrorDescriptor(
+                title="File Error",
+                message=str(error),
+            )
+
+        case ValueError():
+            return ErrorDescriptor(
+                title="Invalid Data",
+                message=str(error),
+                level="warning",
+            )
+
+        case RuntimeError():
+            return ErrorDescriptor(
+                title="Operation Failed",
+                message=str(error),
+            )
+
+        case _:
+            return ErrorDescriptor(
+                title="Unexpected Error",
+                message=str(error),
+            )

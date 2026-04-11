@@ -39,6 +39,15 @@ class SchemaInspection:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class SchemaIndexSpec:
+    name: str
+    table: str
+    columns: tuple[str, ...]
+    unique: bool = False
+    where: str | None = None
+
+
 class BaseModel(Model):
     class Meta:
         database = DB_PROXY
@@ -317,6 +326,67 @@ ALL_MODELS = [
 
 EXPECTED_TABLES = frozenset(model._meta.table_name for model in ALL_MODELS)
 
+# Keep index names explicit for backwards compatibility with existing checks.
+# Peewee handles table creation, but these indexes require stable names and,
+# for some cases, partial-index predicates.
+SCHEMA_INDEX_SPECS: tuple[SchemaIndexSpec, ...] = (
+    SchemaIndexSpec("idx_transactions_account_id", "transactions", ("account_id",)),
+    SchemaIndexSpec("idx_transactions_date", "transactions", ("date",)),
+    SchemaIndexSpec("idx_transactions_type", "transactions", ("type",)),
+    SchemaIndexSpec("idx_transactions_category", "transactions", ("category",)),
+    SchemaIndexSpec("idx_transactions_category_id", "transactions", ("category_id",)),
+    SchemaIndexSpec("idx_transactions_date_type", "transactions", ("date", "type")),
+    SchemaIndexSpec("idx_budget_detail_budget_id", "budget_detail", ("budget_id",)),
+    SchemaIndexSpec("idx_budget_detail_category_id", "budget_detail", ("category_id",)),
+    SchemaIndexSpec(
+        "idx_budget_master_default_per_year",
+        "budget_master",
+        ("year",),
+        unique=True,
+        where="is_default_year = 1",
+    ),
+    SchemaIndexSpec("idx_categories_type", "categories", ("type",)),
+    SchemaIndexSpec("idx_categories_is_savings", "categories", ("is_savings",)),
+    SchemaIndexSpec("idx_categories_parent_id", "categories", ("parent_id",)),
+    SchemaIndexSpec("idx_transaction_tags_transaction_id", "transaction_tags", ("transaction_id",)),
+    SchemaIndexSpec("idx_transaction_tags_tag_id", "transaction_tags", ("tag_id",)),
+    SchemaIndexSpec("idx_recurring_transaction_tags_recurring_id", "recurring_transaction_tags", ("recurring_id",)),
+    SchemaIndexSpec("idx_recurring_transaction_tags_tag_id", "recurring_transaction_tags", ("tag_id",)),
+    SchemaIndexSpec("idx_insight_events_tx", "insight_events", ("transaction_id",)),
+    SchemaIndexSpec("idx_insight_events_period", "insight_events", ("period_key", "insight_code")),
+    SchemaIndexSpec("idx_insight_events_created_at", "insight_events", ("created_at",)),
+    SchemaIndexSpec("idx_achievement_events_tx", "achievement_events", ("transaction_id",)),
+    SchemaIndexSpec("idx_achievement_events_period", "achievement_events", ("period_key", "achievement_code")),
+    SchemaIndexSpec("idx_message_events_code_type", "message_events", ("message_code", "message_type")),
+    SchemaIndexSpec("idx_message_events_source", "message_events", ("source_event_type", "source_event_id")),
+    SchemaIndexSpec("idx_message_events_reference_date", "message_events", ("reference_date",)),
+    SchemaIndexSpec("idx_message_events_period_category", "message_events", ("period_key", "context_category_id")),
+    SchemaIndexSpec("idx_message_events_shown_at", "message_events", ("shown_at",)),
+    SchemaIndexSpec(
+        "uq_message_events_tx_type",
+        "message_events",
+        ("source_event_type", "source_event_id", "message_type"),
+        unique=True,
+        where="source_event_type = 'transaction' AND source_event_id IS NOT NULL",
+    ),
+    SchemaIndexSpec(
+        "uq_message_events_daily_reference",
+        "message_events",
+        ("source_event_type", "message_type", "reference_date"),
+        unique=True,
+        where=("source_event_type = 'app_start' AND message_type = 'daily_context' " "AND reference_date IS NOT NULL"),
+    ),
+)
+
+
+def _build_create_index_sql(index_spec: SchemaIndexSpec) -> str:
+    unique_sql = "UNIQUE " if index_spec.unique else ""
+    columns_sql = ", ".join(index_spec.columns)
+    where_sql = f" WHERE {index_spec.where}" if index_spec.where else ""
+    return (
+        f"CREATE {unique_sql}INDEX IF NOT EXISTS {index_spec.name} " f"ON {index_spec.table}({columns_sql}){where_sql}"
+    )
+
 
 def create_peewee_database(path: str) -> SqliteDatabase:
     return SqliteDatabase(
@@ -422,66 +492,8 @@ def inspect_database_schema(
 def initialize_schema(database: SqliteDatabase) -> None:
     database.create_tables(ALL_MODELS, safe=True)
     # Schema v2 intentionally uses *_cents columns for all persisted money.
-    # Keep explicit index names for backwards compatibility with existing checks.
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON transactions(account_id)")
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date)")
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)")
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category)")
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON transactions(category_id)")
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transactions_date_type ON transactions(date, type)")
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_budget_detail_budget_id ON budget_detail(budget_id)")
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_budget_detail_category_id ON budget_detail(category_id)")
-    database.execute_sql(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_budget_master_default_per_year "
-        "ON budget_master(year) WHERE is_default_year = 1"
-    )
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_categories_type ON categories(type)")
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_categories_is_savings ON categories(is_savings)")
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON categories(parent_id)")
-    database.execute_sql(
-        "CREATE INDEX IF NOT EXISTS idx_transaction_tags_transaction_id ON transaction_tags(transaction_id)"
-    )
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_transaction_tags_tag_id ON transaction_tags(tag_id)")
-    database.execute_sql(
-        "CREATE INDEX IF NOT EXISTS idx_recurring_transaction_tags_recurring_id "
-        "ON recurring_transaction_tags(recurring_id)"
-    )
-    database.execute_sql(
-        "CREATE INDEX IF NOT EXISTS idx_recurring_transaction_tags_tag_id ON recurring_transaction_tags(tag_id)"
-    )
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_insight_events_tx ON insight_events(transaction_id)")
-    database.execute_sql(
-        "CREATE INDEX IF NOT EXISTS idx_insight_events_period ON insight_events(period_key, insight_code)"
-    )
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_insight_events_created_at ON insight_events(created_at)")
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_achievement_events_tx ON achievement_events(transaction_id)")
-    database.execute_sql(
-        "CREATE INDEX IF NOT EXISTS idx_achievement_events_period ON achievement_events(period_key, achievement_code)"
-    )
-    database.execute_sql(
-        "CREATE INDEX IF NOT EXISTS idx_message_events_code_type ON message_events(message_code, message_type)"
-    )
-    database.execute_sql(
-        "CREATE INDEX IF NOT EXISTS idx_message_events_source ON message_events(source_event_type, source_event_id)"
-    )
-    database.execute_sql(
-        "CREATE INDEX IF NOT EXISTS idx_message_events_reference_date " "ON message_events(reference_date)"
-    )
-    database.execute_sql(
-        "CREATE INDEX IF NOT EXISTS idx_message_events_period_category "
-        "ON message_events(period_key, context_category_id)"
-    )
-    database.execute_sql("CREATE INDEX IF NOT EXISTS idx_message_events_shown_at ON message_events(shown_at)")
-    database.execute_sql(
-        "CREATE UNIQUE INDEX IF NOT EXISTS uq_message_events_tx_type "
-        "ON message_events(source_event_type, source_event_id, message_type) "
-        "WHERE source_event_type = 'transaction' AND source_event_id IS NOT NULL"
-    )
+    # Keep explicit index names and partial predicates from one declarative source.
+    for index_spec in SCHEMA_INDEX_SPECS:
+        database.execute_sql(_build_create_index_sql(index_spec))
     database.execute_sql("DROP INDEX IF EXISTS uq_message_events_daily")
-    database.execute_sql(
-        "CREATE UNIQUE INDEX IF NOT EXISTS uq_message_events_daily_reference "
-        "ON message_events(source_event_type, message_type, reference_date) "
-        "WHERE source_event_type = 'app_start' AND message_type = 'daily_context' "
-        "AND reference_date IS NOT NULL"
-    )
     database.execute_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")

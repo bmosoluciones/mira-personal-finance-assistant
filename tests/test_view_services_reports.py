@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from mira.app.view_services import ReportsViewService, ReportsViewStateBuilder
+from mira.app.view_services._common import ANALYTICS_PALETTE
 from mira.db.database import Database
 from mira.db.errors import BudgetValidationError
 
@@ -289,10 +290,13 @@ def test_reports_view_state_builder_shapes_sections_and_pagination(db: Database)
     assert presentation.cash_flow.chart.line_series[0].points[-1][1] == pytest.approx(50.0)
     assert presentation.category.title == "Level: Parent categories"
     assert presentation.category.rows[0].cells[0].text == "Food"
+    assert presentation.category.chart.slices[0].color == ANALYTICS_PALETTE.palette_hex(0)
+    assert presentation.category.chart.slices[1].color == ANALYTICS_PALETTE.palette_hex(1)
     assert drilldown.category.back_enabled is True
     assert drilldown.category.rows[0].cells[0].text == "Dining › Restaurants"
     assert presentation.tag.matrix_headers[0] == "Tags"
     assert "Dining" in presentation.tag.matrix_headers
+    assert presentation.tag.chart.slices[0].color == ANALYTICS_PALETTE.palette_hex(0)
     assert presentation.budget.rows == ()
     assert "USD" in presentation.account_balance.summary_text
     assert any(row.cells[0].text == "Wallet" for row in presentation.account_balance.rows)

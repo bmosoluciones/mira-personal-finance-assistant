@@ -150,30 +150,6 @@ def _fmt_amount_with_currency(db: Database, amount: float, currency: str, *, dec
     )
 
 
-_ANALYTICS_MULTICOLOR_PALETTE = [
-    "#2EC4B6",
-    "#4D96FF",
-    "#FF6B6B",
-    "#F4A261",
-    "#8AC926",
-    "#00B8D9",
-    "#FF9F1C",
-    "#FF4D8D",
-]
-
-_ANALYTICS_SEMANTIC_COLORS = {
-    "income": "#2EC4B6",
-    "expense": "#FF6B6B",
-    "net": "#4D96FF",
-    "secondary": "#00B8D9",
-    "budget": "#4D96FF",
-    "actual": "#FF6B6B",
-    "financing": "#F4A261",
-    "savings": "#8AC926",
-    "flow_total": "#00B8D9",
-}
-
-
 def _savings_category_names(db: Database) -> set[str]:
     return build_savings_lookup(db.category.list("expense"))[1]
 

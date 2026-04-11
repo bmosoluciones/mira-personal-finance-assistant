@@ -38,6 +38,7 @@ from mira.app.view_services import (
     MiraAnalysisViewState,
     MiraAnalysisViewStateBuilder,
 )
+from mira.app.view_services._common import ANALYTICS_PALETTE, try_parse_waterfall_step_kind
 from mira.db.database import Database
 from mira.ui.i18n import normalize_language, tr
 from mira.ui.views._shared import (
@@ -64,14 +65,6 @@ class _WaterfallChartWidget(QWidget):
         "text": "#D6DEE8",
         "value_text": "#F5F7FA",
         "connector": "#88A9C3",
-        "income_total": "#2EC4B6",
-        "expense": "#FF6B6B",
-        "financing": "#F4A261",
-        "savings_allocation": "#8AC926",
-        "deficit_total": "#FF9F1C",
-        "surplus_total": "#4D96FF",
-        "month_balance": "#4D96FF",
-        "final_total": "#00B8D9",
         "default": "#9FB3C8",
     }
 
@@ -92,8 +85,9 @@ class _WaterfallChartWidget(QWidget):
         self.update()
 
     def _bar_color(self, step: dict[str, Any]) -> QColor:
-        kind = str(step.get("kind") or "")
-        return QColor(self._COLORS.get(kind, self._COLORS["default"]))
+        if (kind := try_parse_waterfall_step_kind(step.get("kind"))) is None:
+            return QColor(self._COLORS["default"])
+        return QColor(ANALYTICS_PALETTE.waterfall_hex(kind))
 
     def _wrap_label(self, label: str) -> str:
         words = label.split()

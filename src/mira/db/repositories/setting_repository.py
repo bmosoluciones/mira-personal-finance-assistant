@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from mira.db import bootstrap as db_bootstrap
 from mira.db import helpers as db_helpers
-from mira.db.helpers import _SAVINGS_GOALS_PARENT_NAMES
+from mira.db.helpers import SAVINGS_GOALS_DEFAULTS
 from mira.db.model import Currency, Setting
 
 CURRENCY_CODES = db_helpers.CURRENCY_CODES
@@ -43,9 +43,9 @@ class SettingRepository:
         return "es" if language == "es" else "en"
 
     def _savings_goals_parent_name_candidates(self) -> list[str]:
-        current = _SAVINGS_GOALS_PARENT_NAMES[self._database_language()]
+        current = SAVINGS_GOALS_DEFAULTS.name_for(self._database_language())
         candidates = [current]
-        for name in _SAVINGS_GOALS_PARENT_NAMES.values():
+        for name in SAVINGS_GOALS_DEFAULTS.all_names():
             if name not in candidates:
                 candidates.append(name)
         return candidates
@@ -54,7 +54,7 @@ class SettingRepository:
         parent = self._find_savings_goals_parent_category()
         if parent is not None:
             return str(parent["name"])
-        return _SAVINGS_GOALS_PARENT_NAMES[self._database_language()]
+        return SAVINGS_GOALS_DEFAULTS.name_for(self._database_language())
 
     def get_currencies(self, region: str | None = "americas") -> list[dict]:
         query = Currency.select(Currency.code, Currency.name, Currency.region)

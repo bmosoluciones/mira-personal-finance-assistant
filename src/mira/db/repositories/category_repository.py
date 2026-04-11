@@ -10,9 +10,8 @@ from peewee import IntegrityError as PeeweeIntegrityError, fn
 from mira.db.errors import DuplicateCategoryNameError
 from mira.db.helpers import (
     _ICON_MAX_LENGTH,
-    _SAVINGS_GOALS_PARENT_COLOR,
-    _SAVINGS_GOALS_PARENT_NAMES,
     _UNSET,
+    SAVINGS_GOALS_DEFAULTS,
 )
 from mira.db.model import Bucket, Category, RecurringTransaction, SavingsGoal, Transaction
 
@@ -185,9 +184,9 @@ class CategoryRepository:
         parent = self._find_savings_goals_parent_category()
         if parent is None:
             return self.add_category(
-                name=_SAVINGS_GOALS_PARENT_NAMES[self._database_language()],
+                name=SAVINGS_GOALS_DEFAULTS.name_for(self._database_language()),
                 cat_type="expense",
-                color=_SAVINGS_GOALS_PARENT_COLOR,
+                color=SAVINGS_GOALS_DEFAULTS.color,
                 is_savings=True,
             )
         updates: dict[str, object] = {}
@@ -222,7 +221,7 @@ class CategoryRepository:
 
     def _reserved_savings_goals_parent_name_match(self, name: str) -> bool:
         normalized = name.strip().casefold()
-        return normalized in {candidate.casefold() for candidate in _SAVINGS_GOALS_PARENT_NAMES.values()}
+        return normalized in {candidate.casefold() for candidate in SAVINGS_GOALS_DEFAULTS.all_names()}
 
     def _group_savings_goal_category(self, category: dict) -> dict:
         parent = self._ensure_savings_goals_parent_category()

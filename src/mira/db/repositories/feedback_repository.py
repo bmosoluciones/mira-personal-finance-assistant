@@ -13,10 +13,8 @@ from peewee import JOIN, SQL, fn
 
 from mira.finance_summary import build_savings_lookup, is_savings_transaction
 from mira.db.helpers import (
-    MESSAGE_PRIORITY,
-    _MILESTONES_MIRA_REPORT_VIEWS,
-    _MILESTONES_NL_TRANSACTIONS,
-    _MILESTONES_SAVINGS_CONTRIBUTIONS,
+    FEEDBACK_MILESTONES,
+    MessagePriority,
 )
 from mira.db.model import (
     AchievementCounter,
@@ -339,7 +337,7 @@ class FeedbackRepository:
                     code="income_goal_100",
                     message_type="realtime_insight",
                     message=tr("feedback.income_goal_100", language),
-                    priority=MESSAGE_PRIORITY["INSIGHT_CRITICAL"] - 5,
+                    priority=int(MessagePriority.INSIGHT_CRITICAL) - 5,
                     specificity=50,
                 )
             )
@@ -349,7 +347,7 @@ class FeedbackRepository:
                     code="income_goal_80",
                     message_type="realtime_insight",
                     message=tr("feedback.income_goal_80", language),
-                    priority=MESSAGE_PRIORITY["INSIGHT_WARNING"] - 10,
+                    priority=int(MessagePriority.INSIGHT_WARNING) - 10,
                     specificity=40,
                 )
             )
@@ -359,7 +357,7 @@ class FeedbackRepository:
                     code="income_goal_110",
                     message_type="realtime_insight",
                     message=tr("feedback.income_goal_110", language),
-                    priority=MESSAGE_PRIORITY["INSIGHT_WARNING"] + 5,
+                    priority=int(MessagePriority.INSIGHT_WARNING) + 5,
                     specificity=45,
                 )
             )
@@ -369,7 +367,7 @@ class FeedbackRepository:
                     code="income_recovery",
                     message_type="realtime_insight",
                     message=tr("feedback.income_recovery", language),
-                    priority=MESSAGE_PRIORITY["INSIGHT_INFO"],
+                    priority=int(MessagePriority.INSIGHT_INFO),
                     specificity=35,
                 )
             )
@@ -380,7 +378,7 @@ class FeedbackRepository:
                     code="income_unusual_high",
                     message_type="realtime_insight",
                     message=tr("feedback.income_unusual_high", language),
-                    priority=MESSAGE_PRIORITY["INSIGHT_INFO"] - 5,
+                    priority=int(MessagePriority.INSIGHT_INFO) - 5,
                     specificity=20,
                     cooldown_scope="day",
                 )
@@ -405,7 +403,7 @@ class FeedbackRepository:
                     code="expense_category_100",
                     message_type="realtime_insight",
                     message=tr("feedback.expense_category_100", language, params={"category_name": category_name}),
-                    priority=MESSAGE_PRIORITY["INSIGHT_CRITICAL"],
+                    priority=int(MessagePriority.INSIGHT_CRITICAL),
                     specificity=50,
                 )
             )
@@ -417,7 +415,7 @@ class FeedbackRepository:
                     code="expense_category_90",
                     message_type="realtime_insight",
                     message=tr("feedback.expense_category_90", language, params={"category_name": category_name}),
-                    priority=MESSAGE_PRIORITY["INSIGHT_WARNING"],
+                    priority=int(MessagePriority.INSIGHT_WARNING),
                     specificity=40,
                     cooldown_scope="period_category",
                     category_id=context.get("category_id"),
@@ -429,7 +427,7 @@ class FeedbackRepository:
                     code="expense_total_100",
                     message_type="realtime_insight",
                     message=tr("feedback.expense_total_100", language),
-                    priority=MESSAGE_PRIORITY["INSIGHT_CRITICAL"] - 2,
+                    priority=int(MessagePriority.INSIGHT_CRITICAL) - 2,
                     specificity=45,
                 )
             )
@@ -445,7 +443,7 @@ class FeedbackRepository:
                     code="expense_high_pace",
                     message_type="realtime_insight",
                     message=tr("feedback.expense_high_pace", language),
-                    priority=MESSAGE_PRIORITY["INSIGHT_WARNING"] - 5,
+                    priority=int(MessagePriority.INSIGHT_WARNING) - 5,
                     specificity=30,
                 )
             )
@@ -456,7 +454,7 @@ class FeedbackRepository:
                     code="expense_unusual_high",
                     message_type="realtime_insight",
                     message=tr("feedback.expense_unusual_high", language, params={"category_name": category_name}),
-                    priority=MESSAGE_PRIORITY["INSIGHT_INFO"],
+                    priority=int(MessagePriority.INSIGHT_INFO),
                     specificity=20,
                     cooldown_scope="day",
                 )
@@ -505,7 +503,7 @@ class FeedbackRepository:
         if source == "nl_assistant":
             nl_prev = self.get_achievement_counter("nl_transactions")
             nl_current = nl_prev + 1
-            for milestone in _MILESTONES_NL_TRANSACTIONS:
+            for milestone in FEEDBACK_MILESTONES.nl_transactions:
                 if nl_prev < milestone <= nl_current:
                     candidates.append(
                         MessageCandidate(
@@ -516,13 +514,13 @@ class FeedbackRepository:
                                 language,
                                 params={"milestone": milestone},
                             ),
-                            priority=MESSAGE_PRIORITY["ACHIEVEMENT_LOW"] + 10,
+                            priority=int(MessagePriority.ACHIEVEMENT_LOW) + 10,
                             cooldown_scope="period",
                         )
                     )
 
         report_views = self.get_achievement_counter("mira_report_views")
-        for milestone in _MILESTONES_MIRA_REPORT_VIEWS:
+        for milestone in FEEDBACK_MILESTONES.mira_report_views:
             if report_views >= milestone and not self._achievement_already_emitted(
                 f"achievement_mira_report_views_{milestone}"
             ):
@@ -535,7 +533,7 @@ class FeedbackRepository:
                             language,
                             params={"milestone": milestone},
                         ),
-                        priority=MESSAGE_PRIORITY["ACHIEVEMENT_LOW"],
+                        priority=int(MessagePriority.ACHIEVEMENT_LOW),
                         cooldown_scope="period",
                     )
                 )
@@ -544,7 +542,7 @@ class FeedbackRepository:
         if tx_type == TransactionType.EXPENSE and is_savings_transaction(tx, savings_lookup):
             savings_prev = self.get_achievement_counter("savings_contributions")
             savings_current = savings_prev + 1
-            for milestone in _MILESTONES_SAVINGS_CONTRIBUTIONS:
+            for milestone in FEEDBACK_MILESTONES.savings_contributions:
                 if savings_prev < milestone <= savings_current:
                     candidates.append(
                         MessageCandidate(
@@ -555,7 +553,7 @@ class FeedbackRepository:
                                 language,
                                 params={"milestone": milestone},
                             ),
-                            priority=MESSAGE_PRIORITY["ACHIEVEMENT_MEDIUM"],
+                            priority=int(MessagePriority.ACHIEVEMENT_MEDIUM),
                             cooldown_scope="period",
                             counter_updates=[("savings_contributions", 1)],
                         )
@@ -571,7 +569,7 @@ class FeedbackRepository:
                     code="achievement_income_goal_met",
                     message_type="achievement",
                     message=tr("feedback.achievement_income_goal_met", language),
-                    priority=MESSAGE_PRIORITY["ACHIEVEMENT_CRITICAL"],
+                    priority=int(MessagePriority.ACHIEVEMENT_CRITICAL),
                     cooldown_scope="period",
                 )
             )
@@ -595,7 +593,7 @@ class FeedbackRepository:
                         code="achievement_income_above_historical_avg",
                         message_type="achievement",
                         message=tr("feedback.achievement_income_above_historical_avg", language),
-                        priority=MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"] + 5,
+                        priority=int(MessagePriority.ACHIEVEMENT_HIGH) + 5,
                         cooldown_scope="day",
                     )
                 )
@@ -608,7 +606,7 @@ class FeedbackRepository:
                     code="achievement_saved_this_month",
                     message_type="achievement",
                     message=tr("feedback.achievement_saved_this_month", language),
-                    priority=MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"],
+                    priority=int(MessagePriority.ACHIEVEMENT_HIGH),
                     cooldown_scope="period",
                 )
             )
@@ -627,7 +625,7 @@ class FeedbackRepository:
                     code="achievement_savings_vs_previous_month",
                     message_type="achievement",
                     message=tr("feedback.achievement_savings_vs_previous_month", language),
-                    priority=MESSAGE_PRIORITY["ACHIEVEMENT_HIGH"] + 15,
+                    priority=int(MessagePriority.ACHIEVEMENT_HIGH) + 15,
                     cooldown_scope="period",
                 )
             )
@@ -642,7 +640,7 @@ class FeedbackRepository:
                     code="achievement_savings_three_month_streak",
                     message_type="achievement",
                     message=tr("feedback.achievement_savings_three_month_streak", language),
-                    priority=MESSAGE_PRIORITY["ACHIEVEMENT_CRITICAL"] + 5,
+                    priority=int(MessagePriority.ACHIEVEMENT_CRITICAL) + 5,
                     cooldown_scope="period",
                 )
             )

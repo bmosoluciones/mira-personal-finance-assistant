@@ -9,22 +9,11 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any, cast
 
-from mira.app.view_services._common import PresentationContext
+from mira.app.view_services._common import ANALYTICS_PALETTE, PresentationContext
 from mira.db.database import Database
 from mira.db.errors import BudgetError
 from mira.finance_summary import build_savings_lookup, is_savings_transaction
 from mira.transaction_kinds import is_analytics_excluded_transaction, is_balance_adjustment_transaction
-
-_MULTICOLOR_PALETTE: tuple[str, ...] = (
-    "#2EC4B6",
-    "#4D96FF",
-    "#FF6B6B",
-    "#F4A261",
-    "#8AC926",
-    "#00B8D9",
-    "#FF9F1C",
-    "#FF4D8D",
-)
 
 
 @dataclass(frozen=True)
@@ -550,7 +539,7 @@ class ReportsViewStateBuilder:
                         )
                     )
                 )
-            slices.append(PieChartSlice(category, float(amount), _MULTICOLOR_PALETTE[idx % len(_MULTICOLOR_PALETTE)]))
+            slices.append(PieChartSlice(category, float(amount), ANALYTICS_PALETTE.palette_hex(idx)))
 
         chart = PieChartState(
             title=context.translate("menu.reports.category", "Category Breakdown"),
@@ -667,9 +656,7 @@ class ReportsViewStateBuilder:
                 )
             )
             if idx < 8:
-                slices.append(
-                    PieChartSlice(tag_name, float(amount), _MULTICOLOR_PALETTE[idx % len(_MULTICOLOR_PALETTE)])
-                )
+                slices.append(PieChartSlice(tag_name, float(amount), ANALYTICS_PALETTE.palette_hex(idx)))
 
         category_totals: dict[str, float] = {}
         for cats in state.by_tag_category.values():

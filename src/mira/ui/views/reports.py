@@ -46,6 +46,7 @@ from mira.app.view_services import (
     ReportsViewService,
     ReportsViewStateBuilder,
 )
+from mira.app.view_services._common import ANALYTICS_PALETTE, AnalyticsSemanticRole
 from mira.db.database import Database
 from mira.ui.i18n import normalize_language, tr
 from mira.ui.views.report_types import (
@@ -58,7 +59,6 @@ from mira.ui.views.report_types import (
     REPORT_TOTAL,
 )
 from mira.ui.views._shared import (
-    _ANALYTICS_SEMANTIC_COLORS,
     _COMBO_STYLE,
     _DATE_STYLE,
     _SIGNAL_CELL_ROLE,
@@ -650,7 +650,11 @@ class ReportsView(QWidget):
         return col
 
     def _semantic_chart_color(self, key: str, fallback: str = "#9FB3C8") -> QColor:
-        return QColor(_ANALYTICS_SEMANTIC_COLORS.get(key, fallback))
+        try:
+            role = AnalyticsSemanticRole(str(key).strip().lower())
+        except ValueError:
+            return QColor(fallback)
+        return QColor(ANALYTICS_PALETTE.semantic_hex(role))
 
     def _base_chart(self, title: str) -> QChart:
         chart = QChart()

@@ -22,7 +22,7 @@ from mira.db.errors import (
     DuplicateCategoryNameError,
     DuplicateTagNameError,
 )
-from mira.db.model import SCHEMA_VERSION, Setting, inspect_database_schema
+from mira.db.model import SCHEMA_INDEX_SPECS, SCHEMA_VERSION, Setting, inspect_database_schema
 from mira.db.repositories import tag_repository as tag_repository_module
 from tests.db_inspection import (
     backend_connection_state,
@@ -2398,6 +2398,14 @@ class TestRecurring:
 
 
 class TestDatabaseIndexes:
+    def test_declared_schema_indexes_are_created(self, db):
+        """Ensure every declared index spec exists in sqlite_master."""
+        rows = fetch_all_dicts(db, "SELECT name FROM sqlite_master WHERE type='index'")
+        created_index_names = {row["name"] for row in rows}
+        expected_index_names = {index_spec.name for index_spec in SCHEMA_INDEX_SPECS}
+
+        assert expected_index_names.issubset(created_index_names)
+
     def test_indexes_exist_on_transactions(self, db):
         """Verify that performance indexes are present on the transactions table."""
         rows = fetch_all_dicts(db, "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='transactions'")

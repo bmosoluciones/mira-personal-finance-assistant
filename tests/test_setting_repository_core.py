@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from mira.db.database import Database
-from mira.db.helpers import _SAVINGS_GOALS_PARENT_NAMES
+from mira.db.helpers import SAVINGS_GOALS_DEFAULTS
 
 
 @pytest.fixture
@@ -32,11 +32,11 @@ def test_setting_repository_get_delegates_and_default_currency_normalizes_or_fal
 def test_setting_repository_savings_parent_name_uses_language_fallback_or_existing_category(db: Database) -> None:
     db.setting.set("language", "es")
 
-    assert db.setting.get_savings_goals_parent_name() == _SAVINGS_GOALS_PARENT_NAMES["es"]
+    assert db.setting.get_savings_goals_parent_name() == SAVINGS_GOALS_DEFAULTS.name_for("es")
 
     db.setting.seed_initial_data(include_default_categories=True, account_names=[], language="es")
 
-    assert db.setting.get_savings_goals_parent_name() == _SAVINGS_GOALS_PARENT_NAMES["es"]
+    assert db.setting.get_savings_goals_parent_name() == SAVINGS_GOALS_DEFAULTS.name_for("es")
 
 
 def test_setting_repository_list_currencies_can_return_all_regions(db: Database) -> None:
