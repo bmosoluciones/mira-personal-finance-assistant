@@ -16,6 +16,15 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 - `mira.ui.dialogs.crud` is now a compatibility layer only; transaction, category, budget, recurring, goal, and tag dialogs live in dedicated owner modules, while `MainWindow` now delegates layout and navigation to focused mixins and the demo seed/executor helpers moved further into internal collaborators.
 - `MainWindow` now delegates prompt/chat command flow to a dedicated mixin, `Executor` delegates income/expense recording to a transaction recorder collaborator, and the demo seed bootstrap now uses explicit runtime/result builders to keep the seed entrypoint declarative.
 - Beta readiness cleanup: the main window shell/refresh helpers now live in a dedicated mixin, executor delegation was reduced further to collaborators, and the development environment documentation/metadata now explicitly includes `openpyxl` so `pytest -m full` is a real quality gate instead of an implicit setup trap.
+- Master-data deletion confirmations now explicitly warn that accounts, categories, tags, budgets, recurring rules, and savings goals are destructive non-reversible changes.
+
+### Fixed
+
+- The create/edit transaction dialog now keeps Save/Cancel accessible by moving the form content into an internal vertical scroll area.
+- Category parent selection now only lists root categories, preventing invalid child-as-parent choices that led to false maximum-depth validation errors.
+- The accounts view now exposes the existing transfer-between-accounts and credit-card-payment flows directly from the account list.
+- Changing the application language now tells the user to close and reopen MIRA for the language change to apply completely.
+- Applying recurring transactions without any recurring rules now warns the user instead of falling through into the monthly apply flow.
 
 ## [0.0.1a3] - 2026-04-07
 
