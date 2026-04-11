@@ -958,7 +958,7 @@ class BudgetView(QWidget):
             self._t("budget.dialog.title", "Presupuestos"),
             self._t(
                 "budget.delete.confirm",
-                "¿Eliminar el presupuesto '{code}'?",
+                "Delete budget '{code}'?\n\nThis action cannot be undone.",
                 params={"code": budget["code"]},
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,

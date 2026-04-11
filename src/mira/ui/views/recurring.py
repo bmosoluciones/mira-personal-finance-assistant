@@ -31,6 +31,7 @@ from mira.ui.views._shared import (
     _fmt_amount,
     _make_toolbar_btn,
     _notify_info,
+    _notify_warning,
     _section_title,
     _select_row_at_pos,
     _tr_db,
@@ -159,8 +160,16 @@ class RecurringView(QWidget):
             return
         reply = QMessageBox.question(
             self,
-            "Delete Recurring",
-            f"Delete recurring transaction '{rec.get('description', '')}' ({_fmt_amount(self._db, rec['amount'])})?",
+            _tr_db(self._db, "recurring.delete.title", "Delete Recurring"),
+            _tr_db(
+                self._db,
+                "recurring.delete.body",
+                "Delete recurring transaction '{description}' ({amount})?\n\nThis action cannot be undone.",
+                params={
+                    "description": rec.get("description", ""),
+                    "amount": _fmt_amount(self._db, rec["amount"]),
+                },
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -186,6 +195,19 @@ class RecurringView(QWidget):
         self.refresh()
 
     def _on_apply(self) -> None:
+        if not self._recurring:
+            self.refresh()
+        if not self._recurring:
+            _notify_warning(
+                self,
+                _tr_db(self._db, "recurring.apply.title", "Apply recurring transactions"),
+                _tr_db(
+                    self._db,
+                    "recurring.apply.empty",
+                    "Create recurring transactions before trying to apply them for a month.",
+                ),
+            )
+            return
         dlg = _RecurringApplyDialog(self)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return

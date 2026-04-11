@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from mira.app.view_services import AccountsViewService, AccountsViewState
+from mira.app.view_services.transactions import TransactionsViewService
 from mira.db.database import Database
 from mira.ui.views._shared import (
     _TABLE_STYLE,
@@ -43,6 +44,7 @@ class AccountsView(QWidget):
         super().__init__(parent)
         self._db = db
         self._service = service or AccountsViewService(db)
+        self._transactions_service = TransactionsViewService(db)
         self._accounts: list[dict] = []
         self._build_ui()
 
@@ -62,12 +64,16 @@ class AccountsView(QWidget):
         self._btn_balance_adjustment = _make_toolbar_btn(
             _tr_db(self._db, "btn.balance_adjustment", "~ Balance Adjustment")
         )
+        self._btn_transfer = _make_toolbar_btn(_tr_db(self._db, "btn.transfer", "↔ Transfer"))
+        self._btn_credit_payment = _make_toolbar_btn(_tr_db(self._db, "btn.credit_payment", "💳 Card Payment"))
         for btn in [
             self._btn_add,
             self._btn_edit,
             self._btn_delete,
             self._btn_set_default,
             self._btn_balance_adjustment,
+            self._btn_transfer,
+            self._btn_credit_payment,
         ]:
             tb.addWidget(btn)
         tb.addStretch()
@@ -89,6 +95,8 @@ class AccountsView(QWidget):
         self._btn_delete.clicked.connect(self._on_delete)
         self._btn_set_default.clicked.connect(self._on_set_default)
         self._btn_balance_adjustment.clicked.connect(self._on_balance_adjustment)
+        self._btn_transfer.clicked.connect(self._on_transfer)
+        self._btn_credit_payment.clicked.connect(self._on_credit_payment)
         self._table.doubleClicked.connect(self._on_edit)
         self._table.customContextMenuRequested.connect(self._open_context_menu)
 
@@ -164,8 +172,13 @@ class AccountsView(QWidget):
         next_row = self._table.currentRow()
         reply = QMessageBox.question(
             self,
-            "Delete Account",
-            f"Delete account '{acc['name']}'? This cannot be undone.",
+            _tr_db(self._db, "accounts.delete.title", "Delete Account"),
+            _tr_db(
+                self._db,
+                "accounts.delete.body",
+                "Delete account '{name}'?\n\nThis action cannot be undone.",
+                params={"name": acc["name"]},
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -195,6 +208,22 @@ class AccountsView(QWidget):
             feedback = self._service.record_balance_adjustment(dlg.get_data())
             self.refresh(selected_account_id=feedback.selected_id)
 
+    def _on_transfer(self) -> None:
+        from mira.ui.dialogs import TransferDialog
+
+        dlg = TransferDialog(self._db, parent=self)
+        if dlg.exec() == TransferDialog.DialogCode.Accepted:
+            self._transactions_service.transfer(dlg.get_data())
+            self.refresh()
+
+    def _on_credit_payment(self) -> None:
+        from mira.ui.dialogs import TransferDialog
+
+        dlg = TransferDialog(self._db, parent=self, credit_payment=True)
+        if dlg.exec() == TransferDialog.DialogCode.Accepted:
+            self._transactions_service.record_credit_payment(dlg.get_data())
+            self.refresh()
+
     def _open_context_menu(self, pos: QPoint) -> None:
         if not _select_row_at_pos(self._table, pos):
             return
@@ -204,20 +233,35 @@ class AccountsView(QWidget):
         act_set_default = menu.addAction("⭐ Set as Default")
         act_adjust = menu.addAction(_tr_db(self._db, "btn.balance_adjustment", "~ Balance Adjustment"))
         act_adjust.setEnabled(self._is_adjustable_account(account))
+        act_transfer = menu.addAction(_tr_db(self._db, "btn.transfer", "↔ Transfer"))
+        act_credit_payment = menu.addAction(_tr_db(self._db, "btn.credit_payment", "💳 Card Payment"))
         act_delete = menu.addAction("Delete")
         chosen = menu.exec(self._table.viewport().mapToGlobal(pos))
-        if chosen is act_edit:
-            self._on_edit()
-        elif chosen is act_set_default:
-            self._on_set_default()
-        elif chosen is act_adjust:
-            self._on_balance_adjustment()
-        elif chosen is act_delete:
-            self._on_delete()
+        match chosen:
+            case _ if chosen is act_edit:
+                self._on_edit()
+            case _ if chosen is act_set_default:
+                self._on_set_default()
+            case _ if chosen is act_adjust:
+                self._on_balance_adjustment()
+            case _ if chosen is act_transfer:
+                self._on_transfer()
+            case _ if chosen is act_credit_payment:
+                self._on_credit_payment()
+            case _ if chosen is act_delete:
+                self._on_delete()
 
     def open_add_dialog(self) -> None:
         """Public helper used by the main menu to add an account."""
         self._on_add()
+
+    def open_transfer_dialog(self) -> None:
+        """Public helper to open the transfer dialog from the accounts view."""
+        self._on_transfer()
+
+    def open_credit_payment_dialog(self) -> None:
+        """Public helper to open the credit card payment dialog from the accounts view."""
+        self._on_credit_payment()
 
     def refresh(self, *, selected_account_id: int | None = None) -> None:
         if selected_account_id is None:

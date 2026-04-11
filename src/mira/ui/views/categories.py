@@ -335,7 +335,11 @@ class CategoriesView(QWidget):
         reply = QMessageBox.question(
             self,
             self._t("categories.delete.title", "Delete Category"),
-            self._t("categories.delete.body", "Delete category '{name}'?", params={"name": cat["name"]}),
+            self._t(
+                "categories.delete.body",
+                "Delete category '{name}'?\n\nThis action cannot be undone.",
+                params={"name": cat["name"]},
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:

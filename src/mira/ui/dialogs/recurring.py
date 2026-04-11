@@ -5,10 +5,19 @@
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLineEdit, QSpinBox, QVBoxLayout
+from PySide6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QLabel,
+    QLineEdit,
+    QSpinBox,
+    QVBoxLayout,
+)
 
 from mira.db.database import Database
-from mira.ui.dialogs._shared import _TagMultiSelectButton, _make_amount_spin, _notify_warning
+from mira.ui.dialogs._shared import _NOTICE_LABEL_STYLE, _TagMultiSelectButton, _make_amount_spin, _notify_warning
 from mira.ui.i18n import normalize_language, tr
 
 
@@ -69,6 +78,19 @@ class RecurringDialog(QDialog):
         self._day_spin.setValue(1)
         form.addRow(tr("dialog.recurring.day_of_month", self._language, default="Day of month:"), self._day_spin)
         layout.addLayout(form)
+        self._notice_lbl = QLabel("")
+        self._notice_lbl.setWordWrap(True)
+        self._notice_lbl.setStyleSheet(_NOTICE_LABEL_STYLE + "background:#472624;color:#FFB0A3;")
+        self._notice_lbl.setVisible(self._recurring is not None)
+        if self._recurring is not None:
+            self._notice_lbl.setText(
+                tr(
+                    "dialog.recurring.notice.edit",
+                    self._language,
+                    default="Editing this recurring rule is a destructive change and cannot be undone automatically.",
+                )
+            )
+        layout.addWidget(self._notice_lbl)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)

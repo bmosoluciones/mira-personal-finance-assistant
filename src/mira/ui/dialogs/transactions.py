@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import date
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -74,6 +76,17 @@ class TransactionDialog(QDialog):
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
+        self._form_scroll = QScrollArea(self)
+        self._form_scroll.setWidgetResizable(True)
+        self._form_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._form_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._form_scroll.setStyleSheet("QScrollArea{border:none;background:transparent;}")
+        self._scroll_content = QWidget()
+        content_layout = QVBoxLayout(self._scroll_content)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(10)
+        self._form_scroll.setWidget(self._scroll_content)
+        layout.addWidget(self._form_scroll, 1)
 
         title = QLabel(
             tr(
@@ -83,7 +96,7 @@ class TransactionDialog(QDialog):
             )
         )
         title.setStyleSheet("font-size:28px;font-weight:700;padding-bottom:4px;")
-        layout.addWidget(title)
+        content_layout.addWidget(title)
 
         type_row = QHBoxLayout()
         self._btn_expense = QPushButton(tr("dialog.transaction.type.expense", self._language, default="Expense"))
@@ -92,20 +105,20 @@ class TransactionDialog(QDialog):
         self._btn_income.clicked.connect(lambda: self._set_type("income"))
         type_row.addWidget(self._btn_expense)
         type_row.addWidget(self._btn_income)
-        layout.addLayout(type_row)
+        content_layout.addLayout(type_row)
 
         self._type_combo = QComboBox()
         self._type_combo.addItems(["expense", "income"])
         self._type_combo.hide()
 
         amount_lbl = QLabel(tr("dialog.transaction.original_amount", self._language, default="Original amount"))
-        layout.addWidget(amount_lbl)
+        content_layout.addWidget(amount_lbl)
         self._amount_spin = _make_amount_spin(self._db)
         self._amount_spin.setPrefix("$")
         self._amount_spin.setDecimals(2)
         self._amount_spin.setButtonSymbols(QDoubleSpinBox.ButtonSymbols.NoButtons)
         self._amount_spin.setStyleSheet(_hero_amount_spin_style("#F48771"))
-        layout.addWidget(self._amount_spin)
+        content_layout.addWidget(self._amount_spin)
 
         grid = QHBoxLayout()
 
@@ -142,12 +155,12 @@ class TransactionDialog(QDialog):
         self._payment_method_form.setSpacing(10)
         self._payment_method_combo = QComboBox()
         self._payment_method_combo.addItems(["cash", "credit_card", "debit_card", "transfer", "other"])
-        layout.addLayout(grid)
+        content_layout.addLayout(grid)
         self._payment_method_form.addRow(
             tr("dialog.transaction.payment_method", self._language, default="Payment method:"),
             self._payment_method_combo,
         )
-        layout.addLayout(self._payment_method_form)
+        content_layout.addLayout(self._payment_method_form)
 
         self._fx_check = QCheckBox(
             tr(
@@ -157,7 +170,7 @@ class TransactionDialog(QDialog):
             )
         )
         self._fx_check.toggled.connect(self._sync_fx_state)
-        layout.addWidget(self._fx_check)
+        content_layout.addWidget(self._fx_check)
 
         fx_form = QFormLayout()
         fx_form.setSpacing(8)
@@ -186,20 +199,20 @@ class TransactionDialog(QDialog):
             self._converted_amount_spin,
         )
 
-        layout.addLayout(fx_form)
+        content_layout.addLayout(fx_form)
 
         self._amount_spin.valueChanged.connect(self._recompute_converted_amount)
 
         self._desc_edit = QLineEdit()
         self._desc_edit.setPlaceholderText(tr("dialog.transaction.description", self._language, default="Description"))
-        layout.addWidget(QLabel(tr("dialog.transaction.description", self._language, default="Description")))
-        layout.addWidget(self._desc_edit)
+        content_layout.addWidget(QLabel(tr("dialog.transaction.description", self._language, default="Description")))
+        content_layout.addWidget(self._desc_edit)
 
         self._details_check = QCheckBox(
             tr("dialog.transaction.more_details", self._language, default="Add more details... (optional)")
         )
         self._details_check.toggled.connect(self._toggle_optional)
-        layout.addWidget(self._details_check)
+        content_layout.addWidget(self._details_check)
 
         self._optional_container = QWidget()
         optional_layout = QFormLayout(self._optional_container)
@@ -224,24 +237,26 @@ class TransactionDialog(QDialog):
         optional_layout.addRow(tr("dialog.transaction.receipt", self._language, default="Receipt:"), receipt_row)
 
         self._optional_container.hide()
-        layout.addWidget(self._optional_container)
+        content_layout.addWidget(self._optional_container)
 
-        action_row = QHBoxLayout()
-        cancel_btn = QPushButton(tr("dialog.common.cancel", self._language, default="Cancel"))
-        cancel_btn.clicked.connect(self.reject)
-        save_btn = QPushButton(
+        self._footer_widget = QWidget(self)
+        action_row = QHBoxLayout(self._footer_widget)
+        action_row.setContentsMargins(0, 0, 0, 0)
+        self._cancel_button = QPushButton(tr("dialog.common.cancel", self._language, default="Cancel"))
+        self._cancel_button.clicked.connect(self.reject)
+        self._save_button = QPushButton(
             tr(
                 "dialog.transaction.save.edit" if self._tx else "dialog.transaction.save.new",
                 self._language,
                 default="Update Transaction" if self._tx else "Save Transaction",
             )
         )
-        save_btn.clicked.connect(self._on_accept)
-        cancel_btn.setStyleSheet(_SECONDARY_ACTION_BUTTON_STYLE)
-        save_btn.setStyleSheet(_PRIMARY_ACTION_BUTTON_STYLE)
-        action_row.addWidget(cancel_btn)
-        action_row.addWidget(save_btn)
-        layout.addLayout(action_row)
+        self._save_button.clicked.connect(self._on_accept)
+        self._cancel_button.setStyleSheet(_SECONDARY_ACTION_BUTTON_STYLE)
+        self._save_button.setStyleSheet(_PRIMARY_ACTION_BUTTON_STYLE)
+        action_row.addWidget(self._cancel_button)
+        action_row.addWidget(self._save_button)
+        layout.addWidget(self._footer_widget)
 
     def _toggle_optional(self, checked: bool) -> None:
         self._optional_container.setVisible(checked)

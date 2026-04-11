@@ -222,7 +222,11 @@ class TagsView(QWidget):
         reply = QMessageBox.question(
             self,
             self._t("tags.delete.title", "Delete Tag"),
-            self._t("tags.delete.body", "Delete tag '{name}'?", params={"name": str(tag["name"])}),
+            self._t(
+                "tags.delete.body",
+                "Delete tag '{name}'?\n\nThis action cannot be undone.",
+                params={"name": str(tag["name"])},
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:

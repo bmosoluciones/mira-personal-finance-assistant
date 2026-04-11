@@ -113,9 +113,7 @@ class FeedbackRepository:
         month_tx_total = int(
             Transaction.select(fn.COUNT(Transaction.id))
             .where(
-                analytics_included_expr(Transaction)
-                & (Transaction.date >= month_start)
-                & (Transaction.date <= today)
+                analytics_included_expr(Transaction) & (Transaction.date >= month_start) & (Transaction.date <= today)
             )
             .scalar()
             or 0

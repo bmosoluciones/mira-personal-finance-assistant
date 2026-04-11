@@ -198,7 +198,12 @@ class SavingsGoalsView(QWidget):
         reply = QMessageBox.question(
             self,
             "Delete Goal",
-            f"Delete savings goal '{goal['name']}'?",
+            _tr_db(
+                self._db,
+                "goals.delete.body",
+                "Delete savings goal '{name}'?\n\nThis action cannot be undone.",
+                params={"name": goal["name"]},
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:

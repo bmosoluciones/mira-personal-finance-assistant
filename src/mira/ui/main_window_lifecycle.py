@@ -329,12 +329,23 @@ class MainWindowLifecycleMixin:
         self._apply_model_lifecycle_state(state, show_mode_warning=True)
 
     def _on_language_changed(self, language: str) -> None:
-        self._language = normalize_language(language)
+        current_language = normalize_language(getattr(self, "_language", language))
+        next_language = normalize_language(language)
+        language_changed = current_language != next_language
+        self._language = next_language
         self._build_menu()
         self.notify_user_info(
             self,
             "MIRA",
-            tr("settings.saved.body", self._language, default="Configuration was saved successfully."),
+            tr(
+                "settings.restart_required.body" if language_changed else "settings.saved.body",
+                self._language,
+                default=(
+                    "Language change was saved. Close and reopen MIRA to apply it completely."
+                    if language_changed
+                    else "Configuration was saved successfully."
+                ),
+            ),
         )
 
     def _on_theme_changed(self, theme: str) -> None:

@@ -165,7 +165,7 @@ class CategoryDialog(QDialog):
 
     def _populate_parents(self) -> None:
         cat_type = self._type_combo.currentText()
-        all_cats = self._db.category.list(cat_type)
+        all_cats = [cat for cat in self._db.category.list(cat_type) if cat.get("parent_id") is None]
         current_id = self._category["id"] if self._category and "id" in self._category else None
         self._parent_combo.clear()
         self._parent_combo.addItem(tr("dialog.category.parent.none", self._language, default="(None)"), None)
