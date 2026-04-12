@@ -58,9 +58,9 @@ class AccountDialog(QDialog):
         form.addRow(tr("dialog.account.name", self._language, default="Name:"), self._name_edit)
 
         self._type_combo = QComboBox()
-        self._type_combo.addItem("bank", "bank")
-        self._type_combo.addItem("cash", "cash")
-        self._type_combo.addItem("credit", "credit")
+        self._type_combo.addItem(tr("dialog.account.type.bank", self._language, default="Bank"), "bank")
+        self._type_combo.addItem(tr("dialog.account.type.cash", self._language, default="Cash"), "cash")
+        self._type_combo.addItem(tr("dialog.account.type.credit", self._language, default="Credit card"), "credit")
         self._type_combo.currentIndexChanged.connect(self._sync_balance_range)
         form.addRow(tr("dialog.account.type", self._language, default="Type:"), self._type_combo)
 

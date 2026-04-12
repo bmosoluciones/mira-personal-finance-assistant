@@ -107,8 +107,24 @@ def test_recurring_view_reports_already_applied_when_rules_exist(monkeypatch: py
         view._on_apply()
         view._on_apply()
 
-        assert infos[0] == ("Applied", "Created 1 recurring transaction(s) for 2026-04.")
-        assert infos[1] == ("Already Applied", "Recurring transactions have already been applied for 2026-04.")
+        assert infos[0] == (
+            views_module._tr_db(db, "recurring.apply.applied_title", "Applied"),
+            views_module._tr_db(
+                db,
+                "recurring.apply.applied_body",
+                "Created {count} recurring transaction(s) for {period}.",
+                params={"count": 1, "period": "2026-04"},
+            ),
+        )
+        assert infos[1] == (
+            views_module._tr_db(db, "recurring.apply.already_title", "Already Applied"),
+            views_module._tr_db(
+                db,
+                "recurring.apply.already_body",
+                "Recurring transactions have already been applied for {period}.",
+                params={"period": "2026-04"},
+            ),
+        )
     finally:
         view.close()
 

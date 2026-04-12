@@ -197,7 +197,7 @@ class SavingsGoalsView(QWidget):
             return
         reply = QMessageBox.question(
             self,
-            "Delete Goal",
+            _tr_db(self._db, "goals.delete.title", "Delete Goal"),
             _tr_db(
                 self._db,
                 "goals.delete.body",
@@ -224,9 +224,9 @@ class SavingsGoalsView(QWidget):
         self.refresh()
 
         menu = QMenu(self)
-        act_contribute = menu.addAction("Contribute")
-        act_edit = menu.addAction("Edit")
-        act_delete = menu.addAction("Delete")
+        act_contribute = menu.addAction(_tr_db(self._db, "common.contribute", "Contribute"))
+        act_edit = menu.addAction(_tr_db(self._db, "common.edit", "Edit"))
+        act_delete = menu.addAction(_tr_db(self._db, "common.delete", "Delete"))
         chosen = menu.exec(global_pos)
         if chosen is act_contribute:
             self._on_contribute()

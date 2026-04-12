@@ -7,6 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from tests.qt_stubs import fresh_import, install_fake_pyside
+from mira.ui.i18n import tr
 
 
 class _StatusBar:
@@ -553,7 +554,17 @@ def test_model_download_flow_success_cancel_and_error_paths(monkeypatch) -> None
     assert error_session.progress_dialog.closed is True
     title, message, widget = error_notifications.error_calls[0]
     assert title.endswith("Download Error")
-    assert (message, widget) == ("reload failed", None)
+    assert (
+        message,
+        widget,
+    ) == (
+        tr(
+            "model.download.error.body_generic",
+            "en",
+            default="The model could not be downloaded or activated. Please try again.",
+        ),
+        None,
+    )
 
 
 def test_card_widget_menu_builder_and_report_types(monkeypatch) -> None:

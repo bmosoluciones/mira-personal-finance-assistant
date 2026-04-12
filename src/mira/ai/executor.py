@@ -26,6 +26,7 @@ from mira.ai.executor_components import (
 from mira.db.database import Database
 from mira.db.helpers import fold_text
 from mira.db.money import Money
+from mira.ui.i18n import normalize_language, tr
 
 # ---------------------------------------------------------------------------
 # Category matching constants
@@ -552,6 +553,20 @@ def _compute_summary(db: Database, transactions: list[dict[str, Any]]) -> dict[s
     return ExecutorSummaryTools.compute_summary(db, transactions)
 
 
+def _executor_language(db: Database) -> str:
+    return normalize_language(db.setting.get("language"))
+
+
+def _executor_tr(
+    db: Database,
+    key: str,
+    default: str,
+    *,
+    params: dict[str, object] | None = None,
+) -> str:
+    return tr(key, _executor_language(db), default=default, params=params)
+
+
 class Executor:
     """Executes structured MIRA actions against the database."""
 
@@ -609,17 +624,19 @@ class Executor:
         return self._report_builder.build_report(action)
 
     def _none(self, action: dict[str, Any]) -> ActionResult:
-        msg = action.get("message") or (
-            "Disculpa, no entendí tu solicitud. "
-            "Puedo ayudarte a registrar ingresos, gastos o ver tu resumen financiero."
+        msg = action.get("message") or _executor_tr(
+            self._db,
+            "chat.none.generic",
+            "Sorry, I did not understand your request. I can help you record income, expenses, or review your financial summary.",
         )
-        return ActionResult(success=True, action="none", message=msg)
+        return ActionResult(success=True, action="none", message=str(msg))
 
     def _data_analysis(self, action: dict[str, Any]) -> ActionResult:
         period = action.get("period") or {}
-        msg = (
-            "Abriré el reporte MIRA oficial para analizar tus datos financieros. "
-            "Ahí verás el resumen y las comparativas del periodo."
+        msg = _executor_tr(
+            self._db,
+            "chat.analysis.open_report",
+            "I will open the official MIRA report to analyze your financial data. There you will see the summary and period comparisons.",
         )
         return ActionResult(
             success=True,

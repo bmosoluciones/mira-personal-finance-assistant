@@ -41,7 +41,9 @@ class SavingsGoalDialog(QDialog):
         form = QFormLayout()
         form.setSpacing(10)
         self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText("Goal name… (e.g. Viaje a Europa)")
+        self._name_edit.setPlaceholderText(
+            self._t("goals.dialog.name.placeholder", "Goal name... (e.g. Trip to Europe)")
+        )
         self._name_edit.textChanged.connect(self._update_notice)
         form.addRow(self._t("goals.dialog.name", "Name:"), self._name_edit)
         self._target_spin = _make_amount_spin(self._db)
@@ -129,7 +131,15 @@ class ContributeGoalDialog(QDialog):
     def __init__(self, db: Database, goal_name: str, parent=None) -> None:
         super().__init__(parent)
         self._db = db
-        self.setWindowTitle(f"Contribute to: {goal_name}")
+        self._language = normalize_language(self._db.setting.get("language"))
+        self.setWindowTitle(
+            tr(
+                "goals.contribute.dialog.title",
+                self._language,
+                default="Contribute to: {name}",
+                params={"name": goal_name},
+            )
+        )
         self.setMinimumWidth(300)
         self._build_ui()
 
@@ -138,7 +148,10 @@ class ContributeGoalDialog(QDialog):
         form = QFormLayout()
         form.setSpacing(10)
         self._amount_spin = _make_amount_spin(self._db)
-        form.addRow("Amount to Contribute:", self._amount_spin)
+        form.addRow(
+            tr("goals.contribute.dialog.amount", self._language, default="Amount to Contribute:"),
+            self._amount_spin,
+        )
         layout.addLayout(form)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self._on_accept)
@@ -147,7 +160,15 @@ class ContributeGoalDialog(QDialog):
 
     def _on_accept(self) -> None:
         if self._amount_spin.value() <= 0:
-            _notify_warning(self, "Validation", "Amount must be greater than zero.")
+            _notify_warning(
+                self,
+                tr("validation.title", self._language, default="Validation"),
+                tr(
+                    "goals.contribute.validation.amount",
+                    self._language,
+                    default="Amount must be greater than zero.",
+                ),
+            )
             return
         self.accept()
 

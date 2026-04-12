@@ -21,6 +21,7 @@ from mira.ui.dialogs.financial.compound_interest import CompoundInterestDialog a
 from mira.ui.dialogs.financial.goal_simulator import GoalScenarioDialog as _GoalScenarioDialog
 from mira.ui.dialogs.financial.loan_amortization import LoanAmortizationDialog as _LoanAmortizationDialog
 from mira.ui.i18n import normalize_language, tr
+from mira.ui.main_window_shell import MainWindowShellMixin
 from mira.ui.notifications import show_user_message
 
 _APP_VERSION_FALLBACK = APP_VERSION
@@ -139,7 +140,7 @@ class MainWindowLifecycleMixin:
             )
         )
 
-        title = QLabel("<b>MIRA</b>")
+        title = QLabel(f"<b>{tr('app.name', self._language, default='MIRA')}</b>")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet("font-size:22px;")
         layout.addWidget(title)
@@ -349,8 +350,10 @@ class MainWindowLifecycleMixin:
         )
 
     def _on_theme_changed(self, theme: str) -> None:
-        self._theme = self._normalize_theme(theme)
-        self._apply_theme(self._theme)
+        main_window_module = sys.modules.get("mira.ui.main_window")
+        main_window_cls = getattr(main_window_module, "MainWindow", MainWindowShellMixin)
+        self._theme = main_window_cls._normalize_theme(theme)
+        main_window_cls._apply_theme(self._theme)
         self._refresh_sidebar_style()
 
     def closeEvent(self, event) -> None:  # type: ignore[override]

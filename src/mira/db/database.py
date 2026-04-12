@@ -392,6 +392,9 @@ class RecurringFacade(_DatabaseFacade):
     def list(self) -> list[dict]:
         return self._db.get_recurring()
 
+    def get(self, recurring_id: int) -> dict | None:
+        return self._db._get_recurring_by_id(recurring_id)
+
     def create(
         self,
         *,

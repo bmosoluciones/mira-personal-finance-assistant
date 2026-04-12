@@ -808,11 +808,19 @@ class ReportsView(QWidget):
         )
 
     def _on_report_failed(self, request_snapshot: object, message: str) -> None:
+        del message
         snapshot = request_snapshot
         if not self._should_apply_completed_request(snapshot):
             self._mark_report_pending()
             return
-        self._set_report_status(message, color="#F48771")
+        self._set_report_status(
+            tr(
+                "reports.load_error",
+                self._language,
+                default="The report could not be loaded. Review the filters and try again.",
+            ),
+            color="#F48771",
+        )
 
     def _on_report_finished(self) -> None:
         self._worker = None

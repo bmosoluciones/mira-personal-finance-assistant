@@ -43,7 +43,7 @@ class BudgetCreateDialog(QDialog):
             tr(
                 "dialog.budget_create.code.placeholder",
                 self._language,
-                default="budget2026, budget_holidays, budget_v2…",
+                default="budget2026, budget_holidays, budget_v2...",
             )
         )
         form.addRow(tr("dialog.budget_create.code", self._language, default="Code:"), self._code_edit)
@@ -66,7 +66,10 @@ class BudgetCreateDialog(QDialog):
             tr(
                 "dialog.budget_create.help",
                 self._language,
-                default="The budget is yearly. After creating it, you'll be able to edit all 12 months, propose an initial budget, and compare it with actuals.",
+                default=(
+                    "The budget is yearly. After creating it, you'll be able to edit all 12 months, "
+                    "propose an initial budget, and compare it with actuals."
+                ),
             )
         )
         help_lbl.setWordWrap(True)
@@ -87,7 +90,15 @@ class BudgetCreateDialog(QDialog):
             )
             return
         if not self._currency_combo.currentText().strip():
-            _notify_warning(self, "Validación", "La moneda del presupuesto es obligatoria.")
+            _notify_warning(
+                self,
+                tr("dialog.common.validation", self._language, default="Validation"),
+                tr(
+                    "dialog.budget_create.validation.currency_required",
+                    self._language,
+                    default="Budget currency is required.",
+                ),
+            )
             return
         self.accept()
 

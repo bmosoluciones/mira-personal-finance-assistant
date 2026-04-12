@@ -14,6 +14,7 @@ from mira.ai.parser_engine import TransactionParserEngine
 from mira.ai.pipeline import Pipeline
 from mira.ai.validator import ValidationResult
 from mira.db.database import Database
+from mira.ui.i18n import tr
 
 
 @pytest.fixture
@@ -71,6 +72,11 @@ class TestPipelineWithTransactionParserEngine:
     def test_unknown_command_returns_none(self, pipeline):
         result = pipeline.process("what is the weather today")
         assert result.action == "none"
+        assert result.message == tr(
+            "chat.none.generic",
+            "en",
+            default="Sorry, I did not understand your request. I can help you record income, expenses, or review your financial summary.",
+        )
 
     def test_currency_normalisation_k_suffix(self, pipeline, db):
         result = pipeline.process("received 2k bonus")
@@ -123,7 +129,14 @@ class TestPipelineWithTransactionParserEngine:
         result = pipeline.process_chat("hola")
         assert result.action == "chat"
         assert result.success is False
-        assert "no está disponible" in result.message.lower() or "modelo" in result.message.lower()
+        assert result.message == tr(
+            "chat.unavailable",
+            "es",
+            default=(
+                "El modo chat no está disponible porque no hay un modelo GGUF activo. "
+                "Puedes seguir usando el modo asistente para registrar y consultar tus finanzas."
+            ),
+        )
 
 
 class TestPipelineCreditAccounts:
@@ -332,7 +345,37 @@ def test_pipeline_falls_back_when_engine_parse_fails(db):
     result = pipeline.process("hola")
     assert result.success is False
     assert result.action == "none"
-    assert "Disculpa" in result.message
+    assert result.message == tr(
+        "chat.parser.error",
+        "es",
+        default=(
+            "Disculpa, no pude procesar tu solicitud. "
+            "Por favor intenta con algo como:\n"
+            '  - "recibi 500 de salario"\n'
+            '  - "gaste 30 en comida"\n'
+            '  - "reporte"'
+        ),
+    )
+
+
+def test_pipeline_falls_back_when_engine_parse_fails_in_english(db):
+    db.setting.set("language", "en")
+    pipeline = Pipeline(db=db, engine=_EngineParseError())
+    result = pipeline.process("hello there")
+
+    assert result.success is False
+    assert result.action == "none"
+    assert result.message == tr(
+        "chat.parser.error",
+        "en",
+        default=(
+            "Sorry, I couldn't process your request. "
+            "Please try something like:\n"
+            '  - "received 500 salary"\n'
+            '  - "spent 30 on groceries"\n'
+            '  - "report"'
+        ),
+    )
 
 
 def test_pipeline_falls_back_when_engine_returns_invalid_json(db):

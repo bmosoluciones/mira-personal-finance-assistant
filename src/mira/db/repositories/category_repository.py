@@ -12,6 +12,7 @@ from mira.db.helpers import (
     _ICON_MAX_LENGTH,
     _UNSET,
     SAVINGS_GOALS_DEFAULTS,
+    localized_savings_goals_parent_name,
 )
 from mira.db.model import Bucket, Category, RecurringTransaction, SavingsGoal, Transaction
 
@@ -184,7 +185,7 @@ class CategoryRepository:
         parent = self._find_savings_goals_parent_category()
         if parent is None:
             return self.add_category(
-                name=SAVINGS_GOALS_DEFAULTS.name_for(self._database_language()),
+                name=localized_savings_goals_parent_name(self._database_language()),
                 cat_type="expense",
                 color=SAVINGS_GOALS_DEFAULTS.color,
                 is_savings=True,

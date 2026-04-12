@@ -38,7 +38,7 @@ _FEW_SHOT_EXAMPLES = [
     ),
     (
         "what is the weather today",
-        '{"action": "none", "amount": null, "description": null, "category": null, "account": null, "base_currency": "USD", "exchange_rate": null, "converted_amount": null, "report_type": null, "period": null, "filters": null, "message": "Disculpa, no entendí tu solicitud. Puedo ayudarte a registrar ingresos, gastos o ver tu resumen financiero."}',
+        '{"action": "none", "amount": null, "description": null, "category": null, "account": null, "base_currency": "USD", "exchange_rate": null, "converted_amount": null, "report_type": null, "period": null, "filters": null, "message": null}',
     ),
 ]
 

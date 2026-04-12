@@ -89,10 +89,15 @@ class ModelDownloadFlow:
                     interaction_mode=self._get_interaction_mode(),
                 )
             except Exception as exc:  # noqa: BLE001
+                del exc
                 session.progress_dialog.close()
                 self._notification_service.error(
                     tr("model.download.error.title", self._language, default="MIRA - Download Error"),
-                    str(exc),
+                    tr(
+                        "model.download.error.body_generic",
+                        self._language,
+                        default="The model could not be downloaded or activated. Please try again.",
+                    ),
                     widget=self._parent,
                 )
                 return
@@ -114,13 +119,18 @@ class ModelDownloadFlow:
             )
 
         def _on_error(message: str) -> None:
+            del message
             session = session_holder["session"]
             session.progress_dialog.close()
             if session.cancelled:
                 return
             self._notification_service.error(
                 tr("model.download.error.title", self._language, default="MIRA - Download Error"),
-                message,
+                tr(
+                    "model.download.error.body_generic",
+                    self._language,
+                    default="The model could not be downloaded or activated. Please try again.",
+                ),
                 widget=self._parent,
             )
 

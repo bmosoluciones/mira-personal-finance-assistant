@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from mira.db import bootstrap as db_bootstrap
 from mira.db import helpers as db_helpers
-from mira.db.helpers import SAVINGS_GOALS_DEFAULTS
+from mira.db.helpers import SAVINGS_GOALS_DEFAULTS, localized_savings_goals_parent_name
 from mira.db.model import Currency, Setting
 
 CURRENCY_CODES = db_helpers.CURRENCY_CODES
@@ -54,7 +54,7 @@ class SettingRepository:
         parent = self._find_savings_goals_parent_category()
         if parent is not None:
             return str(parent["name"])
-        return SAVINGS_GOALS_DEFAULTS.name_for(self._database_language())
+        return localized_savings_goals_parent_name(self._database_language())
 
     def get_currencies(self, region: str | None = "americas") -> list[dict]:
         query = Currency.select(Currency.code, Currency.name, Currency.region)

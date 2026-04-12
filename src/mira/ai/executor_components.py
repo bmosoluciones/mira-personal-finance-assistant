@@ -12,6 +12,7 @@ from typing import Any, cast
 from mira.db.database import Database
 from mira.db.money import MONEY_ZERO, Money, money_to_decimal
 from mira.transaction_kinds import TransactionType
+from mira.ui.i18n import normalize_language, tr
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,20 @@ class CreditCardDetectionPatterns:
     card_payment: Any
     card_payment_target: Any
     card_usage: Any
+
+
+def _component_language(db: Database) -> str:
+    return normalize_language(db.setting.get("language"))
+
+
+def _component_tr(
+    db: Database,
+    key: str,
+    default: str,
+    *,
+    params: dict[str, object] | None = None,
+) -> str:
+    return tr(key, _component_language(db), default=default, params=params)
 
 
 class ExecutorAccountResolver:
@@ -87,8 +102,12 @@ class ExecutorAccountResolver:
 
         context = requested_name or (raw_text[:40] if raw_text else None) or "unknown"
         raise ValueError(
-            f"No matching account could be resolved for '{context}'. "
-            "Please create an account in the application before adding transactions."
+            _component_tr(
+                self._db,
+                "chat.account.resolve.error",
+                "I could not identify a valid account for '{context}'. Create or select an account in the application before adding transactions.",
+                params={"context": str(context)},
+            )
         )
 
 
@@ -191,7 +210,11 @@ class ExecutorCreditCardHelper:
             return self._action_result_cls(
                 success=True,
                 action="none",
-                message="Necesito identificar con claridad la tarjeta de crédito para registrar ese pago.",
+                message=_component_tr(
+                    self._db,
+                    "chat.card_payment.target_required",
+                    "I need to identify the credit card clearly before I can record that payment.",
+                ),
             )
 
         source = self.resolve_credit_payment_source(raw_text)
@@ -199,14 +222,24 @@ class ExecutorCreditCardHelper:
             return self._action_result_cls(
                 success=True,
                 action="none",
-                message="Necesito saber desde qué cuenta bank/cash se realizó el pago de la tarjeta.",
+                message=_component_tr(
+                    self._db,
+                    "chat.card_payment.source_required",
+                    "I need to know which bank or cash account was used to pay the card.",
+                ),
             )
 
         amount_value = action.get("converted_amount")
         if amount_value is None:
             amount_value = action.get("amount")
         if amount_value is None:
-            raise ValueError("Credit card payment amount is required")
+            raise ValueError(
+                _component_tr(
+                    self._db,
+                    "chat.card_payment.amount_required",
+                    "The credit card payment amount is required.",
+                )
+            )
         stored_amount = money_to_decimal(cast(Any, amount_value)) or MONEY_ZERO
         debit_tx, credit_tx = self._db.transaction.record_credit_card_payment(
             from_account_id=int(source["id"]),
@@ -219,9 +252,16 @@ class ExecutorCreditCardHelper:
         return self._action_result_cls(
             success=True,
             action="add_expense",
-            message=(
-                f"↔ Card payment recorded: {self._format_money(action['amount'])} {action.get('base_currency', 'USD')}"
-                f" to {target['name']} from {source['name']}"
+            message=_component_tr(
+                self._db,
+                "chat.card_payment.recorded",
+                "Card payment recorded: {amount} {currency} to {target} from {source}",
+                params={
+                    "amount": self._format_money(action["amount"]),
+                    "currency": str(action.get("base_currency", "USD")),
+                    "target": str(target["name"]),
+                    "source": str(source["name"]),
+                },
             ),
             data={
                 "debit_transaction": debit_tx,
@@ -244,7 +284,11 @@ class ExecutorCreditCardHelper:
             return self._action_result_cls(
                 success=True,
                 action="none",
-                message="Hay más de una tarjeta posible para ese gasto. Indica cuál cuenta credit usar.",
+                message=_component_tr(
+                    self._db,
+                    "chat.card_purchase.multiple_cards",
+                    "There is more than one possible card for that expense. Tell me which credit account I should use.",
+                ),
             )
 
         if self.looks_like_credit_card_purchase(raw_text):
@@ -255,7 +299,11 @@ class ExecutorCreditCardHelper:
                 return self._action_result_cls(
                     success=True,
                     action="none",
-                    message="Necesito saber con cuál tarjeta de crédito hiciste esa compra.",
+                    message=_component_tr(
+                        self._db,
+                        "chat.card_purchase.card_required",
+                        "I need to know which credit card you used for that purchase.",
+                    ),
                 )
 
         return self._accounts.resolve_account(cast(str | None, action.get("account")), raw_text=raw_text)
@@ -362,17 +410,47 @@ class ExecutorReportBuilder:
         accounts = self._db.account.list()
         recent = transactions[:10]
         lines = [
-            f"📊 Report ({report_type}) – period: {period_preset}",
-            f"  Income:   {self._format_money(summary['total_income']):>10}",
-            f"  Expenses: {self._format_money(summary['total_expenses']):>10}",
-            f"  Savings:  {self._format_money(summary['savings']):>10}",
-            f"  Net:      {self._format_money(summary['net']):>10}",
-            f"  Transactions matched: {len(transactions)}",
+            _component_tr(
+                self._db,
+                "chat.report.header",
+                "Report ({report_type}) - period: {period}",
+                params={"report_type": str(report_type), "period": str(period_preset)},
+            ),
+            _component_tr(
+                self._db,
+                "chat.report.line.income",
+                "  Income: {amount}",
+                params={"amount": self._format_money(summary["total_income"])},
+            ),
+            _component_tr(
+                self._db,
+                "chat.report.line.expense",
+                "  Expense: {amount}",
+                params={"amount": self._format_money(summary["total_expenses"])},
+            ),
+            _component_tr(
+                self._db,
+                "chat.report.line.savings",
+                "  Savings: {amount}",
+                params={"amount": self._format_money(summary["savings"])},
+            ),
+            _component_tr(
+                self._db,
+                "chat.report.line.net",
+                "  Net: {amount}",
+                params={"amount": self._format_money(summary["net"])},
+            ),
+            _component_tr(
+                self._db,
+                "chat.report.line.transactions",
+                "  Transactions matched: {count}",
+                params={"count": len(transactions)},
+            ),
             "",
-            "Accounts:",
+            _component_tr(self._db, "chat.report.section.accounts", "Accounts:"),
         ]
         for acc in accounts:
-            lines.append(f"  {acc['name']:<20} {self._format_money(acc['balance']):>10}")
+            lines.append(f"  {acc['name']}: {self._format_money(acc['balance'])}")
 
         return self._action_result_cls(
             success=True,
@@ -469,7 +547,13 @@ class ExecutorTransactionRecorder:
         if amount_value is None:
             amount_value = action.get("amount")
         if amount_value is None:
-            raise ValueError("Income amount is required")
+            raise ValueError(
+                _component_tr(
+                    self._db,
+                    "chat.income.amount_required",
+                    "The income amount is required.",
+                )
+            )
         stored_amount = money_to_decimal(cast(Any, amount_value)) or MONEY_ZERO
         tx = self._db.transaction.create(
             account_id=account["id"],
@@ -481,11 +565,18 @@ class ExecutorTransactionRecorder:
             converted_amount=action.get("converted_amount"),
             source="nl_assistant",
         )
-        msg = (
-            f"✅ Income recorded: {self._format_money(action['amount'])} {action.get('base_currency', 'USD')}"
-            f" (converted: {self._format_money(stored_amount)})"
-            f"{' – ' + action['description'] if action.get('description') else ''}"
-            f" (account: {account_name})"
+        description_suffix = f" - {action['description']}" if action.get("description") else ""
+        msg = _component_tr(
+            self._db,
+            "chat.income.recorded",
+            "Income recorded: {amount} {currency} (converted: {converted}){description} (account: {account})",
+            params={
+                "amount": self._format_money(action["amount"]),
+                "currency": str(action.get("base_currency", "USD")),
+                "converted": self._format_money(stored_amount),
+                "description": description_suffix,
+                "account": str(account_name),
+            },
         )
         return self._action_result_cls(
             success=True,
@@ -507,7 +598,13 @@ class ExecutorTransactionRecorder:
         if amount_value is None:
             amount_value = action.get("amount")
         if amount_value is None:
-            raise ValueError("Expense amount is required")
+            raise ValueError(
+                _component_tr(
+                    self._db,
+                    "chat.expense.amount_required",
+                    "The expense amount is required.",
+                )
+            )
         stored_amount = money_to_decimal(cast(Any, amount_value)) or MONEY_ZERO
         tx = self._db.transaction.create(
             account_id=account["id"],
@@ -519,11 +616,18 @@ class ExecutorTransactionRecorder:
             converted_amount=action.get("converted_amount"),
             source="nl_assistant",
         )
-        msg = (
-            f"💸 Expense recorded: {self._format_money(action['amount'])} {action.get('base_currency', 'USD')}"
-            f" (converted: {self._format_money(stored_amount)})"
-            f"{' – ' + action['description'] if action.get('description') else ''}"
-            f" (account: {account_name})"
+        description_suffix = f" - {action['description']}" if action.get("description") else ""
+        msg = _component_tr(
+            self._db,
+            "chat.expense.recorded",
+            "Expense recorded: {amount} {currency} (converted: {converted}){description} (account: {account})",
+            params={
+                "amount": self._format_money(action["amount"]),
+                "currency": str(action.get("base_currency", "USD")),
+                "converted": self._format_money(stored_amount),
+                "description": description_suffix,
+                "account": str(account_name),
+            },
         )
         return self._action_result_cls(
             success=True,

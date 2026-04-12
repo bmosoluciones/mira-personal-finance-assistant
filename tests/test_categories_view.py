@@ -275,7 +275,7 @@ def test_category_dialog_filters_parent_options_by_type_and_excludes_current_cat
         assert int(income_parent["id"]) not in expense_parent_ids
         assert int(expense_current["id"]) not in expense_parent_ids
 
-        income_index = dialog._type_combo.findText("income")
+        income_index = dialog._type_combo.findData("income")
         assert income_index >= 0
         dialog._type_combo.setCurrentIndex(income_index)
         app.processEvents()
@@ -319,11 +319,14 @@ def test_categories_view_delete_confirmation_warns_that_action_is_irreversible(
     category = db.category.create("Food", "expense")
     prompts: list[tuple[str, str]] = []
 
+    def _fake_question(_parent, title, message, *_args, **_kwargs):
+        prompts.append((str(title), str(message)))
+        return qtwidgets.QMessageBox.StandardButton.No
+
     monkeypatch.setattr(
         qtwidgets.QMessageBox,
         "question",
-        lambda _parent, title, message, *_args, **_kwargs: prompts.append((str(title), str(message)))
-        or qtwidgets.QMessageBox.StandardButton.No,
+        _fake_question,
     )
 
     view = views_module.CategoriesView(db)
@@ -338,8 +341,12 @@ def test_categories_view_delete_confirmation_warns_that_action_is_irreversible(
 
         assert prompts == [
             (
-                "Eliminar categoría",
-                "¿Eliminar la categoría 'Food'?\n\nEsta acción no se puede revertir.",
+                view._t("categories.delete.title", "Delete Category"),
+                view._t(
+                    "categories.delete.body",
+                    "Delete category '{name}'?\n\nThis action cannot be undone.",
+                    params={"name": category["name"]},
+                ),
             )
         ]
         assert db.category.get(int(category["id"])) is not None

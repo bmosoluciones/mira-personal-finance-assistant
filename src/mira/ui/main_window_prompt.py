@@ -180,7 +180,12 @@ class MainWindowPromptMixin:
         self.notify_user_error(
             self,
             tr("app.name", self._language, default="MIRA"),
-            str(error),
+            str(error).strip()
+            or tr(
+                "chat.error.generic",
+                self._language,
+                default="I couldn't complete the request. Review the details and try again.",
+            ),
         )
         self._finish_command()
 

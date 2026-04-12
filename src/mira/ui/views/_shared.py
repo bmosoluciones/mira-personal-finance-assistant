@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from mira.db.database import Database
+from mira.error_policy import ErrorDescriptor, describe as describe_error
 from mira.finance_summary import build_savings_lookup
 from mira.transaction_kinds import is_balance_adjustment_transaction
 from mira.ui.i18n import normalize_language, tr
@@ -58,6 +59,15 @@ def _notify_warning(widget: QWidget, *args: object) -> None:
 
 def _notify_error(widget: QWidget, *args: object) -> None:
     _notify(widget, *args, level="error")
+
+
+def _describe_exception(db: Database, error: Exception) -> ErrorDescriptor:
+    return describe_error(error, language=_ui_lang(db))
+
+
+def _notify_exception(widget: QWidget, db: Database, error: Exception, *, title: str | None = None) -> None:
+    descriptor = _describe_exception(db, error)
+    _notify(widget, title or descriptor.title, descriptor.message, level=descriptor.level)
 
 
 _TABLE_STYLE = (

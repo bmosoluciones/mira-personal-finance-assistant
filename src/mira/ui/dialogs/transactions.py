@@ -154,7 +154,15 @@ class TransactionDialog(QDialog):
         self._payment_method_form = QFormLayout()
         self._payment_method_form.setSpacing(10)
         self._payment_method_combo = QComboBox()
-        self._payment_method_combo.addItems(["cash", "credit_card", "debit_card", "transfer", "other"])
+        payment_methods = [
+            ("dialog.transaction.payment_method.cash", "Cash", "cash"),
+            ("dialog.transaction.payment_method.credit_card", "Credit card", "credit_card"),
+            ("dialog.transaction.payment_method.debit_card", "Debit card", "debit_card"),
+            ("dialog.transaction.payment_method.transfer", "Transfer", "transfer"),
+            ("dialog.transaction.payment_method.other", "Other", "other"),
+        ]
+        for key, default, value in payment_methods:
+            self._payment_method_combo.addItem(tr(key, self._language, default=default), value)
         content_layout.addLayout(grid)
         self._payment_method_form.addRow(
             tr("dialog.transaction.payment_method", self._language, default="Payment method:"),
@@ -417,7 +425,7 @@ class TransactionDialog(QDialog):
 
         self._set_category_combo_value(str(tx.get("category") or ""))
 
-        pm_idx = self._payment_method_combo.findText(tx.get("payment_method") or "cash")
+        pm_idx = self._payment_method_combo.findData(tx.get("payment_method") or "cash")
         if pm_idx >= 0:
             self._payment_method_combo.setCurrentIndex(pm_idx)
         self._desc_edit.setText(tx.get("description") or "")
@@ -538,7 +546,7 @@ class TransactionDialog(QDialog):
             "account_id": self._account_combo.currentData(),
             "category": self._normalized_category(),
             "subcategory": None,
-            "payment_method": self._payment_method_combo.currentText(),
+            "payment_method": self._payment_method_combo.currentData() or "cash",
             "description": self._desc_edit.text().strip() or None,
             "note": self._note_edit.toPlainText().strip() or None,
             "receipt_path": self._receipt_path_edit.text().strip() or None,
@@ -717,7 +725,7 @@ class TransferDialog(QDialog):
         self._sync_currency_transfer_fields()
 
         action_row = QHBoxLayout()
-        cancel_btn = QPushButton("Cancelar")
+        cancel_btn = QPushButton(_transfer_tr(self._db, "dialog.common.cancel", "Cancel"))
         cancel_btn.clicked.connect(self.reject)
         save_btn = QPushButton(self._dialog_title())
         save_btn.clicked.connect(self._on_accept)

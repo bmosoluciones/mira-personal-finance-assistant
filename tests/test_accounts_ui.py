@@ -167,6 +167,7 @@ def test_accounts_view_transfer_shortcuts_reuse_existing_transfer_dialog(
     source = db.account.create("Banco", "bank", 500.0, "USD")
     destination = db.account.create("Ahorro", "bank", 50.0, "USD")
     credit = db.account.create("Visa", "credit", -25.0, "USD")
+    valid_tx_date = credit["created_at"].strftime("%Y-%m-%d")
     dialog_calls: list[bool] = []
 
     class FakeTransferDialog:
@@ -188,7 +189,7 @@ def test_accounts_view_transfer_shortcuts_reuse_existing_transfer_dialog(
                 "amount": 20.0,
                 "exchange_rate": 1.0,
                 "converted_amount": 20.0,
-                "tx_date": "2026-04-10",
+                "tx_date": valid_tx_date,
                 "description": "shortcut",
                 "note": "nota",
             }

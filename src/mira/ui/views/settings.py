@@ -320,7 +320,9 @@ class SettingsView(QWidget):
             self._mode_combo.setCurrentIndex(midx)
 
     def set_engine_info(self, info: str) -> None:
-        self._engine_label.setText(f"Engine: {info}")
+        self._engine_label.setText(
+            tr("settings.engine.info", self._language, default="Engine: {info}", params={"info": info})
+        )
 
     def _refresh_model_options(self, *, selected_model: str) -> None:
         self._models_frame.setVisible(self._llama_cpp_available)

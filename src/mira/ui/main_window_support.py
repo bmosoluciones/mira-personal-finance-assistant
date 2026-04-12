@@ -120,7 +120,7 @@ class MainWindowNotificationProxy:
                 service.info(str(title), str(message), widget=widget)
 
     def notify_exception(self, title: str, exc: Exception, *, prefix: str | None = None) -> None:
-        descriptor = describe_error(exc)
+        descriptor = describe_error(exc, language=getattr(self._window, "_language", "en"))
         message = descriptor.message if prefix is None else f"{prefix}\n{descriptor.message}"
         self.notify(self._window, title, message, level=descriptor.level)
 

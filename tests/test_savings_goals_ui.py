@@ -237,8 +237,13 @@ def test_savings_goals_view_delete_confirmation_warns_that_action_is_irreversibl
 
         assert prompts == [
             (
-                "Delete Goal",
-                "¿Eliminar la meta de ahorro 'Vacation'?\n\nEsta acción no se puede revertir.",
+                views_module._tr_db(db, "goals.delete.title", "Delete Goal"),
+                views_module._tr_db(
+                    db,
+                    "goals.delete.body",
+                    "Delete savings goal '{name}'?\n\nThis action cannot be undone.",
+                    params={"name": goal["name"]},
+                ),
             )
         ]
         assert db.savings_goal.get(int(goal["id"])) is not None

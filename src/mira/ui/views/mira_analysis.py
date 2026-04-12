@@ -72,7 +72,11 @@ class _WaterfallChartWidget(QWidget):
         super().__init__(parent)
         self._db = db
         self._steps: list[dict[str, Any]] = []
-        self._empty_state_text = "No data available for the waterfall chart."
+        self._empty_state_text = tr(
+            "mira.analysis.waterfall.no_data",
+            normalize_language(self._db.setting.get("language")),
+            default="No data available for the waterfall chart.",
+        )
         self.setMinimumHeight(420)
 
     def set_steps(self, steps: list[dict[str, Any]]) -> None:
@@ -800,15 +804,20 @@ class MiraAnalysisView(QWidget):
         if emit_to_assistant:
             self._emit_report_to_assistant()
 
-    def _on_report_error(self, message: str) -> None:
-        _notify_warning(self, self._t("mira.analysis.dialog_title", "Análisis MIRA"), message)
-        self._set_analysis_status(message, color="#F48771")
-
     def _on_report_finished(self) -> None:
         self._btn_apply.setEnabled(True)
         self._worker = None
         if self._payload is not None:
             self._mark_report_pending()
+
+    def _on_report_error(self, message: str) -> None:
+        del message
+        localized_message = self._t(
+            "mira.analysis.load_error",
+            "The MIRA analysis could not be loaded. Review the period and try again.",
+        )
+        _notify_warning(self, self._t("mira.analysis.dialog_title", "MIRA Analysis"), localized_message)
+        self._set_analysis_status(localized_message, color="#F48771")
 
     def refresh(self) -> None:
         self._language = normalize_language(self._db.setting.get("language"))

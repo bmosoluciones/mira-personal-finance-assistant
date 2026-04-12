@@ -35,11 +35,11 @@ from mira.ui.coordinators.model_download_coordinator import ModelDownloadCoordin
 from mira.ui.coordinators.model_download_flow import ModelDownloadFlow, ModelDownloadSession
 from mira.ui.notification_service import NotificationService
 from mira.ui.notifications import show_user_message
-from mira.ui.main_window_layout import MainWindowLayoutMixin
+from mira.ui.main_window_layout import MainWindowLayoutMixin, _SIDEBAR_WIDTH  # noqa: F401
 from mira.ui.main_window_navigation import MainWindowNavigationMixin
 from mira.ui.main_window_prompt import MainWindowPromptMixin
 from mira.ui.main_window_shell import MainWindowShellMixin
-from mira.ui.main_window_lifecycle import MainWindowLifecycleMixin
+from mira.ui.main_window_lifecycle import MainWindowLifecycleMixin, _DOCS_URL, webbrowser  # noqa: F401
 from mira.ui.main_window_support import (
     MainWindowChatPresenter,
     MainWindowFileActions,
@@ -249,7 +249,7 @@ class MainWindow(
             self,
             tr("dialog.backup.title", self._language, default="Backup Database"),
             default_name,
-            "SQLite DB (*.db);;All Files (*)",
+            tr("file.filter.sqlite_db", self._language, default="SQLite DB (*.db);;All Files (*)"),
         )
         if not path:
             return
@@ -262,7 +262,7 @@ class MainWindow(
             self,
             tr("dialog.restore.title", self._language, default="Restore Database"),
             "",
-            "SQLite DB (*.db);;All Files (*)",
+            tr("file.filter.sqlite_db", self._language, default="SQLite DB (*.db);;All Files (*)"),
         )
         if not path:
             return
@@ -278,10 +278,17 @@ class MainWindow(
         chat_type = type(chat_engine).__name__ if chat_engine is not None else "Disabled"
         self.notify_user_info(
             self,
-            "AI Diagnostics",
-            f"Assistant parser: <b>{parser_type}</b><br>"
-            f"Chat engine: <b>{chat_type}</b><br><br>"
-            "Assistant mode always uses the deterministic parser.<br>"
-            "Optional local chat mode can be enabled with:<br>"
-            "<code>mira --model /path/to/model.gguf</code>",
+            tr("chat.diagnostics.title", self._language, default="AI Diagnostics"),
+            tr(
+                "chat.diagnostics.body",
+                self._language,
+                default=(
+                    "Assistant parser: <b>{parser}</b><br>"
+                    "Chat engine: <b>{chat}</b><br><br>"
+                    "Assistant mode always uses the deterministic parser.<br>"
+                    "Optional local chat mode can be enabled with:<br>"
+                    "<code>mira --model /path/to/model.gguf</code>"
+                ),
+                params={"parser": parser_type, "chat": chat_type},
+            ),
         )

@@ -326,8 +326,13 @@ class TransactionsView(QWidget):
             return
         reply = QMessageBox.question(
             self,
-            "Delete Transaction",
-            f"Delete transaction of {_fmt_amount(self._db, tx['amount'])} on {tx['date']}?",
+            _tr_db(self._db, "transactions.delete.title", "Delete Transaction"),
+            _tr_db(
+                self._db,
+                "transactions.delete.body",
+                "Delete transaction of {amount} on {date}?",
+                params={"amount": _fmt_amount(self._db, tx["amount"]), "date": tx["date"]},
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -418,8 +423,8 @@ class TransactionsView(QWidget):
         current_idx = names.index(current_name) if current_name in names else 0
         chosen_name, ok = QInputDialog.getItem(
             self,
-            "Change Account",
-            "Move transaction to account:",
+            _tr_db(self._db, "transactions.change_account.title", "Change Account"),
+            _tr_db(self._db, "transactions.change_account.prompt", "Move transaction to account:"),
             names,
             current_idx,
             False,
@@ -434,8 +439,13 @@ class TransactionsView(QWidget):
 
         reply = QMessageBox.question(
             self,
-            "Change Account",
-            f"Move this transaction to account '{selected_account['name']}'?",
+            _tr_db(self._db, "transactions.change_account.title", "Change Account"),
+            _tr_db(
+                self._db,
+                "transactions.change_account.confirm",
+                "Move this transaction to account '{name}'?",
+                params={"name": selected_account["name"]},
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
@@ -472,8 +482,8 @@ class TransactionsView(QWidget):
         idx = categories.index(current) if current in categories else 0
         new_category, ok = QInputDialog.getItem(
             self,
-            "Change Category",
-            "Select category:",
+            _tr_db(self._db, "transactions.change_category.title", "Change Category"),
+            _tr_db(self._db, "transactions.change_category.prompt", "Select category:"),
             categories,
             idx,
             False,
@@ -485,8 +495,13 @@ class TransactionsView(QWidget):
 
         reply = QMessageBox.question(
             self,
-            "Change Category",
-            f"Change category to '{new_category}'?",
+            _tr_db(self._db, "transactions.change_category.title", "Change Category"),
+            _tr_db(
+                self._db,
+                "transactions.change_category.confirm",
+                "Change category to '{name}'?",
+                params={"name": new_category},
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
@@ -498,12 +513,12 @@ class TransactionsView(QWidget):
         if not _select_row_at_pos(self._table, pos):
             return
         menu = QMenu(self)
-        act_edit = menu.addAction("Edit")
-        act_delete = menu.addAction("Delete")
-        act_dup = menu.addAction("Duplicate")
+        act_edit = menu.addAction(_tr_db(self._db, "common.edit", "Edit"))
+        act_delete = menu.addAction(_tr_db(self._db, "common.delete", "Delete"))
+        act_dup = menu.addAction(_tr_db(self._db, "common.duplicate", "Duplicate"))
         menu.addSeparator()
-        act_change_acc = menu.addAction("Cambiar de cuenta")
-        act_change_cat = menu.addAction("Cambiar de categoria")
+        act_change_acc = menu.addAction(_tr_db(self._db, "transactions.change_account.title", "Change Account"))
+        act_change_cat = menu.addAction(_tr_db(self._db, "transactions.change_category.title", "Change Category"))
 
         chosen = menu.exec(self._table.viewport().mapToGlobal(pos))
         if chosen is act_edit:

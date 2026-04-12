@@ -30,6 +30,7 @@ from typing import Any
 from mira.ai.base_engine import BaseEngine
 from mira.ai.parser_signals import ParseSignals, collect_signals, resolve_intent
 from mira.ai.prompt_assets import PromptAssets
+from mira.ui.i18n import tr
 
 # ---------------------------------------------------------------------------
 # Amount / currency helpers
@@ -461,9 +462,7 @@ def _extract_freeform_category(text: str) -> str | None:
 # Result construction
 # ---------------------------------------------------------------------------
 
-_NONE_MESSAGE = (
-    "Disculpa, no entendí tu solicitud. Puedo ayudarte a registrar ingresos, gastos o ver tu resumen financiero."
-)
+_NONE_MESSAGE_KEY = "chat.none.generic"
 
 _ACTION_TEMPLATE: dict[str, Any] = {
     "action": "none",
@@ -493,7 +492,7 @@ def _build_filters(category: str | None) -> dict[str, Any] | None:
     }
 
 
-def _build_result(signals: ParseSignals, intent: str, default_currency: str | None = None) -> dict[str, Any]:
+def _build_result_legacy(signals: ParseSignals, intent: str, default_currency: str | None = None) -> dict[str, Any]:
     """Convert an intent + signals into the final action dict using ``match/case``."""
     result: dict[str, Any] = dict(_ACTION_TEMPLATE)
 
@@ -513,16 +512,24 @@ def _build_result(signals: ParseSignals, intent: str, default_currency: str | No
 
         case "expense" if signals.amount is None:
             result["action"] = "none"
-            result["message"] = (
-                "Parece un gasto, pero no detecté el monto ni la moneda. "
-                "¿Puedes indicar cuánto gastaste y en qué moneda?"
+            result["message"] = _message_text(
+                "chat.parser.missing_amount.expense",
+                signals.raw_text,
+                default=(
+                    "This looks like an expense, but I could not detect the amount or currency. "
+                    "Can you tell me how much you spent and in which currency?"
+                ),
             )
 
         case "income" if signals.amount is None:
             result["action"] = "none"
-            result["message"] = (
-                "Parece un ingreso, pero no detecté el monto ni la moneda. "
-                "¿Puedes indicar cuánto recibiste y en qué moneda?"
+            result["message"] = _message_text(
+                "chat.parser.missing_amount.income",
+                signals.raw_text,
+                default=(
+                    "This looks like income, but I could not detect the amount or currency. "
+                    "Can you tell me how much you received and in which currency?"
+                ),
             )
 
         case "expense":
@@ -549,14 +556,145 @@ def _build_result(signals: ParseSignals, intent: str, default_currency: str | No
 
         case "unknown" if signals.amount is not None:
             result["action"] = "none"
-            result["message"] = (
-                f"Detecté un monto de {signals.amount:.0f}, pero no estoy seguro "
-                "si es ingreso o gasto. ¿Puedes indicármelo?"
+            result["message"] = _message_text(
+                "chat.parser.unknown_direction",
+                signals.raw_text,
+                default=(
+                    "I detected an amount of {amount:.0f}, but I am not sure whether it is income or expense. "
+                    "Can you clarify?"
+                ),
+                params={"amount": float(signals.amount)},
             )
 
         case _:
             result["action"] = "none"
-            result["message"] = _NONE_MESSAGE
+            result["message"] = _message_text(
+                _NONE_MESSAGE_KEY,
+                signals.raw_text,
+                default=(
+                    "Sorry, I did not understand your request. "
+                    "I can help you record income, expenses, or review your financial summary."
+                ),
+            )
+
+    return result
+
+
+# Localized override for assistant-facing clarification messages. Defining this
+# second copy keeps the parser logic readable while allowing the final user copy
+# to be translated without threading database state through the parser.
+_SPANISH_MESSAGE_HINTS = {
+    "abone",
+    "ahorro",
+    "comida",
+    "cuenta",
+    "gaste",
+    "gasto",
+    "gastos",
+    "ingreso",
+    "pague",
+    "recibi",
+    "reporte",
+    "salario",
+    "tarjeta",
+}
+
+
+def _message_language(text: str | None) -> str:
+    normalized = " ".join(str(text or "").casefold().split())
+    words = set(re.findall(r"\w+", normalized, flags=re.UNICODE))
+    if re.search(r"[áéíóúñ¿¡]", normalized) or _SPANISH_MESSAGE_HINTS.intersection(words):
+        return "es"
+    return "en"
+
+
+def _message_text(key: str, raw_text: str | None, *, default: str, params: dict[str, object] | None = None) -> str:
+    return tr(key, _message_language(raw_text), default=default, params=params)
+
+
+def _build_result(signals: ParseSignals, intent: str, default_currency: str | None = None) -> dict[str, Any]:
+    result: dict[str, Any] = dict(_ACTION_TEMPLATE)
+
+    freeform_category = _extract_freeform_category(signals.raw_text) if signals.account is None else None
+
+    match intent:
+        case "report":
+            result["action"] = "report"
+            result["report_type"] = _extract_report_type(signals.raw_text)
+            result["period"] = _extract_period(signals.raw_text)
+            result["filters"] = _build_filters(signals.category)
+
+        case "analysis":
+            result["action"] = "data_analysis"
+            result["period"] = _extract_period(signals.raw_text)
+            result["filters"] = _build_filters(signals.category)
+
+        case "expense" if signals.amount is None:
+            result["action"] = "none"
+            result["message"] = _message_text(
+                "chat.parser.missing_amount.expense",
+                signals.raw_text,
+                default=(
+                    "This looks like an expense, but I could not detect the amount or currency. "
+                    "Can you tell me how much you spent and in which currency?"
+                ),
+            )
+
+        case "income" if signals.amount is None:
+            result["action"] = "none"
+            result["message"] = _message_text(
+                "chat.parser.missing_amount.income",
+                signals.raw_text,
+                default=(
+                    "This looks like income, but I could not detect the amount or currency. "
+                    "Can you tell me how much you received and in which currency?"
+                ),
+            )
+
+        case "expense":
+            amount = _adjust_amount_by_context(signals.amount, signals.raw_text, is_income=False)  # type: ignore[arg-type]
+            result["action"] = "add_expense"
+            result["amount"] = amount
+            result["description"] = signals.raw_text.strip()
+            result["category"] = signals.category or freeform_category or "expense"
+            result["account"] = signals.account
+            result["base_currency"] = _extract_currency(signals.raw_text, default_currency)
+            result["exchange_rate"] = 1.0
+            result["converted_amount"] = amount
+
+        case "income":
+            amount = _adjust_amount_by_context(signals.amount, signals.raw_text, is_income=True)  # type: ignore[arg-type]
+            result["action"] = "add_income"
+            result["amount"] = amount
+            result["description"] = signals.raw_text.strip()
+            result["category"] = signals.category or freeform_category or "income"
+            result["account"] = signals.account
+            result["base_currency"] = _extract_currency(signals.raw_text, default_currency)
+            result["exchange_rate"] = 1.0
+            result["converted_amount"] = amount
+
+        case "unknown" if signals.amount is not None:
+            result["action"] = "none"
+            result["message"] = _message_text(
+                "chat.parser.unknown_direction",
+                signals.raw_text,
+                default=(
+                    "I detected an amount of {amount:.0f}, but I am not sure whether it is income or expense. "
+                    "Can you clarify?"
+                ),
+                params={"amount": float(signals.amount)},
+            )
+
+        case _:
+            result["action"] = "none"
+            result["message"] = _message_text(
+                "chat.none.generic",
+                signals.raw_text,
+                default=(
+                    "Sorry, I did not understand your request. "
+                    "I can help you record income, expenses, or review your financial summary."
+                ),
+            )
 
     return result
 

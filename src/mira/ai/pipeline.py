@@ -25,6 +25,7 @@ from mira.ai.executor import ActionResult, Executor
 from mira.ai.normalizer import normalise
 from mira.ai.validator import validate
 from mira.db.database import Database
+from mira.ui.i18n import tr
 
 logger = logging.getLogger(__name__)
 
@@ -176,10 +177,20 @@ class Pipeline:
         return "es" if str(self._db.setting.get("language") or "en").strip().lower() == "es" else "en"
 
     def _parser_error_message(self, user_input: str | None = None) -> str:
-        return _PARSER_ERROR_MESSAGES[self._chat_language(user_input)]
+        language = self._chat_language(user_input)
+        return tr(
+            "chat.parser.error",
+            language,
+            default=_PARSER_ERROR_MESSAGES[language],
+        )
 
     def _chat_unavailable_message(self, user_input: str | None = None) -> str:
-        return _CHAT_UNAVAILABLE_MESSAGES[self._chat_language(user_input)]
+        language = self._chat_language(user_input)
+        return tr(
+            "chat.unavailable",
+            language,
+            default=_CHAT_UNAVAILABLE_MESSAGES[language],
+        )
 
     @property
     def engine(self) -> BaseEngine:

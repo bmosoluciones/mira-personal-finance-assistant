@@ -8,6 +8,7 @@ import importlib
 import pytest
 
 from conftest import opengl_import_error
+from mira.ui.i18n import tr
 
 pytestmark = pytest.mark.skipif(
     opengl_import_error(),
@@ -252,7 +253,11 @@ def test_model_download_flow_notifies_error_and_closes_dialog(monkeypatch: pytes
     assert len(notifications.error_calls) == 1
     title, message, widget = notifications.error_calls[0]
     assert title.endswith("Download Error")
-    assert message == "network down"
+    assert message == tr(
+        "model.download.error.body_generic",
+        "en",
+        default="The model could not be downloaded or activated. Please try again.",
+    )
     assert widget is None
 
 
@@ -286,5 +291,9 @@ def test_model_download_flow_notifies_service_failures(monkeypatch: pytest.Monke
     assert len(notifications.error_calls) == 1
     title, message, widget = notifications.error_calls[0]
     assert title.endswith("Download Error")
-    assert message == "reload failed"
+    assert message == tr(
+        "model.download.error.body_generic",
+        "en",
+        default="The model could not be downloaded or activated. Please try again.",
+    )
     assert widget is None

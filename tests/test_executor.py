@@ -12,6 +12,7 @@ import pytest
 from mira.ai.executor import Executor
 from mira.ai import executor as executor_module
 from mira.db.database import Database
+from mira.ui.i18n import tr
 
 
 @pytest.fixture
@@ -191,6 +192,7 @@ class TestExecutorAddExpense:
         assert credit_after["balance"] == pytest.approx(-100.0)
 
     def test_credit_card_payment_without_clear_source_returns_none(self, executor, db):
+        db.setting.set("language", "es")
         db.account.create("BAC", account_type="bank", opening_balance=500.0, currency="NIO")
         db.account.create("LAFISE", account_type="bank", opening_balance=400.0, currency="NIO")
         credit = db.account.create("Visa", account_type="credit", opening_balance=-250.0, currency="NIO")
@@ -207,7 +209,11 @@ class TestExecutorAddExpense:
 
         assert result.success is True
         assert result.action == "none"
-        assert "cuenta" in result.message.lower() or "bank/cash" in result.message.lower()
+        assert result.message == tr(
+            "chat.card_payment.source_required",
+            "es",
+            default="Necesito saber desde que cuenta bank/cash se realizo el pago de la tarjeta.",
+        )
 
     @pytest.mark.parametrize(
         "description",
@@ -293,17 +299,32 @@ class TestExecutorDataAnalysis:
 
 
 class TestExecutorNone:
-    def test_returns_friendly_message(self, executor):
+    def test_returns_localized_default_message_in_spanish(self, executor, db):
+        db.setting.set("language", "es")
         action = _action(
             action="none",
             amount=None,
             exchange_rate=None,
             converted_amount=None,
-            message="Disculpa, no entendí tu solicitud.",
+            message=None,
         )
         result = executor.execute(action)
         assert result.success is True
-        assert "Disculpa" in result.message or "entend" in result.message
+        assert result.message == tr(
+            "chat.none.generic",
+            "es",
+            default="Sorry, I did not understand your request. I can help you record income, expenses, or review your financial summary.",
+        )
+
+    def test_returns_localized_default_message_in_english(self, executor, db):
+        db.setting.set("language", "en")
+        result = executor.execute(_action(action="none", message=None))
+        assert result.success is True
+        assert result.message == tr(
+            "chat.none.generic",
+            "en",
+            default="Sorry, I did not understand your request. I can help you record income, expenses, or review your financial summary.",
+        )
 
 
 def test_execute_unknown_action_uses_none_handler(executor):
@@ -345,6 +366,75 @@ def test_report_filters_by_multiple_categories_account_and_amount_range(executor
     assert len(txs) == 1
     assert txs[0]["category"] == "transport"
     assert float(txs[0]["amount"]) == pytest.approx(20.0)
+
+
+def test_income_confirmation_is_localized_in_spanish(executor, db):
+    db.setting.set("language", "es")
+
+    result = executor.execute(_action(action="add_income", amount=125.0, converted_amount=125.0, description="salario"))
+
+    assert result.success is True
+    assert result.action == "add_income"
+    assert result.message.startswith("Ingreso registrado:")
+    assert "(cuenta:" in result.message
+
+
+def test_expense_confirmation_is_localized_in_english(executor, db):
+    db.setting.set("language", "en")
+
+    result = executor.execute(
+        _action(action="add_expense", amount=45.0, converted_amount=45.0, description="groceries")
+    )
+
+    assert result.success is True
+    assert result.action == "add_expense"
+    assert result.message.startswith("Expense recorded:")
+    assert "(account:" in result.message
+
+
+def test_credit_card_payment_clarification_is_localized_in_english(executor, db):
+    db.setting.set("language", "en")
+    db.account.create("BAC", account_type="bank", opening_balance=500.0, currency="NIO")
+    db.account.create("LAFISE", account_type="bank", opening_balance=400.0, currency="NIO")
+    credit = db.account.create("Visa", account_type="credit", opening_balance=-250.0, currency="NIO")
+    db.account.set_default(credit["id"])
+
+    result = executor.execute(
+        _action(
+            action="add_expense",
+            amount=100.0,
+            converted_amount=100.0,
+            description="paid 100 to visa",
+        )
+    )
+
+    assert result.success is True
+    assert result.action == "none"
+    assert result.message == tr(
+        "chat.card_payment.source_required",
+        "en",
+        default="I need to know which bank or cash account was used to pay the card.",
+    )
+
+
+def test_report_message_is_localized_in_english(executor, db):
+    db.setting.set("language", "en")
+    result = executor.execute(
+        _action(
+            action="report",
+            amount=None,
+            exchange_rate=None,
+            converted_amount=None,
+            report_type="expenses",
+            period={"preset": "this_month", "from": None, "to": None},
+            filters={"categories": None, "accounts": None, "min_amount": None, "max_amount": None, "text": None},
+        )
+    )
+
+    assert result.success is True
+    assert result.action == "report"
+    assert result.message.splitlines()[0] == "Report (expenses) - period: this_month"
+    assert "Accounts:" in result.message
 
 
 def test_compute_summary_mixed_transactions(db) -> None:

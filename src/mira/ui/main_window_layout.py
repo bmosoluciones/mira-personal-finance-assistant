@@ -312,9 +312,18 @@ class MainWindowLayoutMixin:
         qb_row.setContentsMargins(0, 0, 0, 0)
         qb_row.setSpacing(6)
         for label, template in [
-            (tr("quick.add_income", self._language, default="➕ Add Income"), "received 0 from "),
-            (tr("quick.add_expense", self._language, default="➖ Add Expense"), "spent 0 on "),
-            (tr("quick.report", self._language, default="📊 View Report"), "report"),
+            (
+                tr("quick.add_income", self._language, default="➕ Add Income"),
+                tr("quick.template.add_income", self._language, default="received 0 from "),
+            ),
+            (
+                tr("quick.add_expense", self._language, default="➖ Add Expense"),
+                tr("quick.template.add_expense", self._language, default="spent 0 on "),
+            ),
+            (
+                tr("quick.report", self._language, default="📊 View Report"),
+                tr("quick.template.report", self._language, default="report"),
+            ),
         ]:
             btn = QPushButton(label)
             btn.setStyleSheet(

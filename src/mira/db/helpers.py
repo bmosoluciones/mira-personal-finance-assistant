@@ -192,12 +192,22 @@ def normalize_language(language: str | None) -> str:
     return "es" if normalized == "es" else "en"
 
 
+def _translated_db_label(key: str, language: str | None, default: str) -> str:
+    from mira.ui.i18n import tr
+
+    return tr(key, normalize_language(language), default=default)
+
+
 def localized_default_account_name(language: str | None) -> str:
-    return "Cuenta principal" if normalize_language(language) == "es" else "Main account"
+    return _translated_db_label("db.default_account_name", language, "Main account")
 
 
 def localized_default_savings_name(language: str | None) -> str:
-    return "Ahorro" if normalize_language(language) == "es" else "Savings"
+    return _translated_db_label("db.default_savings_name", language, "Savings")
+
+
+def localized_savings_goals_parent_name(language: str | None) -> str:
+    return _translated_db_label("db.savings_goals_parent_name", language, "Savings Goals")
 
 
 def fold_text(value: str | None) -> str:

@@ -69,8 +69,9 @@ class CategoryDialog(QDialog):
         form.addRow(tr("dialog.category.name", self._language, default="Name:"), self._name_edit)
 
         self._type_combo = QComboBox()
-        self._type_combo.addItems(["expense", "income"])
-        if (idx := self._type_combo.findText(self._default_type)) >= 0:
+        self._type_combo.addItem(tr("dialog.category.type.expense", self._language, default="Expense"), "expense")
+        self._type_combo.addItem(tr("dialog.category.type.income", self._language, default="Income"), "income")
+        if (idx := self._type_combo.findData(self._default_type)) >= 0:
             self._type_combo.setCurrentIndex(idx)
         self._type_combo.currentIndexChanged.connect(self._populate_parents)
         form.addRow(tr("dialog.category.type", self._language, default="Type:"), self._type_combo)
@@ -134,7 +135,7 @@ class CategoryDialog(QDialog):
 
     def _prefill(self, cat: dict) -> None:
         self._name_edit.setText(cat.get("name", ""))
-        if (idx := self._type_combo.findText(cat.get("type", "expense"))) >= 0:
+        if (idx := self._type_combo.findData(cat.get("type", "expense"))) >= 0:
             self._type_combo.setCurrentIndex(idx)
         self._update_color_preview(str(cat.get("color") or "#888888"))
         _set_icon_combo_value(self._icon_combo, str(cat.get("icon") or ""))
@@ -157,14 +158,14 @@ class CategoryDialog(QDialog):
         icon_value = (self._icon_combo.currentData() or self._icon_combo.currentText()).strip()
         return {
             "name": self._name_edit.text().strip(),
-            "cat_type": self._type_combo.currentText(),
+            "cat_type": str(self._type_combo.currentData() or "expense"),
             "color": self._selected_color,
             "icon": icon_value,
             "parent_id": self._parent_combo.currentData(),
         }
 
     def _populate_parents(self) -> None:
-        cat_type = self._type_combo.currentText()
+        cat_type = str(self._type_combo.currentData() or "expense")
         all_cats = [cat for cat in self._db.category.list(cat_type) if cat.get("parent_id") is None]
         current_id = self._category["id"] if self._category and "id" in self._category else None
         self._parent_combo.clear()

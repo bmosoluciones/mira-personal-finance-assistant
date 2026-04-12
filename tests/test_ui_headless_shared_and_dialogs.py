@@ -106,7 +106,7 @@ def test_shared_helpers_cover_notifications_formatting_and_selection(monkeypatch
     assert layout.spacing == 10
     assert chart_view.minimum_height == 420
     assert chart_view.render_hints == [qt.QtGui.QPainter.RenderHint.Antialiasing]
-    assert module._account_type_label(db, "card") == "credit"
+    assert module._account_type_label(db, "card") == module._tr_db(db, "accounts.type.credit", "credit")
 
 
 def test_cell_delegates_draw_semantic_cells_and_badges(monkeypatch) -> None:

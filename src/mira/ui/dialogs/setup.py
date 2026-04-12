@@ -24,14 +24,14 @@ from PySide6.QtWidgets import (
 )
 
 from mira.db.database import CURRENCY_CODES, Database
-from mira.ui.i18n import normalize_language, tr
-from mira.ui.notifications import show_user_message
-from mira.ui.number_format import separator_options, validate_number_format_config
 from mira.ui.dialogs._shared import (
     _INITIAL_SETUP_THEME,
     _make_balance_spin,
     _resolve_ui_icon_path,
 )
+from mira.ui.i18n import SUPPORTED_LANGUAGES, normalize_language, tr
+from mira.ui.notifications import show_user_message
+from mira.ui.number_format import separator_options, validate_number_format_config
 
 
 class InitialSetupDialog(QWizard):
@@ -47,15 +47,15 @@ class InitialSetupDialog(QWizard):
         super().__init__(parent)
         self._db = db
         self._wizard_language = "en"
-        self.setWindowTitle("MIRA - Initial setup")
+        self.setWindowTitle(tr("setup.wizard.title", self._wizard_language, default="MIRA - Initial setup"))
         self.setMinimumWidth(560)
         self.setMinimumHeight(520)
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         self.setOption(QWizard.WizardOption.NoBackButtonOnStartPage, True)
-        self.setButtonText(QWizard.WizardButton.NextButton, "Next ->")
-        self.setButtonText(QWizard.WizardButton.BackButton, "<- Back")
-        self.setButtonText(QWizard.WizardButton.FinishButton, "Start")
-        self.setButtonText(QWizard.WizardButton.CancelButton, "Cancel")
+        self.setButtonText(QWizard.WizardButton.NextButton, tr("setup.wizard.btn.next", self._wizard_language))
+        self.setButtonText(QWizard.WizardButton.BackButton, tr("setup.wizard.btn.back", self._wizard_language))
+        self.setButtonText(QWizard.WizardButton.FinishButton, tr("setup.wizard.btn.finish", self._wizard_language))
+        self.setButtonText(QWizard.WizardButton.CancelButton, tr("setup.wizard.btn.cancel", self._wizard_language))
 
         self._page_welcome = _WelcomePage()
         self._page_profile = _ProfilePage(db)
@@ -76,11 +76,11 @@ class InitialSetupDialog(QWizard):
         lang = normalize_language(language)
         self._wizard_language = lang
 
-        self.setWindowTitle(tr("setup.wizard.title", lang))
-        self.setButtonText(QWizard.WizardButton.NextButton, tr("setup.wizard.btn.next", lang))
-        self.setButtonText(QWizard.WizardButton.BackButton, tr("setup.wizard.btn.back", lang))
-        self.setButtonText(QWizard.WizardButton.FinishButton, tr("setup.wizard.btn.finish", lang))
-        self.setButtonText(QWizard.WizardButton.CancelButton, tr("setup.wizard.btn.cancel", lang))
+        self.setWindowTitle(tr("setup.wizard.title", lang, default="MIRA - Initial setup"))
+        self.setButtonText(QWizard.WizardButton.NextButton, tr("setup.wizard.btn.next", lang, default="Next ->"))
+        self.setButtonText(QWizard.WizardButton.BackButton, tr("setup.wizard.btn.back", lang, default="<- Back"))
+        self.setButtonText(QWizard.WizardButton.FinishButton, tr("setup.wizard.btn.finish", lang, default="Start"))
+        self.setButtonText(QWizard.WizardButton.CancelButton, tr("setup.wizard.btn.cancel", lang, default="Cancel"))
 
         self._page_welcome.apply_language(lang)
         self._page_profile.apply_language(lang)
@@ -108,6 +108,7 @@ class _WelcomePage(QWizardPage):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self._language = "en"
         self.setTitle(" ")
 
         layout = QVBoxLayout(self)
@@ -134,10 +135,10 @@ class _WelcomePage(QWizardPage):
             logo_font.setPointSize(28)
             logo_font.setBold(True)
             logo_lbl.setFont(logo_font)
-            logo_lbl.setText("MIRA")
+            logo_lbl.setText(tr("app.name", self._language, default="MIRA"))
         layout.addWidget(logo_lbl)
 
-        tagline_lbl = QLabel("Asistente de Finanzas Personales")
+        tagline_lbl = QLabel()
         tagline_font = QFont()
         tagline_font.setPointSize(13)
         tagline_lbl.setFont(tagline_font)
@@ -147,12 +148,7 @@ class _WelcomePage(QWizardPage):
 
         layout.addSpacing(10)
 
-        welcome_text = QLabel(
-            "¡Bienvenido a MIRA!\n\n"
-            "Este asistente te guiará a través de la configuración inicial "
-            "para que tengas la mejor experiencia desde el primer momento.\n\n"
-            "Haz clic en <b>Siguiente</b> para comenzar."
-        )
+        welcome_text = QLabel()
         welcome_text.setWordWrap(True)
         welcome_text.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         welcome_text.setStyleSheet("font-size:13px;background:transparent;")
@@ -160,22 +156,19 @@ class _WelcomePage(QWizardPage):
 
         layout.addSpacing(10)
 
-        features_box = QGroupBox("Lo que configuraremos juntos")
+        features_box = QGroupBox()
         features_layout = QVBoxLayout(features_box)
-        for step in [
-            "🌐  Idioma y tema visual",
-            "💱  Moneda y formato de números",
-            "📁  Categorías predeterminadas",
-            "🏦  Tus cuentas financieras",
-        ]:
-            lbl = QLabel(step)
+        feature_labels: list[QLabel] = []
+        for _ in range(4):
+            lbl = QLabel()
             lbl.setStyleSheet("font-size:12px;background:transparent;")
             features_layout.addWidget(lbl)
+            feature_labels.append(lbl)
         layout.addWidget(features_box)
 
         layout.addStretch()
 
-        note = QLabel("100 % offline – tus datos nunca salen de tu dispositivo.")
+        note = QLabel()
         note.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         note.setStyleSheet("font-size:11px;background:transparent;")
         layout.addWidget(note)
@@ -198,13 +191,13 @@ class _WelcomePage(QWizardPage):
         self._tagline_lbl = tagline_lbl
         self._welcome_text_lbl = welcome_text
         self._features_box = features_box
-        self._feature_labels = features_box.findChildren(QLabel)
+        self._feature_labels = feature_labels
         self._note_lbl = note
         self._bmo_logo_lbl = bmo_logo_lbl
         self.apply_language("en")
 
     def apply_language(self, lang: str) -> None:
-        self._tagline_lbl.setText(tr("setup.page.welcome.tagline", lang))
+        self._tagline_lbl.setText(tr("setup.page.welcome.tagline", lang, default="Personal Finance Assistant"))
         self._welcome_text_lbl.setText(tr("setup.page.welcome.text", lang))
         self._features_box.setTitle(tr("setup.page.welcome.features_title", lang))
         items = [
@@ -222,34 +215,30 @@ class _ProfilePage(QWizardPage):
     def __init__(self, db: Database, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._db = db
-        self.setTitle("Your name")
-        self.setSubTitle("Tell MIRA how you want to be addressed during setup and in messages.")
+        self.setTitle("")
+        self.setSubTitle("")
 
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
         layout.setContentsMargins(20, 10, 20, 10)
 
-        intro = QLabel(
-            "We will use your name in welcome messages, the assistant panel, and the status bar "
-            "to make the experience feel more personal."
-        )
-        intro.setWordWrap(True)
-        intro.setStyleSheet("background:transparent;")
-        layout.addWidget(intro)
+        self._intro_label = QLabel()
+        self._intro_label.setWordWrap(True)
+        self._intro_label.setStyleSheet("background:transparent;")
+        layout.addWidget(self._intro_label)
 
         form = QFormLayout()
         form.setSpacing(12)
 
-        self._name_label = QLabel("Name:")
+        self._name_label = QLabel()
         self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText("How should MIRA call you?")
         current_username = str(self._db.setting.get("username") or "").strip()
         if current_username and current_username.casefold() not in {"usuario", "user"}:
             self._name_edit.setText(current_username)
         form.addRow(self._name_label, self._name_edit)
         layout.addLayout(form)
 
-        self._hint_label = QLabel("You can change this later from Settings if you prefer another name or nickname.")
+        self._hint_label = QLabel()
         self._hint_label.setWordWrap(True)
         self._hint_label.setStyleSheet("font-size:11px;background:transparent;")
         layout.addWidget(self._hint_label)
@@ -260,6 +249,7 @@ class _ProfilePage(QWizardPage):
     def apply_language(self, lang: str) -> None:
         self.setTitle(tr("setup.page.profile.title", lang))
         self.setSubTitle(tr("setup.page.profile.subtitle", lang))
+        self._intro_label.setText(tr("setup.page.profile.intro", lang))
         self._name_label.setText(tr("setup.page.profile.name_label", lang))
         self._name_edit.setPlaceholderText(tr("setup.page.profile.name_placeholder", lang))
         self._hint_label.setText(tr("setup.page.profile.hint", lang))
@@ -269,7 +259,11 @@ class _ProfilePage(QWizardPage):
             from mira.ui.views._shared import _notify_warning as shared_notify_warning
 
             lang = self.wizard()._wizard_language if self.wizard() else "en"
-            shared_notify_warning(self, "Validation", tr("setup.page.profile.validation.required", lang))
+            shared_notify_warning(
+                self,
+                tr("validation.title", lang, default="Validation"),
+                tr("setup.page.profile.validation.required", lang),
+            )
             return False
         return True
 
@@ -282,11 +276,9 @@ class _LanguageThemePage(QWizardPage):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setTitle("Idioma y Tema / Language & Theme")
-        self.setSubTitle(
-            "Elige el idioma de la interfaz y el tema visual que prefieras.\n"
-            "Choose the interface language and your preferred visual theme."
-        )
+        self._fallback_theme_options: list[tuple[str, str, str]] = []
+        self.setTitle("")
+        self.setSubTitle("")
 
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
@@ -296,11 +288,11 @@ class _LanguageThemePage(QWizardPage):
         form.setSpacing(12)
 
         self._language_combo = QComboBox()
-        self._language_combo.addItem("Español", "es")
-        self._language_combo.addItem("English", "en")
+        self._language_combo.addItem(SUPPORTED_LANGUAGES["es"], "es")
+        self._language_combo.addItem(SUPPORTED_LANGUAGES["en"], "en")
         if (en_idx := self._language_combo.findData("en")) >= 0:
             self._language_combo.setCurrentIndex(en_idx)
-        self._language_label = QLabel("Language:")
+        self._language_label = QLabel()
         form.addRow(self._language_label, self._language_combo)
 
         self._theme_combo = QComboBox()
@@ -312,17 +304,32 @@ class _LanguageThemePage(QWizardPage):
                 label = theme_file.replace(".xml", "").replace("_", " ").title()
                 self._theme_combo.addItem(label, theme_file)
         except ImportError:
-            self._theme_combo.addItem("🌙  Oscuro / Dark", "dark_teal.xml")
-            self._theme_combo.addItem("☀️  Claro / Light", "light_blue.xml")
+            self._fallback_theme_options = [
+                ("settings.theme.dark", "Dark", "dark_teal.xml"),
+                ("settings.theme.light", "Light", "light_blue.xml"),
+            ]
+            self._populate_fallback_theme_labels("en")
         if (default_idx := self._theme_combo.findData(_INITIAL_SETUP_THEME)) >= 0:
             self._theme_combo.setCurrentIndex(default_idx)
-        self._theme_label = QLabel("Theme:")
+        self._theme_label = QLabel()
         form.addRow(self._theme_label, self._theme_combo)
 
         layout.addLayout(form)
         layout.addStretch()
         self._language_combo.currentIndexChanged.connect(self._on_language_changed)
         self.apply_language("en")
+
+    def _populate_fallback_theme_labels(self, lang: str) -> None:
+        if not self._fallback_theme_options:
+            return
+        current_value = self._theme_combo.currentData()
+        self._theme_combo.clear()
+        for key, default, theme_file in self._fallback_theme_options:
+            self._theme_combo.addItem(tr(key, lang, default=default), theme_file)
+        if current_value is not None and (idx := self._theme_combo.findData(current_value)) >= 0:
+            self._theme_combo.setCurrentIndex(idx)
+        elif (default_idx := self._theme_combo.findData(_INITIAL_SETUP_THEME)) >= 0:
+            self._theme_combo.setCurrentIndex(default_idx)
 
     def _on_language_changed(self) -> None:
         lang = self.get_language()
@@ -334,6 +341,7 @@ class _LanguageThemePage(QWizardPage):
         self.setSubTitle(tr("setup.page.language.subtitle", lang))
         self._language_label.setText(tr("setup.page.language.language_label", lang))
         self._theme_label.setText(tr("setup.page.language.theme_label", lang))
+        self._populate_fallback_theme_labels(lang)
 
     def get_language(self) -> str:
         return self._language_combo.currentData() or "en"
@@ -347,8 +355,8 @@ class _CurrencyFormatPage(QWizardPage):
         super().__init__(parent)
         self._db = db
         self._language = "en"
-        self.setTitle("Moneda y Formato de Números")
-        self.setSubTitle("Selecciona la moneda principal y cómo se mostrarán los números.")
+        self.setTitle("")
+        self.setSubTitle("")
 
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
@@ -363,14 +371,14 @@ class _CurrencyFormatPage(QWizardPage):
             code = currency.get("code", "").strip().upper()
             name = currency.get("name", "")
             if code:
-                self._currency_combo.addItem(f"{code}  –  {name}", code)
+                self._currency_combo.addItem(f"{code} - {name}", code)
         for code in CURRENCY_CODES:
             if self._currency_combo.findData(code) < 0:
                 self._currency_combo.addItem(code, code)
         default_currency = (self._db.setting.get("default_currency") or "USD").strip().upper()
         if (idx := self._currency_combo.findData(default_currency)) >= 0:
             self._currency_combo.setCurrentIndex(idx)
-        self._currency_label = QLabel("Default currency:")
+        self._currency_label = QLabel()
         form.addRow(self._currency_label, self._currency_combo)
 
         sep_opts = separator_options()
@@ -382,21 +390,17 @@ class _CurrencyFormatPage(QWizardPage):
         self._thousands_combo.setCurrentIndex(0)
         if (dot_idx := self._decimal_combo.findData(".")) >= 0:
             self._decimal_combo.setCurrentIndex(dot_idx)
-        self._thousands_label = QLabel("Thousands separator:")
-        self._decimal_label = QLabel("Decimal separator:")
+        self._thousands_label = QLabel()
+        self._decimal_label = QLabel()
         form.addRow(self._thousands_label, self._thousands_combo)
         form.addRow(self._decimal_label, self._decimal_combo)
 
         layout.addLayout(form)
-        hint = QLabel(
-            "Ejemplo: con separador de miles ',' y decimal '.' → 1,234.56\n"
-            "         con separador de miles '.' y decimal ',' → 1.234,56"
-        )
-        hint.setStyleSheet("font-size:11px;background:transparent;")
-        hint.setWordWrap(True)
-        layout.addWidget(hint)
+        self._hint_label = QLabel()
+        self._hint_label.setStyleSheet("font-size:11px;background:transparent;")
+        self._hint_label.setWordWrap(True)
+        layout.addWidget(self._hint_label)
         layout.addStretch()
-        self._hint_label = hint
         self.apply_language("en")
 
     def apply_language(self, lang: str) -> None:
@@ -440,11 +444,8 @@ class _AccountsPage(QWizardPage):
         super().__init__(parent)
         self._account_rows: list[dict[str, object]] = []
 
-        self.setTitle("Tus Cuentas")
-        self.setSubTitle(
-            "Agrega las cuentas que deseas gestionar (cuenta bancaria, efectivo, etc.).\n"
-            "La primera cuenta se marcará como predeterminada."
-        )
+        self.setTitle("")
+        self.setSubTitle("")
 
         outer = QVBoxLayout(self)
         outer.setSpacing(10)
@@ -462,19 +463,17 @@ class _AccountsPage(QWizardPage):
         scroll.setWidget(scroll_widget)
         outer.addWidget(scroll, 1)
 
-        btn_add = QPushButton("➕  Agregar cuenta adicional")
-        btn_add.clicked.connect(self._add_input_row)
-        outer.addWidget(btn_add)
-        self._btn_add = btn_add
+        self._btn_add = QPushButton()
+        self._btn_add.clicked.connect(self._add_input_row)
+        outer.addWidget(self._btn_add)
 
-        btn_skip = QPushButton("Saltar → crear cuenta predeterminada automáticamente")
-        btn_skip.setStyleSheet(
-            "QPushButton{background:transparent;" "border:none;text-decoration:underline;padding:2px;}"
+        self._btn_skip = QPushButton()
+        self._btn_skip.setStyleSheet(
+            "QPushButton{background:transparent;border:none;text-decoration:underline;padding:2px;}"
         )
-        btn_skip.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_skip.clicked.connect(self._on_skip)
-        outer.addWidget(btn_skip, alignment=Qt.AlignmentFlag.AlignHCenter)
-        self._btn_skip = btn_skip
+        self._btn_skip.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_skip.clicked.connect(self._on_skip)
+        outer.addWidget(self._btn_skip, alignment=Qt.AlignmentFlag.AlignHCenter)
         self._btn_skip.hide()
 
         self.apply_language("en")
@@ -582,6 +581,7 @@ class _AccountsPage(QWizardPage):
         self.setTitle(tr("setup.page.accounts.title", lang))
         self.setSubTitle(tr("setup.page.accounts.subtitle", lang))
         self._btn_add.setText(tr("setup.page.accounts.btn_add", lang))
+        self._btn_skip.setText(tr("setup.page.accounts.btn_skip", lang))
         self._refresh_input_labels()
 
     def get_account_names(self) -> list[str]:

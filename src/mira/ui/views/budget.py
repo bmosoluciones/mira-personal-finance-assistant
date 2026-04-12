@@ -29,19 +29,21 @@ from PySide6.QtWidgets import (
 
 from mira.budget_processor import process_budget_value
 from mira.db.database import Database
-from mira.db.errors import BudgetError, DuplicateBudgetCodeError
+from mira.db.errors import BudgetError, BudgetValidationError, DuplicateBudgetCodeError
 from mira.ui.number_format import (
     get_number_format_config,
     parse_number,
 )
 from mira.ui.views._shared import (
     _COMBO_STYLE,
+    _describe_exception,
     _SIGNAL_CELL_ROLE,
     _TABLE_STYLE,
     _build_scrollable_container,
     _fmt_amount,
     _make_toolbar_btn,
     _notify_error,
+    _notify_exception,
     _notify_info,
     _notify_warning,
     _section_title,
@@ -550,8 +552,22 @@ class BudgetView(QWidget):
                 self._t("budget.validation.duplicate_code", "Ya existe un presupuesto con ese código."),
             )
             return
-        except (BudgetError, ValueError) as exc:
-            _notify_warning(self, self._t("budget.dialog.title", "Presupuestos"), str(exc))
+        except BudgetValidationError as exc:
+            _notify_warning(
+                self,
+                self._t("budget.dialog.title", "Presupuestos"),
+                str(exc),
+            )
+            return
+        except ValueError as exc:
+            _notify_warning(
+                self,
+                self._t("budget.dialog.title", "Presupuestos"),
+                str(exc),
+            )
+            return
+        except BudgetError as exc:
+            _notify_exception(self, self._db, exc, title=self._t("budget.dialog.title", "Presupuestos"))
             return
         self._current_budget_id = int(budget["id"])
         self._budget_list_dirty = True
@@ -892,7 +908,8 @@ class BudgetView(QWidget):
                     number_format=get_number_format_config(self._db.setting),
                 )
             except ValueError as exc:
-                message = str(exc)
+                descriptor = _describe_exception(self._db, exc)
+                message = descriptor.message
                 _notify_warning(
                     self,
                     self._t("budget.dialog.title", "Presupuestos"),
@@ -1096,7 +1113,7 @@ class BudgetView(QWidget):
             tracking = self._db.budget.get_monthly_tracking(self._current_budget_id, year, month)
         except ValueError as exc:
             self._current_monthly_tracking = None
-            self._monthly_tracking_hint.setText(str(exc))
+            self._monthly_tracking_hint.setText(_describe_exception(self._db, exc).message)
             self._monthly_tracking_table.setRowCount(0)
             self._reassign_source_combo.clear()
             self._reassign_target_combo.clear()
