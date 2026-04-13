@@ -9,6 +9,7 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 ### Fixed
 
 - Settings now let users correct the system default currency after onboarding, and the deterministic assistant picks up the new default without restarting MIRA.
+- Presupuestos and Budget vs Actual tables now keep the category column usable on laptop-width screens by applying explicit responsive column sizing and enabling horizontal scrolling when needed.
 
 ### Changed
 

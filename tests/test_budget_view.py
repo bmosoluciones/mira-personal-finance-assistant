@@ -136,6 +136,54 @@ def test_budget_view_switches_to_monthly_tracking_mode(
         view.close()
 
 
+def test_budget_view_tables_enable_horizontal_scroll_and_responsive_resize_modes(
+    monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.budget")
+    qtcore = importlib.import_module("PySide6.QtCore")
+    qtwidgets = importlib.import_module("PySide6.QtWidgets")
+
+    income = db.category.create("Honorarios Profesionales Extensos", "income")
+    expense = db.category.create("Servicios Publicos y Operaciones", "expense")
+    budget = db.budget.create("PRESUPUESTO_RESPONSIVE_2026", 2026, "USD")
+    db.budget.upsert_amount(int(budget["id"]), int(income["id"]), 2026, 1, 1000.0)
+    db.budget.upsert_amount(int(budget["id"]), int(expense["id"]), 2026, 1, 250.0)
+
+    view = views_module.BudgetView(db)
+
+    try:
+        view.show()
+        view.refresh()
+        view._load_budget()
+        app.processEvents()
+
+        budget_header = view._budget_table.horizontalHeader()
+        assert budget_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.Stretch
+        assert budget_header.sectionResizeMode(1) == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
+        assert view._budget_table.horizontalScrollBarPolicy() == qtcore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
+
+        view._btn_compare.click()
+        app.processEvents()
+
+        comparison_header = view._comparison_table.horizontalHeader()
+        assert view._comparison_table.columnCount() > 1
+        assert comparison_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.Stretch
+        assert comparison_header.sectionResizeMode(1) == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
+        assert view._comparison_table.horizontalScrollBarPolicy() == qtcore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
+
+        view._btn_monthly_tracking.click()
+        app.processEvents()
+
+        monthly_header = view._monthly_tracking_table.horizontalHeader()
+        assert monthly_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.Stretch
+        assert monthly_header.sectionResizeMode(1) == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
+        assert view._monthly_tracking_table.horizontalScrollBarPolicy() == qtcore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
+    finally:
+        view.close()
+
+
 def test_budget_view_monthly_tracking_uses_selected_budget_year(
     monkeypatch: pytest.MonkeyPatch,
     db: Database,
