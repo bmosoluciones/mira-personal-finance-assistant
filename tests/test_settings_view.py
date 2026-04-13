@@ -88,6 +88,7 @@ def test_settings_view_rejects_equal_number_separators_without_saving(
     db.setting.set("username", "Alicia")
     db.setting.set("language", "es")
     db.setting.set("theme", "dark_teal.xml")
+    db.setting.set("default_currency", "USD")
     db.setting.set("number_thousands_separator", ",")
     db.setting.set("number_decimal_separator", ".")
 
@@ -119,7 +120,32 @@ def test_settings_view_rejects_equal_number_separators_without_saving(
         assert saved_languages == []
         assert saved_themes == []
         assert db.setting.get("username") == "Alicia"
+        assert db.setting.get("default_currency") == "USD"
         assert db.setting.get("number_thousands_separator") == ","
         assert db.setting.get("number_decimal_separator") == "."
+    finally:
+        view.close()
+
+
+def test_settings_view_loads_and_saves_default_currency(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.settings")
+
+    monkeypatch.setattr(views_module, "is_llama_cpp_available", lambda: False)
+    db.setting.set("default_currency", "NIO")
+
+    view = views_module.SettingsView(db)
+
+    try:
+        assert view._default_currency_combo.currentData() == "NIO"
+        assert "asistente" in view._default_currency_hint.text().casefold()
+
+        crc_idx = view._default_currency_combo.findData("CRC")
+        assert crc_idx >= 0
+        view._default_currency_combo.setCurrentIndex(crc_idx)
+
+        view._save()
+
+        assert db.setting.get("default_currency") == "CRC"
     finally:
         view.close()

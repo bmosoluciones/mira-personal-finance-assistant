@@ -6,9 +6,21 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 
 ## [Unreleased]
 
+### Fixed
+
+- Settings now let users correct the system default currency after onboarding, and the deterministic assistant picks up the new default without restarting MIRA.
+
+### Changed
+
+### Notes
+
+For the record: I have started using MIRA for my personal income and expense traking.
+
+## [0.0.1b1] - 2026-04-11
+
 ### Added
 
- - Add balance adjustment flow for accounts and cards
+ - Add balance adjustment flow for accounts and cards 
 
 ### Changed
 

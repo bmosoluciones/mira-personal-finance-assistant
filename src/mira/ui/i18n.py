@@ -500,6 +500,11 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "settings.username": "Usuario:",
         "settings.language": "Idioma:",
         "settings.theme": "Tema:",
+        "settings.default_currency": "Moneda predeterminada:",
+        "settings.default_currency.help": (
+            "Actualiza la moneda por defecto para nuevos flujos y para el asistente. "
+            "Las cuentas y registros existentes conservan su moneda actual."
+        ),
         "settings.theme.dark": "Oscuro",
         "settings.theme.light": "Claro",
         "settings.save": "Guardar ajustes",
@@ -1230,6 +1235,11 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "settings.ai_rule_based": "Engine: deterministic assistant parser (no GGUF model loaded)",
         "settings.ai_note": "Assistant mode uses the deterministic parser. Select a GGUF model only if you want to enable local chat mode.",
         "settings.chat_support_unavailable": "Local chat controls are unavailable in this environment because llama-cpp-python is not installed.",
+        "settings.default_currency": "Default currency:",
+        "settings.default_currency.help": (
+            "Updates the default currency for new flows and for the assistant. "
+            "Existing accounts and records keep their current currency."
+        ),
         "settings.models": "Available GGUF models",
         "settings.models.none": "No GGUF models found in the configured model directories",
         "settings.mode": "Interaction mode",
