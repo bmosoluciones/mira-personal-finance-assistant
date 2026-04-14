@@ -94,10 +94,96 @@ def test_mira_analysis_message_builder_builds_assistant_messages(db: Database) -
 
     messages = builder.build_assistant_messages(payload, language="en")
 
-    assert messages
-    assert messages[0][0].startswith("Comparisons and context")
-    assert messages[1][0] == "Keep saving."
-    assert messages[1][1] == "MIRA Analysis"
+    # First two messages are the Efficiency and Security sub-reports; no Purpose
+    # because there is no goals data in the payload.
+    assert len(messages) == 3
+    assert messages[0][0].startswith("Efficiency report")
+    assert messages[0][1] == "Efficiency report"
+    assert messages[1][0].startswith("Security report")
+    assert messages[1][1] == "Security report"
+    # Advisor message is last and remains its own entry.
+    assert messages[2][0] == "Keep saving."
+    assert messages[2][1] == "MIRA Analysis"
+
+
+def test_mira_analysis_message_builder_splits_sub_reports_into_separate_messages(db: Database) -> None:
+    """Each sub-report section must produce its own short message, not a single block."""
+    builder = MiraAnalysisMessageBuilder(db)
+    payload = {
+        "kpis": {"net": 500.0},
+        "comparisons": {},
+        "budget": {"has_budget": False},
+        "metrics": {"goal_completion_index_pct": 50.0, "burn_rate_days": 30.0},
+        "goals_summary": {"headline": "1 meta en progreso", "items": []},
+        "advisor": {"messages": [{"text": "Msg A."}, {"text": "Msg B."}]},
+    }
+
+    messages = builder.build_assistant_messages(payload, language="en")
+
+    texts = [m[0] for m in messages]
+    titles = [m[1] for m in messages]
+
+    # Three context sub-reports plus two advisor messages.
+    assert len(messages) == 5
+
+    # Efficiency is first and self-contained.
+    assert texts[0].startswith("Efficiency report")
+    assert "Security report" not in texts[0]
+    assert "Purpose report" not in texts[0]
+    assert titles[0] == "Efficiency report"
+
+    # Security is second and self-contained.
+    assert texts[1].startswith("Security report")
+    assert "Efficiency report" not in texts[1]
+    assert titles[1] == "Security report"
+
+    # Purpose is third (goals data present).
+    assert texts[2].startswith("Purpose report")
+    assert titles[2] == "Purpose report"
+
+    # Advisor messages remain individual short entries.
+    assert texts[3] == "Msg A."
+    assert texts[4] == "Msg B."
+
+
+def test_mira_analysis_message_builder_omits_purpose_when_no_goals(db: Database) -> None:
+    """Purpose message is only emitted when goal data is present."""
+    builder = MiraAnalysisMessageBuilder(db)
+    payload = {
+        "kpis": {"net": 0.0},
+        "comparisons": {},
+        "budget": {"has_budget": False},
+        "metrics": {},
+        "goals_summary": {},
+        "advisor": {"messages": []},
+    }
+
+    messages = builder.build_assistant_messages(payload, language="es")
+
+    titles = [m[1] for m in messages]
+    assert "Reporte de Propósito" not in titles
+    # Efficiency and Security are always present.
+    assert any(t == "Reporte de Eficiencia" for t in titles)
+    assert any(t == "Reporte de Seguridad" for t in titles)
+
+
+def test_mira_analysis_message_builder_no_message_contains_all_sub_reports(db: Database) -> None:
+    """No single message should contain text from more than one sub-report section."""
+    builder = MiraAnalysisMessageBuilder(db)
+    payload = {
+        "kpis": {"net": 200.0},
+        "comparisons": {},
+        "budget": {"has_budget": False},
+        "metrics": {"goal_completion_index_pct": 80.0},
+        "goals_summary": {"headline": "on track", "items": []},
+        "advisor": {"messages": []},
+    }
+
+    messages = builder.build_assistant_messages(payload, language="en")
+
+    for text, _ in messages:
+        sections_present = sum(header in text for header in ("Efficiency report", "Security report", "Purpose report"))
+        assert sections_present <= 1, f"Message contains multiple sub-report headers: {text!r}"
 
 
 def test_mira_analysis_view_state_builder_shapes_cards_waterfall_and_trends(db: Database) -> None:

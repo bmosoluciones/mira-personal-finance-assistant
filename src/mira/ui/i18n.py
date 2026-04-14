@@ -440,7 +440,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "mira.analysis.context.security.deficit": "deficit",
         "mira.analysis.context.security.surplus": "superavit",
         "mira.analysis.context.security.balanced": "equilibrio",
-        "mira.analysis.context.purpose": "Reporte de Proposito",
+        "mira.analysis.context.purpose": "Reporte de Propósito",
         "mira.analysis.context.purpose.summary": "- Resumen ejecutivo: Estado de mi Yo del Futuro.",
         "mira.analysis.context.purpose.completion_index": "- Indice de cumplimiento: {pct:.1f}%.",
         "mira.analysis.less_more.more": "más",
