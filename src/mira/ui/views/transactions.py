@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QDateEdit,
     QFrame,
     QHBoxLayout,
+    QHeaderView,
     QInputDialog,
     QLabel,
     QLineEdit,
@@ -164,6 +165,14 @@ class TransactionsView(QWidget):
                 _tr_db(self._db, "col.note", "Note"),
             ]
         )
+        hh = self._table.horizontalHeader()
+        hh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # Date
+        hh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Type
+        hh.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Amount
+        hh.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # Category
+        hh.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # Description
+        hh.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Account
+        hh.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)  # Note
         self._table.verticalHeader().setVisible(False)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
