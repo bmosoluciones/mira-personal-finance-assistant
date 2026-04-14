@@ -144,18 +144,35 @@ class SavingsGoalsView(QWidget):
     def _on_contribute(self) -> None:
         from mira.ui.dialogs import ContributeGoalDialog
 
-        goal = next((g for g in self._goals if g["id"] == self._selected_id), None)
-        if goal is None:
+        if not self._goals:
             _notify_info(
                 self,
                 _tr_db(self._db, "goals.contribute.title", "Contribute"),
                 _tr_db(self._db, "selection.goal_required", "Select a goal first."),
             )
             return
-        dlg = ContributeGoalDialog(self._db, goal_name=goal["name"], parent=self)
+
+        current_goal = next((g for g in self._goals if g["id"] == self._selected_id), None)
+        goal_name = current_goal["name"] if current_goal else self._goals[0]["name"]
+
+        dlg = ContributeGoalDialog(
+            self._db,
+            goal_name=goal_name,
+            parent=self,
+            goals=self._goals,
+            selected_goal_id=self._selected_id,
+        )
         if dlg.exec() == ContributeGoalDialog.DialogCode.Accepted:
             data = dlg.get_data()
-            self._service.contribute(int(goal["id"]), data["amount"])
+            # Use the goal selected in the dialog when the dropdown was shown.
+            target_id = data.get("goal_id")
+            if target_id is None:
+                # Fallback: use the currently selected goal in the view.
+                goal = current_goal
+                if goal is None:
+                    return
+                target_id = int(goal["id"])
+            self._service.contribute(int(target_id), data["amount"])
             self.refresh()
 
     def _on_edit(self) -> None:
@@ -197,7 +214,7 @@ class SavingsGoalsView(QWidget):
             return
         reply = QMessageBox.question(
             self,
-            "Delete Goal",
+            _tr_db(self._db, "goals.delete.title", "Delete Goal"),
             _tr_db(
                 self._db,
                 "goals.delete.body",
@@ -224,9 +241,9 @@ class SavingsGoalsView(QWidget):
         self.refresh()
 
         menu = QMenu(self)
-        act_contribute = menu.addAction("Contribute")
-        act_edit = menu.addAction("Edit")
-        act_delete = menu.addAction("Delete")
+        act_contribute = menu.addAction(_tr_db(self._db, "btn.contribute", "💰 Contribute"))
+        act_edit = menu.addAction(_tr_db(self._db, "btn.edit", "✏ Edit"))
+        act_delete = menu.addAction(_tr_db(self._db, "btn.delete", "🗑 Delete"))
         chosen = menu.exec(global_pos)
         if chosen is act_contribute:
             self._on_contribute()
@@ -245,8 +262,6 @@ class SavingsGoalsView(QWidget):
 
     def open_contribute_dialog(self) -> None:
         """Public helper used by the main menu to contribute to a goal."""
-        if self._selected_id is None and self._goals:
-            self._selected_id = self._goals[0]["id"]
         self._on_contribute()
 
     def refresh(self) -> None:

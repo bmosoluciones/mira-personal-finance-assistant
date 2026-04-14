@@ -94,9 +94,17 @@ class AccountsViewService:
         )
 
     def create(
-        self, *, name: str, account_type: str, opening_balance: float, currency: str | None
+        self,
+        *,
+        name: str,
+        account_type: str,
+        opening_balance: float,
+        currency: str | None,
+        set_as_default: bool = False,
     ) -> OperationFeedback:
         created = self._db.account.create(name, account_type, opening_balance, currency)
+        if set_as_default:
+            self._db.account.set_default(int(created["id"]))
         return OperationFeedback(selected_id=int(created["id"]))
 
     def update(self, account_id: int, *, name: str, account_type: str, currency: str | None) -> OperationFeedback:

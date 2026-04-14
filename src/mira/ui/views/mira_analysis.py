@@ -17,7 +17,7 @@ from PySide6.QtCharts import (
     QLineSeries,
     QValueAxis,
 )
-from PySide6.QtCore import QRectF, Qt, QThread, Signal
+from PySide6.QtCore import QRectF, Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPaintEvent, QPainter, QPen
 from PySide6.QtWidgets import (
     QComboBox,
@@ -797,6 +797,8 @@ class MiraAnalysisView(QWidget):
             self._t("mira.analysis.status.loaded", "Analisis MIRA cargado."),
             color="#4EC9B0",
         )
+        # Ensure the waterfall chart (top of the report) is visible after loading.
+        QTimer.singleShot(0, lambda: self._report_scroll.verticalScrollBar().setValue(0))
         if emit_to_assistant:
             self._emit_report_to_assistant()
 

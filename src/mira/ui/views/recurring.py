@@ -234,10 +234,10 @@ class RecurringView(QWidget):
         if not _select_row_at_pos(self._table, pos):
             return
         menu = QMenu(self)
-        act_edit = menu.addAction("Edit")
-        act_delete = menu.addAction("Delete")
+        act_edit = menu.addAction(_tr_db(self._db, "btn.edit", "✏ Edit"))
+        act_delete = menu.addAction(_tr_db(self._db, "btn.delete", "🗑 Delete"))
         menu.addSeparator()
-        act_apply = menu.addAction("Apply recurring…")
+        act_apply = menu.addAction(_tr_db(self._db, "btn.apply_recurring", "Apply recurring…"))
         chosen = menu.exec(self._table.viewport().mapToGlobal(pos))
         if chosen is act_edit:
             self._on_edit()

@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
-"""Account-related dialogs."""
+"Account-related dialogs."
 
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -46,23 +47,24 @@ class AccountDialog(QDialog):
         if account:
             self._prefill(account)
 
+    def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        return tr(key, self._language, default=default, params=params)
+
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
         form = QFormLayout()
         form.setSpacing(10)
 
         self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText(
-            tr("dialog.account.name.placeholder", self._language, default="Account name…")
-        )
-        form.addRow(tr("dialog.account.name", self._language, default="Name:"), self._name_edit)
+        self._name_edit.setPlaceholderText(self._t("dialog.account.name.placeholder", "Account name…"))
+        form.addRow(self._t("dialog.account.name", "Name:"), self._name_edit)
 
         self._type_combo = QComboBox()
-        self._type_combo.addItem("bank", "bank")
-        self._type_combo.addItem("cash", "cash")
-        self._type_combo.addItem("credit", "credit")
+        self._type_combo.addItem(self._t("dialog.account.type.bank", "Bank"), "bank")
+        self._type_combo.addItem(self._t("dialog.account.type.cash", "Cash"), "cash")
+        self._type_combo.addItem(self._t("dialog.account.type.credit", "Credit"), "credit")
         self._type_combo.currentIndexChanged.connect(self._sync_balance_range)
-        form.addRow(tr("dialog.account.type", self._language, default="Type:"), self._type_combo)
+        form.addRow(self._t("dialog.account.type", "Type:"), self._type_combo)
 
         self._currency_combo = QComboBox()
         self._currency_combo.setEditable(False)
@@ -74,20 +76,35 @@ class AccountDialog(QDialog):
         default_currency = self._db.setting.get_default_currency()
         if (current_idx := self._currency_combo.findData(default_currency)) >= 0:
             self._currency_combo.setCurrentIndex(current_idx)
-        form.addRow(tr("dialog.account.currency", self._language, default="Currency:"), self._currency_combo)
+        form.addRow(self._t("dialog.account.currency", "Currency:"), self._currency_combo)
 
         self._balance_spin = _make_balance_spin(self._db)
         self._balance_spin.setValue(0.00)
-        self._balance_row_label = QLabel(
-            tr("dialog.account.opening_balance", self._language, default="Opening Balance:")
-        )
+        self._balance_row_label = QLabel(self._t("dialog.account.opening_balance", "Opening Balance:"))
         form.addRow(self._balance_row_label, self._balance_spin)
 
-        if self._account:
+        layout.addLayout(form)
+
+        # "Set as default" checkbox — only relevant when creating a new account.
+        if not self._account:
+            has_existing_accounts = len(self._db.account.list()) > 0
+            self._set_default_chk = QCheckBox(self._t("dialog.account.set_as_default", "Set as default account"))
+            # Pre-check when there are no existing non-pristine accounts.
+            self._set_default_chk.setChecked(not has_existing_accounts)
+            hint_lbl = QLabel(
+                self._t(
+                    "dialog.account.set_as_default.hint",
+                    "The default account is used automatically for new transactions.",
+                )
+            )
+            hint_lbl.setWordWrap(True)
+            hint_lbl.setStyleSheet("font-size:10px;color:#B7C3D0;")
+            layout.addWidget(self._set_default_chk)
+            layout.addWidget(hint_lbl)
+        else:
+            self._set_default_chk = None  # type: ignore[assignment]
             self._balance_spin.setVisible(False)
             self._balance_row_label.setVisible(False)
-
-        layout.addLayout(form)
 
         self._notice_lbl = QLabel("")
         self._notice_lbl.setWordWrap(True)
@@ -131,19 +148,22 @@ class AccountDialog(QDialog):
         if not self._name_edit.text().strip():
             _notify_warning(
                 self,
-                tr("dialog.common.validation", self._language, default="Validation"),
-                tr("dialog.account.validation.name_required", self._language, default="Account name cannot be empty."),
+                self._t("dialog.common.validation", "Validation"),
+                self._t("dialog.account.validation.name_required", "Account name cannot be empty."),
             )
             return
         self.accept()
 
     def get_data(self) -> dict:
-        return {
+        data: dict = {
             "name": self._name_edit.text().strip(),
             "account_type": self._selected_account_type(),
             "opening_balance": self._balance_spin.value() if not self._account else 0.0,
             "currency": str(self._currency_combo.currentData() or self._db.setting.get_default_currency()).upper(),
         }
+        if self._set_default_chk is not None:
+            data["set_as_default"] = self._set_default_chk.isChecked()
+        return data
 
 
 __all__ = ["AccountDialog"]

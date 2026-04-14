@@ -28,7 +28,7 @@ from peewee import (
 )
 
 DB_PROXY: Proxy = Proxy()
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -344,6 +344,13 @@ SCHEMA_INDEX_SPECS: tuple[SchemaIndexSpec, ...] = (
         ("year",),
         unique=True,
         where="is_default_year = 1",
+    ),
+    SchemaIndexSpec(
+        "uq_accounts_single_default",
+        "accounts",
+        ("is_default",),
+        unique=True,
+        where="is_default = 1",
     ),
     SchemaIndexSpec("idx_categories_type", "categories", ("type",)),
     SchemaIndexSpec("idx_categories_is_savings", "categories", ("is_savings",)),

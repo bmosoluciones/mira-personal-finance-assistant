@@ -472,13 +472,17 @@ def test_cli_restore_reports_schema_upgrade(
         conn.execute("CREATE TABLE IF NOT EXISTS cli_restore_probe (id INTEGER PRIMARY KEY AUTOINCREMENT)")
 
     monkeypatch.setattr(db_migrations, "MIN_MIGRATABLE_SCHEMA_VERSION", 1)
-    monkeypatch.setattr(db_migrations, "MIGRATIONS", {1: _migration})
+    monkeypatch.setattr(
+        db_migrations,
+        "MIGRATIONS",
+        {1: _migration, 2: db_migrations._migrate_v2_to_v3},
+    )
 
     restore_exit = cli_module.main(["--db", str(db_path), "restore", "--input-file", str(backup_path)])
     captured = capsys.readouterr()
 
     assert restore_exit == 0
-    assert "schema upgraded v1 -> v2" in captured.out
+    assert "schema upgraded v1 -> v3" in captured.out
     assert applied == [1]
 
     db = Database(path=db_path)

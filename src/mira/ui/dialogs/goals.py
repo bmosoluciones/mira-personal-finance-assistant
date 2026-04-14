@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout
+from PySide6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout
 
 from mira.db.database import Database
 from mira.ui.dialogs._shared import _NOTICE_LABEL_STYLE, _make_amount_spin, _make_date_edit, _notify_warning
@@ -41,7 +41,7 @@ class SavingsGoalDialog(QDialog):
         form = QFormLayout()
         form.setSpacing(10)
         self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText("Goal name… (e.g. Viaje a Europa)")
+        self._name_edit.setPlaceholderText(self._t("goals.dialog.name.placeholder", "Goal name… (e.g. Trip to Europe)"))
         self._name_edit.textChanged.connect(self._update_notice)
         form.addRow(self._t("goals.dialog.name", "Name:"), self._name_edit)
         self._target_spin = _make_amount_spin(self._db)
@@ -124,21 +124,62 @@ class SavingsGoalDialog(QDialog):
 
 
 class ContributeGoalDialog(QDialog):
-    """Add a contribution to a savings goal."""
+    """Add a contribution to a savings goal.
 
-    def __init__(self, db: Database, goal_name: str, parent=None) -> None:
+    When *goals* contains more than one entry, the dialog shows a dropdown so
+    the user can explicitly choose the target goal.  *selected_goal_id* pre-
+    selects the goal that was active in the list view (if any).
+    """
+
+    def __init__(
+        self,
+        db: Database,
+        goal_name: str,
+        parent=None,
+        *,
+        goals: list[dict] | None = None,
+        selected_goal_id: int | None = None,
+    ) -> None:
         super().__init__(parent)
         self._db = db
-        self.setWindowTitle(f"Contribute to: {goal_name}")
-        self.setMinimumWidth(300)
-        self._build_ui()
+        self._language = normalize_language(self._db.setting.get("language"))
+        self._goals = list(goals) if goals else []
+        self.setWindowTitle(tr("goals.contribute.dialog.title", self._language, default="Contribute to Savings Goal"))
+        self.setMinimumWidth(320)
+        self._build_ui(goal_name=goal_name, selected_goal_id=selected_goal_id)
 
-    def _build_ui(self) -> None:
+    def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        return tr(key, self._language, default=default, params=params)
+
+    def _build_ui(self, *, goal_name: str, selected_goal_id: int | None) -> None:
         layout = QVBoxLayout(self)
         form = QFormLayout()
         form.setSpacing(10)
+
+        if self._goals:
+            self._goal_combo = QComboBox()
+            for goal in self._goals:
+                self._goal_combo.addItem(str(goal.get("name", "")), goal.get("id"))
+            # Pre-select based on selected_goal_id, falling back to goal_name.
+            preselect_index = -1
+            if selected_goal_id is not None:
+                for i, g in enumerate(self._goals):
+                    if g.get("id") == selected_goal_id:
+                        preselect_index = i
+                        break
+            if preselect_index == -1:
+                for i, g in enumerate(self._goals):
+                    if g.get("name") == goal_name:
+                        preselect_index = i
+                        break
+            if preselect_index >= 0:
+                self._goal_combo.setCurrentIndex(preselect_index)
+            form.addRow(self._t("goals.contribute.dialog.goal", "Savings goal:"), self._goal_combo)
+        else:
+            self._goal_combo = None  # type: ignore[assignment]
+
         self._amount_spin = _make_amount_spin(self._db)
-        form.addRow("Amount to Contribute:", self._amount_spin)
+        form.addRow(self._t("goals.contribute.dialog.amount", "Amount to contribute:"), self._amount_spin)
         layout.addLayout(form)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self._on_accept)
@@ -147,12 +188,19 @@ class ContributeGoalDialog(QDialog):
 
     def _on_accept(self) -> None:
         if self._amount_spin.value() <= 0:
-            _notify_warning(self, "Validation", "Amount must be greater than zero.")
+            _notify_warning(
+                self,
+                self._t("validation.title", "Validation"),
+                self._t("goals.contribute.dialog.validation.amount", "Amount must be greater than zero."),
+            )
             return
         self.accept()
 
     def get_data(self) -> dict:
-        return {"amount": self._amount_spin.value()}
+        data: dict = {"amount": self._amount_spin.value()}
+        if self._goal_combo is not None:
+            data["goal_id"] = self._goal_combo.currentData()
+        return data
 
 
 __all__ = ["ContributeGoalDialog", "SavingsGoalDialog"]

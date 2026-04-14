@@ -220,8 +220,8 @@ class DashboardView(QWidget):
         if not _select_row_at_pos(self._tx_table, pos):
             return
         menu = QMenu(self)
-        act_edit = menu.addAction("Edit")
-        act_delete = menu.addAction("Delete")
+        act_edit = menu.addAction(_tr_db(self._db, "btn.edit", "✏ Edit"))
+        act_delete = menu.addAction(_tr_db(self._db, "btn.delete", "🗑 Delete"))
         chosen = menu.exec(self._tx_table.viewport().mapToGlobal(pos))
         if chosen is act_edit:
             self._on_recent_edit()

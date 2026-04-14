@@ -14,11 +14,13 @@ from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
+    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
     QMessageBox,
+    QScrollArea,
     QSpinBox,
     QStackedWidget,
     QTableWidget,
@@ -302,7 +304,17 @@ class BudgetView(QWidget):
         self._granularity_combo.currentIndexChanged.connect(self._refresh_comparison)
         toolbar.addWidget(self._granularity_combo)
 
-        layout.addLayout(toolbar)
+        toolbar_widget = QWidget()
+        toolbar_widget.setLayout(toolbar)
+        toolbar_scroll = QScrollArea()
+        toolbar_scroll.setWidget(toolbar_widget)
+        toolbar_scroll.setWidgetResizable(True)
+        toolbar_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        toolbar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        toolbar_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        toolbar_scroll.setFixedHeight(toolbar_widget.sizeHint().height() + 4)
+        toolbar_scroll.setStyleSheet("QScrollArea{border:none;background:transparent;}")
+        layout.addWidget(toolbar_scroll)
 
         self._budget_status_lbl = QLabel("")
         self._budget_status_lbl.setWordWrap(True)

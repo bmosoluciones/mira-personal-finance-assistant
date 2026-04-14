@@ -507,12 +507,12 @@ class TransactionsView(QWidget):
         if not _select_row_at_pos(self._table, pos):
             return
         menu = QMenu(self)
-        act_edit = menu.addAction("Edit")
-        act_delete = menu.addAction("Delete")
-        act_dup = menu.addAction("Duplicate")
+        act_edit = menu.addAction(_tr_db(self._db, "btn.edit", "✏ Edit"))
+        act_delete = menu.addAction(_tr_db(self._db, "btn.delete", "🗑 Delete"))
+        act_dup = menu.addAction(_tr_db(self._db, "btn.duplicate", "⧉ Duplicate"))
         menu.addSeparator()
-        act_change_acc = menu.addAction("Cambiar de cuenta")
-        act_change_cat = menu.addAction("Cambiar de categoria")
+        act_change_acc = menu.addAction(_tr_db(self._db, "transactions.change_account.title", "Change Account"))
+        act_change_cat = menu.addAction(_tr_db(self._db, "transactions.change_category.title", "Change Category"))
 
         chosen = menu.exec(self._table.viewport().mapToGlobal(pos))
         if chosen is act_edit:

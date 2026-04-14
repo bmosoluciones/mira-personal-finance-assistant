@@ -257,3 +257,94 @@ def test_accounts_view_balance_adjustment_button_records_transaction(
         assert txs[0]["payment_method"] == "balance_adjustment"
     finally:
         view.close()
+
+
+def test_account_dialog_set_as_default_checked_when_no_accounts_exist(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    """The 'set as default' checkbox must be pre-checked when no accounts exist yet."""
+    _get_qapplication_or_xfail(monkeypatch)
+    # Remove the bootstrap "General" account so the DB is empty.
+    for acc in db.account.list():
+        db.account.delete(int(acc["id"]))
+
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+    dialog = dialogs_module.AccountDialog(db)
+    try:
+        assert dialog._set_default_chk is not None
+        assert dialog._set_default_chk.isChecked() is True
+        data = dialog.get_data()
+        assert data.get("set_as_default") is True
+    finally:
+        dialog.close()
+
+
+def test_account_dialog_set_as_default_unchecked_when_accounts_already_exist(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    """The checkbox must default to unchecked when there are already accounts in the DB."""
+    _get_qapplication_or_xfail(monkeypatch)
+    # The fixture DB already has a 'General' bootstrap account.
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+    dialog = dialogs_module.AccountDialog(db)
+    try:
+        assert dialog._set_default_chk is not None
+        assert dialog._set_default_chk.isChecked() is False
+    finally:
+        dialog.close()
+
+
+def test_account_dialog_no_set_as_default_in_edit_mode(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    """The 'set as default' checkbox must NOT appear when editing an existing account."""
+    _get_qapplication_or_xfail(monkeypatch)
+    account = db.account.get_or_create("Test Account")
+
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+    dialog = dialogs_module.AccountDialog(db, account=account)
+    try:
+        assert dialog._set_default_chk is None
+        data = dialog.get_data()
+        assert "set_as_default" not in data
+    finally:
+        dialog.close()
+
+
+def test_accounts_view_create_account_with_set_as_default(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    """Adding an account via the view with set_as_default=True makes it the new default."""
+    _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.accounts")
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    class FakeAccountDialog:
+        class DialogCode:
+            Accepted = 1
+
+        def __init__(self, *_args, **_kwargs) -> None:
+            pass
+
+        def exec(self) -> int:
+            return self.DialogCode.Accepted
+
+        def get_data(self) -> dict:
+            return {
+                "name": "New Default",
+                "account_type": "bank",
+                "opening_balance": 0.0,
+                "currency": "USD",
+                "set_as_default": True,
+            }
+
+    monkeypatch.setattr(dialogs_module, "AccountDialog", FakeAccountDialog)
+
+    view = views_module.AccountsView(db)
+    try:
+        view._on_add()
+        defaults = [a for a in db.account.list() if a["is_default"]]
+        assert len(defaults) == 1
+        assert defaults[0]["name"] == "New Default"
+    finally:
+        view.close()

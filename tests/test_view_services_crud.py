@@ -321,3 +321,33 @@ def test_recurring_view_service_load_update_and_delete(db: Database) -> None:
 
     service.delete(int(created.selected_id))
     assert all(int(item["id"]) != int(created.selected_id) for item in service.load_state().recurring)
+
+
+def test_accounts_view_service_create_with_set_as_default_clears_previous(db: Database) -> None:
+    """Creating a new account with set_as_default=True must clear any existing default."""
+    service = AccountsViewService(db)
+
+    first = service.create(name="First", account_type="bank", opening_balance=0.0, currency="USD")
+    service.set_default(first.selected_id)
+
+    second = service.create(
+        name="Second", account_type="bank", opening_balance=0.0, currency="USD", set_as_default=True
+    )
+
+    defaults = [a for a in service.load_state().accounts if a["is_default"]]
+    assert len(defaults) == 1
+    assert int(defaults[0]["id"]) == int(second.selected_id)
+
+
+def test_accounts_view_service_create_without_set_as_default_keeps_existing_default(db: Database) -> None:
+    """Creating a new account without set_as_default must not touch the existing default."""
+    service = AccountsViewService(db)
+
+    first = service.create(name="First", account_type="bank", opening_balance=0.0, currency="USD")
+    service.set_default(first.selected_id)
+
+    service.create(name="Second", account_type="bank", opening_balance=0.0, currency="USD", set_as_default=False)
+
+    defaults = [a for a in service.load_state().accounts if a["is_default"]]
+    assert len(defaults) == 1
+    assert int(defaults[0]["id"]) == int(first.selected_id)

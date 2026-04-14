@@ -13,8 +13,25 @@ MigrationFn = Callable[[sqlite3.Connection], None]
 
 # No in-place migrations are enabled yet. Future releases can lower this floor
 # and register sequential migrations without changing the restore/runtime flow.
-MIN_MIGRATABLE_SCHEMA_VERSION = db_model.SCHEMA_VERSION
-MIGRATIONS: dict[int, MigrationFn] = {}
+MIN_MIGRATABLE_SCHEMA_VERSION = 2
+
+
+def _migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
+    """Sanitize duplicate default accounts and add the uniqueness index.
+
+    If more than one account has ``is_default = 1`` (a data-consistency bug),
+    keep only the one with the lowest ``id`` as the default so that the
+    subsequent ``CREATE UNIQUE INDEX`` call cannot fail.
+    """
+    rows = conn.execute("SELECT id FROM accounts WHERE is_default = 1 ORDER BY id").fetchall()
+    if len(rows) > 1:
+        keep_id = rows[0][0]
+        conn.execute("UPDATE accounts SET is_default = 0 WHERE is_default = 1 AND id != ?", (keep_id,))
+
+
+MIGRATIONS: dict[int, MigrationFn] = {
+    2: _migrate_v2_to_v3,
+}
 
 
 def get_current_schema_version() -> int:
