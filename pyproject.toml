@@ -45,6 +45,7 @@ dev = [
     "openpyxl-stubs",
     "types-openpyxl",
     "qt_material-stubs",
+    "pydocstyle",
 ]
 
 [project.scripts]

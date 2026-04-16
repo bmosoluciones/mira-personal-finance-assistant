@@ -21,6 +21,7 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 - Presupuestos and Budget vs Actual tables now keep the category column usable on laptop-width screens by applying explicit responsive column sizing and enabling horizontal scrolling when needed.
 - Transaction and transfer dialogs now open with a minimum width of 720 px so the two-column form layout is never cut off.
 - Report load failures now preserve the detailed runtime error when one is available, while keeping the localized fallback status message for empty failures.
+- CI dependency install now covers the full development extras, including pydocstyle and typing stub packages required for mypy validation.
 
 ### Changed
 
