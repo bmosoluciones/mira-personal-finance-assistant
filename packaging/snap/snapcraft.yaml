@@ -56,7 +56,7 @@ parts:
     plugin: nil
     source: https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1b2-py3-none-any.whl
     source-type: file
-    source-checksum: sha256/222D99A86167D396B3EDE3A119619F6527A0E94D4239F31C560BEAAEAE8D1276
+    source-checksum: sha256/222d99a86167d396b3ede3a119619f6527a0e94d4239f31c560beaaeae8d1276
     build-snaps:
       - kde-pyside6-core24-sdk/latest/stable
     stage-snaps:
