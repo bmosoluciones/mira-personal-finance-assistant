@@ -64,6 +64,7 @@ class AccountsView(QWidget):
         self._btn_balance_adjustment = _make_toolbar_btn(
             _tr_db(self._db, "btn.balance_adjustment", "~ Balance Adjustment")
         )
+        self._btn_reconcile = _make_toolbar_btn(_tr_db(self._db, "btn.reconcile", "✓ Reconcile"))
         self._btn_transfer = _make_toolbar_btn(_tr_db(self._db, "btn.transfer", "↔ Transfer"))
         self._btn_credit_payment = _make_toolbar_btn(_tr_db(self._db, "btn.credit_payment", "💳 Card Payment"))
         for btn in [
@@ -72,6 +73,7 @@ class AccountsView(QWidget):
             self._btn_delete,
             self._btn_set_default,
             self._btn_balance_adjustment,
+            self._btn_reconcile,
             self._btn_transfer,
             self._btn_credit_payment,
         ]:
@@ -104,6 +106,7 @@ class AccountsView(QWidget):
         self._btn_delete.clicked.connect(self._on_delete)
         self._btn_set_default.clicked.connect(self._on_set_default)
         self._btn_balance_adjustment.clicked.connect(self._on_balance_adjustment)
+        self._btn_reconcile.clicked.connect(self._on_reconcile)
         self._btn_transfer.clicked.connect(self._on_transfer)
         self._btn_credit_payment.clicked.connect(self._on_credit_payment)
         self._table.doubleClicked.connect(self._on_edit)
@@ -234,6 +237,15 @@ class AccountsView(QWidget):
             self._transactions_service.record_credit_payment(dlg.get_data())
             self.refresh()
 
+    def _on_reconcile(self) -> None:
+        from mira.ui.dialogs import ReconciliationDialog
+
+        selected = self._get_selected()
+        account_id = int(selected["id"]) if selected is not None else None
+        dlg = ReconciliationDialog(self._db, parent=self, account_id=account_id)
+        dlg.exec()
+        self.refresh(selected_account_id=account_id)
+
     def _open_context_menu(self, pos: QPoint) -> None:
         if not _select_row_at_pos(self._table, pos):
             return
@@ -243,6 +255,7 @@ class AccountsView(QWidget):
         act_set_default = menu.addAction(_tr_db(self._db, "btn.set_default", "⭐ Set as Default"))
         act_adjust = menu.addAction(_tr_db(self._db, "btn.balance_adjustment", "~ Balance Adjustment"))
         act_adjust.setEnabled(self._is_adjustable_account(account))
+        act_reconcile = menu.addAction(_tr_db(self._db, "btn.reconcile", "✓ Reconcile"))
         act_transfer = menu.addAction(_tr_db(self._db, "btn.transfer", "↔ Transfer"))
         act_credit_payment = menu.addAction(_tr_db(self._db, "btn.credit_payment", "💳 Card Payment"))
         act_delete = menu.addAction(_tr_db(self._db, "btn.delete", "🗑 Delete"))
@@ -254,6 +267,8 @@ class AccountsView(QWidget):
                 self._on_set_default()
             case _ if chosen is act_adjust:
                 self._on_balance_adjustment()
+            case _ if chosen is act_reconcile:
+                self._on_reconcile()
             case _ if chosen is act_transfer:
                 self._on_transfer()
             case _ if chosen is act_credit_payment:
@@ -272,6 +287,10 @@ class AccountsView(QWidget):
     def open_credit_payment_dialog(self) -> None:
         """Public helper to open the credit card payment dialog from the accounts view."""
         self._on_credit_payment()
+
+    def open_reconciliation_dialog(self) -> None:
+        """Public helper to open the reconciliation dialog from the accounts view."""
+        self._on_reconcile()
 
     def refresh(self, *, selected_account_id: int | None = None) -> None:
         if selected_account_id is None:

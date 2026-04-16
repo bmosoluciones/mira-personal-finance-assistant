@@ -49,6 +49,12 @@ class MenuBuilder:
         act_add_account = QAction(tr("menu.accounts.add", window._language, default="Add Account"), window)
         act_add_account.triggered.connect(window._menu_add_account)
         accounts_menu.addAction(act_add_account)
+        act_reconcile = QAction(
+            tr("menu.accounts.reconcile", window._language, default="Reconcile Account"),
+            window,
+        )
+        act_reconcile.triggered.connect(window._menu_open_reconciliation)
+        accounts_menu.addAction(act_reconcile)
 
         tx_menu = mb.addMenu(tr("menu.transactions", window._language, default="Transactions"))
         act_view_tx = QAction(tr("menu.transactions.view", window._language, default="View Transactions"), window)

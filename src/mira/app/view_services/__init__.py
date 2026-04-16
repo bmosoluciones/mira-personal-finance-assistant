@@ -20,6 +20,7 @@ from .mira_analysis import (
     MiraAnalysisWaterfallState,
     MiraAnalysisWaterfallStep,
 )
+from .reconciliation import ReconciliationExternalRow, ReconciliationImportPreview, ReconciliationViewService
 from .recurring import RecurringViewService, RecurringViewState
 from .reports import (
     PresentationCell,
@@ -65,6 +66,9 @@ __all__ = [
     "OperationFeedback",
     "PresentationCell",
     "PresentationContext",
+    "ReconciliationExternalRow",
+    "ReconciliationImportPreview",
+    "ReconciliationViewService",
     "PresentationRow",
     "RecurringViewService",
     "RecurringViewState",

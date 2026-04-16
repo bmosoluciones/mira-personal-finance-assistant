@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Generator
 
@@ -80,6 +81,7 @@ class DatabaseRuntime:
             self._connection = self._database.connection()
             self._connection.row_factory = sqlite3.Row
             if inspection.status == "migratable":
+                self._create_pre_migration_backup(int(inspection.user_version or 0))
                 db_migrations.migrate_database(self._connection, int(inspection.user_version or 0), target_version)
             self._init_schema()
         except Exception:
@@ -126,6 +128,21 @@ class DatabaseRuntime:
         if connection is None:
             raise RuntimeError("Database is not connected. Call connect() first.")
         return connection
+
+    def _create_pre_migration_backup(self, from_version: int) -> Path:
+        connection = self._require_connection()
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup_path = self.path.with_name(
+            f"{self.path.stem}.pre-migration-v{from_version}-{timestamp}{self.path.suffix or '.db'}"
+        )
+        destination = sqlite3.connect(str(backup_path))
+        try:
+            connection.commit()
+            connection.backup(destination)
+            destination.commit()
+        finally:
+            destination.close()
+        return backup_path
 
     @staticmethod
     def _money_to_cents(value: object, *, allow_none: bool = False) -> int | None:

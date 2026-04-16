@@ -209,6 +209,45 @@ def test_accounts_view_transfer_shortcuts_reuse_existing_transfer_dialog(
         view.close()
 
 
+def test_accounts_view_reconcile_shortcut_opens_dialog_with_selected_account(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.accounts")
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    first = db.account.create("Banco", "bank", 500.0, "USD")
+    second = db.account.create("Ahorro", "bank", 50.0, "USD")
+    selected_account_ids: list[int | None] = []
+
+    class FakeReconciliationDialog:
+        class DialogCode:
+            Accepted = 1
+
+        def __init__(self, _db: Database, parent=None, *, account_id: int | None = None, service=None) -> None:
+            del parent, service
+            selected_account_ids.append(account_id)
+
+        def exec(self) -> int:
+            return self.DialogCode.Accepted
+
+    monkeypatch.setattr(dialogs_module, "ReconciliationDialog", FakeReconciliationDialog)
+
+    view = views_module.AccountsView(db)
+    try:
+        view.refresh()
+        second_row = _find_row_by_user_role(view._table, int(second["id"]))
+        view._table.selectRow(second_row)
+        view._table.setCurrentCell(second_row, 0)
+
+        view.open_reconciliation_dialog()
+
+        assert selected_account_ids == [int(second["id"])]
+        assert db.account.get(int(first["id"])) is not None
+    finally:
+        view.close()
+
+
 def test_accounts_view_balance_adjustment_button_records_transaction(
     monkeypatch: pytest.MonkeyPatch, db: Database
 ) -> None:

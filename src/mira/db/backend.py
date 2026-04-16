@@ -10,6 +10,7 @@ from mira.db.repositories.budget_repository import BudgetRepository
 from mira.db.repositories.category_repository import CategoryRepository
 from mira.db.repositories.feedback_repository import FeedbackRepository
 from mira.db.repositories.recurring_repository import RecurringRepository
+from mira.db.repositories.reconciliation_repository import ReconciliationRepository
 from mira.db.repositories.report_repository import ReportRepository
 from mira.db.repositories.savings_goal_repository import SavingsGoalRepository
 from mira.db.repositories.setting_repository import SettingRepository
@@ -22,6 +23,7 @@ class DatabaseBackend(
     DatabaseRuntime,
     AccountRepository,
     TransactionRepository,
+    ReconciliationRepository,
     CategoryRepository,
     SavingsGoalRepository,
     SettingRepository,

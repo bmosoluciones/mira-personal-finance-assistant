@@ -42,6 +42,10 @@ class MainWindowNavigationMixin:
     def _menu_open_accounts(self) -> None:
         self._navigate(self.VIEW_ACCOUNTS)
 
+    def _menu_open_reconciliation(self) -> None:
+        self._navigate(self.VIEW_ACCOUNTS)
+        self._view_accounts.open_reconciliation_dialog()
+
     def _menu_open_transactions(self) -> None:
         self._navigate(self.VIEW_TRANSACTIONS)
 

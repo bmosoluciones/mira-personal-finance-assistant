@@ -8,6 +8,10 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 
 ### Added
 
+- **Bank reconciliation**: new reconciliation dialog accessible from the Accounts view toolbar, context menu, and the Accounts menu in the menu bar. Users can load a bank statement Excel file (`.xlsx`), compare external transactions side-by-side with system transactions, reconcile selected rows, clear reconciliation marks, and inspect opening/closing balance summaries per account and date range. Schema migrated to v4 with `reconciliation_groups`, `reconciliation_matches` tables, and `is_reconciled`/`reconciled_at` columns on transactions.
+- Migration audit trail: `schema_version` table now records the origin version and each applied version step, providing full auditability of applied migrations.
+- ~70 i18n keys for reconciliation UI in Spanish and English.
+
 - Transaction amount field now accepts simple arithmetic formulas (e.g. `=100+50`, `=(200*3)/4`) using the same formula engine as the budget planner. Only positive results are accepted.
 - Category dropdown in the create/edit transaction dialog is now searchable: typing filters categories by name using a case-insensitive contains match, making it easy to find categories in large lists.
 

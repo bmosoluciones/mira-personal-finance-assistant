@@ -707,6 +707,9 @@ def test_card_widget_menu_builder_and_report_types(monkeypatch) -> None:
         def _menu_open_accounts(self) -> None:
             self.open_accounts_calls += 1
 
+        def _menu_open_reconciliation(self) -> None:
+            return None
+
         def _menu_open_transactions(self) -> None:
             self.open_transactions_calls += 1
 

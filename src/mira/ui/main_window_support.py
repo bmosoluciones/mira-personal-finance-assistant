@@ -16,6 +16,7 @@ from mira.app.view_services import (
     CategoriesViewService,
     MiraAnalysisMessageBuilder,
     MiraAnalysisService,
+    ReconciliationViewService,
     RecurringViewService,
     ReportsViewService,
     SavingsGoalsViewService,
@@ -33,6 +34,7 @@ class MainWindowServices:
     transactions: TransactionsViewService
     categories: CategoriesViewService
     tags: TagsViewService
+    reconciliation: ReconciliationViewService
     recurring: RecurringViewService
     reports: ReportsViewService
     mira_analysis: MiraAnalysisService
@@ -47,6 +49,7 @@ def build_view_services(db) -> MainWindowServices:
         transactions=TransactionsViewService(db),
         categories=CategoriesViewService(db),
         tags=TagsViewService(db),
+        reconciliation=ReconciliationViewService(db),
         recurring=RecurringViewService(db),
         reports=ReportsViewService(db),
         mira_analysis=MiraAnalysisService(db),

@@ -400,6 +400,51 @@ class TransactionFacade(_DatabaseFacade):
         )
 
 
+class ReconciliationFacade(_DatabaseFacade):
+    def list_groups(self, *, account_id: int, date_from: str, date_to: str) -> list[dict[str, Any]]:
+        return self._db.list_reconciliation_groups(account_id=account_id, date_from=date_from, date_to=date_to)
+
+    def list_matches(
+        self,
+        *,
+        account_id: int | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        transaction_ids: list[int] | None = None,
+        group_ids: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        return self._db.list_reconciliation_matches(
+            account_id=account_id,
+            date_from=date_from,
+            date_to=date_to,
+            transaction_ids=transaction_ids,
+            group_ids=group_ids,
+        )
+
+    def reconcile(
+        self,
+        *,
+        account_id: int,
+        date_from: str,
+        date_to: str,
+        system_transaction_ids: list[int],
+        external_rows: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return self._db.reconcile_transactions(
+            account_id=account_id,
+            date_from=date_from,
+            date_to=date_to,
+            system_transaction_ids=system_transaction_ids,
+            external_rows=external_rows,
+        )
+
+    def clear_for_transactions(self, transaction_ids: list[int]) -> int:
+        return self._db.clear_reconciliation_for_transactions(transaction_ids)
+
+    def clear_groups(self, group_ids: list[str]) -> int:
+        return self._db.clear_reconciliation_groups(group_ids)
+
+
 class RecurringFacade(_DatabaseFacade):
     def list(self) -> list[dict]:
         return self._db.get_recurring()
@@ -895,6 +940,7 @@ class Database:
         self.category = CategoryFacade(self._backend)
         self.tag = TagFacade(self._backend)
         self.transaction = TransactionFacade(self._backend)
+        self.reconciliation = ReconciliationFacade(self._backend)
         self.recurring = RecurringFacade(self._backend)
         self.savings_goal = SavingsGoalFacade(self._backend)
         self.setting = SettingFacade(self._backend)

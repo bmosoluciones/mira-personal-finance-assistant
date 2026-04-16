@@ -8,6 +8,7 @@ from .budget import BudgetCreateDialog
 from .categories import CategoryDialog, MergeCategoryDialog
 from .goals import ContributeGoalDialog, SavingsGoalDialog
 from .recurring import RecurringDialog
+from .reconciliation import ReconciliationDialog
 from .setup import InitialSetupDialog
 from .tags import TagDialog
 from .transactions import BalanceAdjustmentDialog, TransactionDialog, TransferDialog
@@ -31,6 +32,7 @@ __all__ = [
     "LoanAmortizationDialog",
     "MergeCategoryDialog",
     "RecurringDialog",
+    "ReconciliationDialog",
     "SavingsGoalDialog",
     "TagDialog",
     "TransactionDialog",

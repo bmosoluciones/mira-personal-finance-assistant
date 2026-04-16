@@ -28,7 +28,7 @@ from peewee import (
 )
 
 DB_PROXY: Proxy = Proxy()
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 @dataclass(frozen=True)
@@ -92,6 +92,8 @@ class Transaction(BaseModel):
     is_transfer = BooleanField(default=False)
     exchange_rate = FloatField(null=True)
     converted_amount = IntegerField(column_name="converted_amount_cents", null=True)
+    is_reconciled = BooleanField(default=False)
+    reconciled_at = DateTimeField(null=True)
     date = DateField(default=date.today)
     created_at = DateTimeField(default=datetime.now)
 
@@ -304,6 +306,55 @@ class MessageEvent(BaseModel):
         table_name = "message_events"
 
 
+class ReconciliationGroup(BaseModel):
+    id = CharField(primary_key=True)
+    account = ForeignKeyField(
+        Account,
+        backref="reconciliation_groups",
+        column_name="account_id",
+        on_delete="CASCADE",
+    )
+    date_from = DateField()
+    date_to = DateField()
+    created_at = DateTimeField(default=datetime.now)
+
+    class Meta:
+        table_name = "reconciliation_groups"
+
+
+class ReconciliationMatch(BaseModel):
+    id = CharField(primary_key=True)
+    reconciliation_group = ForeignKeyField(
+        ReconciliationGroup,
+        backref="matches",
+        column_name="reconciliation_group_id",
+        on_delete="CASCADE",
+    )
+    system_transaction = ForeignKeyField(
+        Transaction,
+        backref="reconciliation_matches",
+        column_name="system_transaction_id",
+        on_delete="CASCADE",
+    )
+    external_reference = CharField(null=True)
+    external_date = DateField()
+    external_description = TextField(null=True)
+    external_amount = IntegerField(column_name="external_amount_cents")
+    external_item_key = CharField()
+
+    class Meta:
+        table_name = "reconciliation_matches"
+
+
+class SchemaVersion(BaseModel):
+    version = IntegerField(primary_key=True)
+    applied_at = DateTimeField(default=datetime.now)
+    status = CharField(default="applied")
+
+    class Meta:
+        table_name = "schema_version"
+
+
 class IncomeExpenseRelation(BaseModel):
     id = AutoField()
     income_category = ForeignKeyField(
@@ -343,7 +394,10 @@ ALL_MODELS = [
     AchievementEvent,
     AchievementCounter,
     MessageEvent,
+    ReconciliationGroup,
+    ReconciliationMatch,
     IncomeExpenseRelation,
+    SchemaVersion,
 ]
 
 EXPECTED_TABLES = frozenset(model._meta.table_name for model in ALL_MODELS)  # type: ignore[attr-defined]
@@ -358,6 +412,8 @@ SCHEMA_INDEX_SPECS: tuple[SchemaIndexSpec, ...] = (
     SchemaIndexSpec("idx_transactions_category", "transactions", ("category",)),
     SchemaIndexSpec("idx_transactions_category_id", "transactions", ("category_id",)),
     SchemaIndexSpec("idx_transactions_date_type", "transactions", ("date", "type")),
+    SchemaIndexSpec("idx_transactions_is_reconciled", "transactions", ("is_reconciled",)),
+    SchemaIndexSpec("idx_transactions_reconciled_at", "transactions", ("reconciled_at",)),
     SchemaIndexSpec("idx_budget_detail_budget_id", "budget_detail", ("budget_id",)),
     SchemaIndexSpec("idx_budget_detail_category_id", "budget_detail", ("category_id",)),
     SchemaIndexSpec(
@@ -416,6 +472,32 @@ SCHEMA_INDEX_SPECS: tuple[SchemaIndexSpec, ...] = (
         ("expense_category_id",),
         unique=True,
     ),
+    SchemaIndexSpec(
+        "idx_reconciliation_groups_account_range",
+        "reconciliation_groups",
+        ("account_id", "date_from", "date_to"),
+    ),
+    SchemaIndexSpec(
+        "idx_reconciliation_matches_group",
+        "reconciliation_matches",
+        ("reconciliation_group_id",),
+    ),
+    SchemaIndexSpec(
+        "idx_reconciliation_matches_transaction",
+        "reconciliation_matches",
+        ("system_transaction_id",),
+    ),
+    SchemaIndexSpec(
+        "idx_reconciliation_matches_external_key",
+        "reconciliation_matches",
+        ("external_item_key",),
+    ),
+    SchemaIndexSpec(
+        "uq_reconciliation_matches_group_tx_external",
+        "reconciliation_matches",
+        ("reconciliation_group_id", "system_transaction_id", "external_item_key"),
+        unique=True,
+    ),
 )
 
 
@@ -438,6 +520,61 @@ def create_peewee_database(path: str) -> SqliteDatabase:
 
 def bind_database(database: SqliteDatabase) -> None:
     DB_PROXY.initialize(database)
+
+
+_LEGACY_V1_REQUIRED_TABLES = frozenset(
+    {
+        "accounts",
+        "transactions",
+        "buckets",
+        "settings",
+        "currencies",
+        "categories",
+        "tags",
+        "transaction_tags",
+        "savings_goals",
+        "recurring_transactions",
+        "recurring_transaction_tags",
+        "budget_master",
+        "budget_detail",
+        "insight_events",
+        "achievement_events",
+        "achievement_counters",
+        "message_events",
+    }
+)
+
+
+def _table_columns(conn: sqlite3.Connection, table: str) -> frozenset[str]:
+    return frozenset(str(row[1]) for row in conn.execute(f"PRAGMA table_info({table})").fetchall())
+
+
+def _is_legacy_v1_float_schema(conn: sqlite3.Connection, tables: frozenset[str]) -> bool:
+    if not _LEGACY_V1_REQUIRED_TABLES.issubset(tables):
+        return False
+    accounts_columns = _table_columns(conn, "accounts")
+    transaction_columns = _table_columns(conn, "transactions")
+    bucket_columns = _table_columns(conn, "buckets")
+    recurring_columns = _table_columns(conn, "recurring_transactions")
+    goal_columns = _table_columns(conn, "savings_goals")
+    budget_columns = _table_columns(conn, "budget_detail")
+    message_columns = _table_columns(conn, "message_events")
+    return (
+        "balance" in accounts_columns
+        and "balance_cents" not in accounts_columns
+        and "amount" in transaction_columns
+        and "amount_cents" not in transaction_columns
+        and "budget_amount" in bucket_columns
+        and "budget_amount_cents" not in bucket_columns
+        and "amount" in recurring_columns
+        and "amount_cents" not in recurring_columns
+        and "target_amount" in goal_columns
+        and "target_amount_cents" not in goal_columns
+        and "amount" in budget_columns
+        and "amount_cents" not in budget_columns
+        and "context_amount" in message_columns
+        and "context_amount_cents" not in message_columns
+    )
 
 
 def inspect_database_schema_details(
@@ -476,6 +613,8 @@ def inspect_database_schema_details(
             )
 
         stored_user_version = int(conn.execute("PRAGMA user_version").fetchone()[0] or 0)
+        if stored_user_version == 0 and _is_legacy_v1_float_schema(conn, tables):
+            stored_user_version = 1
     except sqlite3.DatabaseError as exc:
         return SchemaInspection(status="invalid", user_version=None, tables=frozenset(), error=str(exc))
     finally:
@@ -529,4 +668,7 @@ def initialize_schema(database: SqliteDatabase) -> None:
     for index_spec in SCHEMA_INDEX_SPECS:
         database.execute_sql(_build_create_index_sql(index_spec))
     database.execute_sql("DROP INDEX IF EXISTS uq_message_events_daily")
+    SchemaVersion.insert(
+        version=SCHEMA_VERSION, applied_at=datetime.now(), status="applied"
+    ).on_conflict_ignore().execute()
     database.execute_sql(f"PRAGMA user_version = {SCHEMA_VERSION}")

@@ -52,6 +52,7 @@ class TransactionRepository:
         def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict[str, Any]]: ...
         def get_account_by_id(self, account_id: int) -> dict[str, Any] | None: ...
         def get_setting(self, key: str) -> str | None: ...
+        def clear_reconciliation_for_transactions(self, transaction_ids: list[int]) -> int: ...
 
     _MAX_TRANSACTION_AMOUNT = 10_000_000_000
 
@@ -133,6 +134,12 @@ class TransactionRepository:
             "receipt_path": row.receipt_path,
             "to_account_id": row.to_account_id,
             "is_transfer": int(bool(row.is_transfer)),
+            "is_reconciled": int(bool(row.is_reconciled)),
+            "reconciled_at": (
+                row.reconciled_at.strftime("%Y-%m-%d %H:%M:%S")
+                if isinstance(row.reconciled_at, datetime)
+                else row.reconciled_at
+            ),
             "exchange_rate": row.exchange_rate,
             "converted_amount": self._cents_to_decimal(row.converted_amount, allow_none=True),
             "date": date_value,
@@ -373,6 +380,7 @@ class TransactionRepository:
         if tx is None:
             return
         with self._atomic():
+            self.clear_reconciliation_for_transactions([int(tx_id)])
             self._apply_savings_goal_delta_for_transaction(tx, sign=-1)
             if tx["account_id"] is not None:
                 amount_value = self._money_to_decimal(tx.get("amount")) or MONEY_ZERO
@@ -414,6 +422,7 @@ class TransactionRepository:
 
         result: dict[str, Any] | None = None
         with self._atomic():
+            self.clear_reconciliation_for_transactions([int(tx_id)])
             self._apply_savings_goal_delta_for_transaction(old, sign=-1)
             if old["account_id"] is not None:
                 old_amount = self._money_to_decimal(old.get("amount")) or MONEY_ZERO
