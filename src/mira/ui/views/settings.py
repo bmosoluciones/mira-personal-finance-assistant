@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 from mira.ai.engine import is_llama_cpp_available
 from mira.ai.model_registry import discover_gguf_models
 from mira.app.view_services import SettingsViewService, SettingsViewState
-from mira.db.database import Database
+from mira.db.database import CURRENCY_CODES, Database
 from mira.ui.i18n import SUPPORTED_LANGUAGES, normalize_language, tr
 from mira.ui.notifications import show_user_message
 from mira.ui.number_format import (
@@ -121,6 +121,30 @@ class SettingsView(QWidget):
             self._theme_combo.addItem(tr("settings.theme.dark", self._language, default="Dark"), "dark")
             self._theme_combo.addItem(tr("settings.theme.light", self._language, default="Light"), "light")
         form.addRow(tr("settings.theme", self._language, default="Theme:"), self._theme_combo)
+
+        self._default_currency_combo = QComboBox()
+        self._default_currency_combo.setStyleSheet(_COMBO_STYLE)
+        self._default_currency_combo.setEditable(False)
+        self._default_currency_combo.setMaxVisibleItems(15)
+        self._populate_currency_options()
+        form.addRow(
+            tr("settings.default_currency", self._language, default="Default currency:"),
+            self._default_currency_combo,
+        )
+
+        self._default_currency_hint = QLabel(
+            tr(
+                "settings.default_currency.help",
+                self._language,
+                default=(
+                    "Updates the default currency for new flows and the assistant. "
+                    "Existing accounts and records keep their current currency."
+                ),
+            )
+        )
+        self._default_currency_hint.setWordWrap(True)
+        self._default_currency_hint.setStyleSheet("font-size:10px;")
+        form.addRow("", self._default_currency_hint)
 
         self._thousands_sep_combo = QComboBox()
         self._thousands_sep_combo.setStyleSheet(_COMBO_STYLE)
@@ -262,6 +286,7 @@ class SettingsView(QWidget):
                 username=username,
                 language=language,
                 theme=theme,
+                default_currency=str(self._default_currency_combo.currentData() or "USD"),
                 thousands_sep=str(self._thousands_sep_combo.currentData() or ","),
                 decimal_sep=str(self._decimal_sep_combo.currentData() or "."),
                 preferred_model=selected_model if self._llama_cpp_available else "",
@@ -306,6 +331,8 @@ class SettingsView(QWidget):
         tidx = self._theme_combo.findData(theme)
         if tidx >= 0:
             self._theme_combo.setCurrentIndex(tidx)
+        if (currency_idx := self._default_currency_combo.findData(state.default_currency)) >= 0:
+            self._default_currency_combo.setCurrentIndex(currency_idx)
         gidx = self._thousands_sep_combo.findData(state.thousands_sep)
         if gidx >= 0:
             self._thousands_sep_combo.setCurrentIndex(gidx)
@@ -376,3 +403,13 @@ class SettingsView(QWidget):
             chk.blockSignals(True)
             chk.setChecked(False)
             chk.blockSignals(False)
+
+    def _populate_currency_options(self) -> None:
+        for currency in self._db.setting.list_currencies(region=None):
+            code = str(currency.get("code") or "").strip().upper()
+            name = str(currency.get("name") or "").strip()
+            if code:
+                self._default_currency_combo.addItem(f"{code}  -  {name}", code)
+        for code in CURRENCY_CODES:
+            if self._default_currency_combo.findData(code) < 0:
+                self._default_currency_combo.addItem(code, code)

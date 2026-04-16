@@ -88,3 +88,25 @@ class CategoriesViewService:
         target = merged.get("target") if isinstance(merged, dict) else None
         selected_id = int(target["id"]) if isinstance(target, dict) and target.get("id") is not None else int(target_id)
         return OperationFeedback(selected_id=selected_id)
+
+    # -- Income-Expense Relation helpers ------------------------------------
+
+    def list_relations(self) -> list[dict[str, Any]]:
+        return self._db.category.list_relations()
+
+    def create_relation(self, income_category_id: int, expense_category_id: int) -> dict[str, Any]:
+        return self._db.category.create_relation(income_category_id, expense_category_id)
+
+    def delete_relation(self, relation_id: int) -> None:
+        self._db.category.delete_relation(relation_id)
+
+    def parent_income_categories(self) -> list[dict[str, Any]]:
+        """Return level-1 income categories (no parent)."""
+        return [c for c in self._db.category.list("income") if c.get("parent_id") is None]
+
+    def available_parent_expense_categories(self) -> list[dict[str, Any]]:
+        """Return level-1 expense categories that are not already linked."""
+        linked = self._db.category.linked_expense_ids()
+        return [
+            c for c in self._db.category.list("expense") if c.get("parent_id") is None and int(c["id"]) not in linked
+        ]

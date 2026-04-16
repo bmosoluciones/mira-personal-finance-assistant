@@ -287,3 +287,93 @@ def test_categories_view_shows_warning_when_linked_category_delete_is_blocked(
         assert "cannot be deleted" in warnings[0]
     finally:
         view.close()
+
+
+def test_contribute_goal_dialog_shows_goal_dropdown_with_multiple_goals(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    """ContributeGoalDialog must expose a goal combobox when multiple goals exist."""
+    _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    goal1 = db.savings_goal.create("Vacation", 1000.0)
+    goal2 = db.savings_goal.create("Emergency Fund", 5000.0)
+
+    goals = [goal1, goal2]
+    dialog = dialogs_module.ContributeGoalDialog(
+        db,
+        goal_name="Vacation",
+        goals=goals,
+        selected_goal_id=int(goal1["id"]),
+    )
+    try:
+        assert dialog._goal_combo is not None
+        assert dialog._goal_combo.count() == 2
+        # The first goal must be pre-selected.
+        assert dialog._goal_combo.currentText() == "Vacation"
+    finally:
+        dialog.close()
+
+
+def test_contribute_goal_dialog_preselects_by_goal_name_fallback(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    """When selected_goal_id is None the dialog falls back to matching by name."""
+    _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    goal1 = db.savings_goal.create("Trip", 800.0)
+    goal2 = db.savings_goal.create("Car", 3000.0)
+    goals = [goal1, goal2]
+
+    dialog = dialogs_module.ContributeGoalDialog(
+        db,
+        goal_name="Car",
+        goals=goals,
+        selected_goal_id=None,
+    )
+    try:
+        assert dialog._goal_combo.currentText() == "Car"
+    finally:
+        dialog.close()
+
+
+def test_contribute_goal_dialog_no_dropdown_for_single_call(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    """ContributeGoalDialog without a goals list must not show a goal combobox."""
+    _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    dialog = dialogs_module.ContributeGoalDialog(db, goal_name="Solo Goal")
+    try:
+        assert dialog._goal_combo is None
+        data = dialog.get_data()
+        assert "goal_id" not in data
+    finally:
+        dialog.close()
+
+
+def test_contribute_goal_dialog_returns_selected_goal_id(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    """get_data() must include goal_id matching the selected combobox entry."""
+    _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    goal1 = db.savings_goal.create("Alpha", 200.0)
+    goal2 = db.savings_goal.create("Beta", 400.0)
+    goals = [goal1, goal2]
+
+    dialog = dialogs_module.ContributeGoalDialog(
+        db,
+        goal_name="Beta",
+        goals=goals,
+        selected_goal_id=int(goal2["id"]),
+    )
+    try:
+        dialog._goal_combo.setCurrentIndex(1)  # select Beta
+        data = dialog.get_data()
+        assert data["goal_id"] == goal2["id"]
+    finally:
+        dialog.close()

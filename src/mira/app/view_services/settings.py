@@ -16,6 +16,7 @@ class SettingsViewState:
     username: str
     language: str
     theme: str
+    default_currency: str
     thousands_sep: str
     decimal_sep: str
     preferred_model: str
@@ -34,6 +35,7 @@ class SettingsViewService:
             username=str(self._db.setting.get("username") or ""),
             language=str(self._db.setting.get("language") or "es"),
             theme=str(self._db.setting.get("theme") or "dark_teal.xml"),
+            default_currency=str(self._db.setting.get_default_currency() or "USD").strip().upper() or "USD",
             thousands_sep=number_format.thousands_sep,
             decimal_sep=number_format.decimal_sep,
             preferred_model=str(self._db.setting.get("preferred_model") or ""),
@@ -46,6 +48,7 @@ class SettingsViewService:
         username: str,
         language: str,
         theme: str,
+        default_currency: str,
         thousands_sep: str,
         decimal_sep: str,
         preferred_model: str,
@@ -55,6 +58,7 @@ class SettingsViewService:
         self._db.setting.set("username", username)
         self._db.setting.set("language", language)
         self._db.setting.set("theme", theme)
+        self._db.setting.set("default_currency", default_currency.strip().upper() or "USD")
         self._db.setting.set("number_thousands_separator", number_format.thousands_sep)
         self._db.setting.set("number_decimal_separator", number_format.decimal_sep)
         self._db.setting.set("preferred_model", preferred_model)

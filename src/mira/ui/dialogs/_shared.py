@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from mira.db.database import Database
 from mira.ui.i18n import normalize_language, tr
 from mira.ui.notifications import show_user_message
-from mira.ui.number_format import NumberMaskedSpinBox, format_number, get_number_format_config
+from mira.ui.number_format import FormulaAmountEdit, NumberMaskedSpinBox, format_number, get_number_format_config
 
 _TAG_SELECTOR_POPUP_STYLE = "QFrame{border-radius:4px;}"
 _TAG_SELECTOR_LIST_STYLE = "QListWidget{border:none;padding:2px;}"
@@ -72,6 +72,15 @@ def _make_amount_spin(db: Database) -> QDoubleSpinBox:
     spin.setRange(0.01, 9_999_999.99)
     spin.setDecimals(2)
     spin.setValue(0.00)
+    return spin
+
+
+def _make_formula_amount_spin(db: Database) -> FormulaAmountEdit:
+    """Return an amount spinbox that also accepts ``=``-prefixed formulas."""
+    spin = FormulaAmountEdit(db.setting)
+    spin.setRange(0.01, 9_999_999.99)
+    spin.setDecimals(2)
+    spin.setValue(0.01)
     return spin
 
 

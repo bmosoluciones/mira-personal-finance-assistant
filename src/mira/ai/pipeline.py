@@ -155,6 +155,7 @@ class Pipeline:
     def reload_engine(self, model_path: str | None) -> None:
         """Hot-reload the optional chat engine when the selected model changes."""
         with self._engine_lock:
+            self._parser.set_default_currency(self._db.setting.get_default_currency())
             if self._chat_engine is not None:
                 self._chat_engine.shutdown()
 
@@ -164,6 +165,7 @@ class Pipeline:
             except _EXPECTED_ENGINE_RELOAD_ERRORS as exc:
                 logger.warning("Failed to reload chat engine: %s", exc)
                 self._chat_engine = None
+            self._parser.set_default_currency(self._db.setting.get_default_currency())
 
     def _parser_error_result(self, user_input: str | None = None) -> ActionResult:
         return ActionResult(success=False, action="none", message=self._parser_error_message(user_input))

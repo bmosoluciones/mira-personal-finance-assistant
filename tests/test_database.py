@@ -474,6 +474,56 @@ class TestAccounts:
             db.account.set_default(999999)
         assert db.account.get_default()["id"] == original_default["id"]
 
+    def test_unique_index_prevents_two_default_accounts(self, tmp_path):
+        """DB-level partial unique index must reject a second default account."""
+        from mira.db.model import Account
+
+        db_path = tmp_path / "single_default.db"
+        database = Database(path=db_path)
+        database.connect()
+        try:
+            database.account.create("Second")
+            second = database.account.find_by_name("Second")
+            assert second is not None
+            # Attempt to force a second default at the raw ORM level; the
+            # partial unique index introduced in v3 must reject this.
+            with pytest.raises(Exception):
+                Account.update(is_default=True).where(Account.id == second["id"]).execute()
+        finally:
+            database.close()
+
+    def test_migrate_v2_to_v3_sanitises_duplicate_defaults(self, tmp_path):
+        """Migration v2→v3 must keep exactly one default account."""
+        db_path = tmp_path / "migrate_v2_v3.db"
+        # Create a fresh v3 database, then downgrade to v2 and inject duplicate
+        # default accounts directly to simulate the corrupted state.
+        database = Database(path=db_path)
+        database.connect()
+        database.close()
+
+        with sqlite3.connect(db_path) as conn:
+            # Force user_version back to 2 so the migration will run.
+            conn.execute("PRAGMA user_version = 2")
+            # Drop the partial unique index that v3 introduces so we can
+            # inject duplicate default rows without triggering the constraint.
+            conn.execute("DROP INDEX IF EXISTS uq_accounts_single_default")
+            # Insert a second account with is_default = 1.
+            conn.execute(
+                "INSERT OR IGNORE INTO accounts(name, balance_cents, account_type, currency, is_default)"
+                " VALUES (?, 0, 'bank', 'USD', 1)",
+                ("Second Default",),
+            )
+            conn.commit()
+
+        # Reconnect – the runtime should detect version 2 and run the migration.
+        database = Database(path=db_path)
+        database.connect()
+        try:
+            defaults = [a for a in database.account.list() if a["is_default"]]
+            assert len(defaults) == 1
+        finally:
+            database.close()
+
     def test_seed_initial_data_account_names_list(self, db):
         db.setting.set("default_currency", "USD")
         db.setting.seed_initial_data(

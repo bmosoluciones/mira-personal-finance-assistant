@@ -902,12 +902,45 @@ class MiraAnalysisMessageBuilder:
         return "\n".join(lines).strip()
 
     def build_assistant_messages(self, payload: dict[str, Any], *, language: str) -> list[tuple[str, str]]:
+        """Return one short, focused message per sub-report section plus individual advisor messages.
+
+        Each sub-report (Efficiency, Security, Purpose) becomes its own navigable
+        message so the user sees brief, relevant context one at a time instead of
+        a single large block.  Advisor messages remain individual entries.
+        """
         messages: list[tuple[str, str]] = []
-        context_text = self.build_context_message(payload, language=language)
-        if context_text:
+        context = self._context(language)
+        comparisons = cast(dict[str, Any], payload.get("comparisons") or {})
+        budget = cast(dict[str, Any], payload.get("budget") or {})
+        metrics = cast(dict[str, Any], payload.get("metrics") or {})
+        history_hints = [str(item).strip() for item in list(payload.get("history_hints") or []) if str(item).strip()]
+        goals_summary = cast(dict[str, Any], payload.get("goals_summary") or {})
+
+        efficiency_lines = self._build_efficiency_context_lines(
+            context, comparisons=comparisons, budget=budget, metrics=metrics
+        )
+        efficiency_text = "\n".join(efficiency_lines).strip()
+        if efficiency_text:
             messages.append(
-                (context_text, self._t(language, "mira.analysis.context.chat_title", "Comparativas y contexto"))
+                (efficiency_text, self._t(language, "mira.analysis.context.efficiency", "Efficiency report"))
             )
+
+        security_lines = self._build_security_context_lines(
+            context, payload=payload, metrics=metrics, history_hints=history_hints
+        )
+        security_text = "\n".join(security_lines).strip()
+        if security_text:
+            messages.append((security_text, self._t(language, "mira.analysis.context.security", "Security report")))
+
+        if (
+            goals_summary.get("headline")
+            or list(goals_summary.get("items") or [])
+            or metrics.get("goal_completion_index_pct") is not None
+        ):
+            purpose_lines = self._build_purpose_context_lines(context, metrics=metrics, goals_summary=goals_summary)
+            purpose_text = "\n".join(purpose_lines).strip()
+            if purpose_text:
+                messages.append((purpose_text, self._t(language, "mira.analysis.context.purpose", "Purpose report")))
 
         advisor_messages = (payload.get("advisor") or {}).get("messages") or []
         if advisor_messages:

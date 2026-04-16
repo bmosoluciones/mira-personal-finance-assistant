@@ -155,6 +155,7 @@ def test_settings_view_service_save_roundtrip(db: Database) -> None:
         username="Alex",
         language="en",
         theme="dark_teal.xml",
+        default_currency="crc",
         thousands_sep=" ",
         decimal_sep=",",
         preferred_model="tiny.gguf",
@@ -163,6 +164,7 @@ def test_settings_view_service_save_roundtrip(db: Database) -> None:
 
     assert saved.username == "Alex"
     assert saved.language == "en"
+    assert saved.default_currency == "CRC"
     assert saved.thousands_sep == " "
     assert saved.decimal_sep == ","
     assert saved.preferred_model == "tiny.gguf"
@@ -174,6 +176,7 @@ def test_settings_view_service_save_rejects_equal_separators_without_persisting(
     db.setting.set("username", "Alex")
     db.setting.set("language", "en")
     db.setting.set("theme", "dark_teal.xml")
+    db.setting.set("default_currency", "USD")
     db.setting.set("number_thousands_separator", ",")
     db.setting.set("number_decimal_separator", ".")
     db.setting.set("preferred_model", "tiny.gguf")
@@ -184,6 +187,7 @@ def test_settings_view_service_save_rejects_equal_separators_without_persisting(
             username="Bianca",
             language="es",
             theme="light_blue.xml",
+            default_currency="crc",
             thousands_sep=".",
             decimal_sep=".",
             preferred_model="other.gguf",
@@ -193,6 +197,7 @@ def test_settings_view_service_save_rejects_equal_separators_without_persisting(
     assert db.setting.get("username") == "Alex"
     assert db.setting.get("language") == "en"
     assert db.setting.get("theme") == "dark_teal.xml"
+    assert db.setting.get("default_currency") == "USD"
     assert db.setting.get("number_thousands_separator") == ","
     assert db.setting.get("number_decimal_separator") == "."
     assert db.setting.get("preferred_model") == "tiny.gguf"
@@ -316,3 +321,33 @@ def test_recurring_view_service_load_update_and_delete(db: Database) -> None:
 
     service.delete(int(created.selected_id))
     assert all(int(item["id"]) != int(created.selected_id) for item in service.load_state().recurring)
+
+
+def test_accounts_view_service_create_with_set_as_default_clears_previous(db: Database) -> None:
+    """Creating a new account with set_as_default=True must clear any existing default."""
+    service = AccountsViewService(db)
+
+    first = service.create(name="First", account_type="bank", opening_balance=0.0, currency="USD")
+    service.set_default(first.selected_id)
+
+    second = service.create(
+        name="Second", account_type="bank", opening_balance=0.0, currency="USD", set_as_default=True
+    )
+
+    defaults = [a for a in service.load_state().accounts if a["is_default"]]
+    assert len(defaults) == 1
+    assert int(defaults[0]["id"]) == int(second.selected_id)
+
+
+def test_accounts_view_service_create_without_set_as_default_keeps_existing_default(db: Database) -> None:
+    """Creating a new account without set_as_default must not touch the existing default."""
+    service = AccountsViewService(db)
+
+    first = service.create(name="First", account_type="bank", opening_balance=0.0, currency="USD")
+    service.set_default(first.selected_id)
+
+    service.create(name="Second", account_type="bank", opening_balance=0.0, currency="USD", set_as_default=False)
+
+    defaults = [a for a in service.load_state().accounts if a["is_default"]]
+    assert len(defaults) == 1
+    assert int(defaults[0]["id"]) == int(first.selected_id)

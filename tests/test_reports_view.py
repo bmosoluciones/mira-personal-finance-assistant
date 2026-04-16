@@ -155,6 +155,35 @@ def test_reports_view_apply_binds_presentation_state(monkeypatch: pytest.MonkeyP
 @pytest.mark.skipif(
     opengl_import_error(), reason="PySide6.QtCharts requires OpenGL (not available in headless environments)"
 )
+def test_reports_view_comparison_tables_have_responsive_horizontal_policies(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.reports")
+    qtcore = importlib.import_module("PySide6.QtCore")
+    qtwidgets = importlib.import_module("PySide6.QtWidgets")
+
+    view = views_module.ReportsView(db)
+    try:
+        view.show()
+        app.processEvents()
+
+        total_header = view._income_expense_table.horizontalHeader()
+        assert total_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.Stretch
+        assert total_header.sectionResizeMode(1) == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
+        assert view._income_expense_table.horizontalScrollBarPolicy() == qtcore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
+
+        budget_header = view._budget_table.horizontalHeader()
+        assert budget_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.Stretch
+        assert budget_header.sectionResizeMode(1) == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
+        assert view._budget_table.horizontalScrollBarPolicy() == qtcore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
+    finally:
+        view.close()
+
+
+@pytest.mark.skipif(
+    opengl_import_error(), reason="PySide6.QtCharts requires OpenGL (not available in headless environments)"
+)
 def test_reports_view_set_report_payload_binds_presentation_state(
     monkeypatch: pytest.MonkeyPatch, db: Database
 ) -> None:

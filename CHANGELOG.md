@@ -8,7 +8,26 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 
 ### Added
 
- - Add balance adjustment flow for accounts and cards
+- Transaction amount field now accepts simple arithmetic formulas (e.g. `=100+50`, `=(200*3)/4`) using the same formula engine as the budget planner. Only positive results are accepted.
+- Category dropdown in the create/edit transaction dialog is now searchable: typing filters categories by name using a case-insensitive contains match, making it easy to find categories in large lists.
+
+### Fixed
+
+- Settings now let users correct the system default currency after onboarding, and the deterministic assistant picks up the new default without restarting MIRA.
+- Presupuestos and Budget vs Actual tables now keep the category column usable on laptop-width screens by applying explicit responsive column sizing and enabling horizontal scrolling when needed.
+- Transaction and transfer dialogs now open with a minimum width of 720 px so the two-column form layout is never cut off.
+
+### Changed
+
+### Notes
+
+For the record: I have started using MIRA for my personal income and expense traking.
+
+## [0.0.1b1] - 2026-04-11
+
+### Added
+
+ - Add balance adjustment flow for accounts and cards 
 
 ### Changed
 

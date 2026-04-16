@@ -111,6 +111,7 @@ def get_mira_master_report(
 
     categories = db.get_categories()
     goals = db.get_savings_goals()
+    category_relations = db.list_category_relations()
     language = str(db.get_setting("language") or "en").strip().lower()
     if language not in {"es", "en"}:
         language = "en"
@@ -136,6 +137,7 @@ def get_mira_master_report(
             savings_goals=goals,
             relevance_threshold=relevance_threshold,
             language=language,
+            category_relations=category_relations,
         )
     )
 

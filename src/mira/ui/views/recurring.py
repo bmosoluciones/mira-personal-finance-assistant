@@ -41,10 +41,11 @@ from mira.ui.views._shared import (
 class _RecurringApplyDialog(QDialog):
     """Dialog to choose target month/year for applying recurring rules."""
 
-    def __init__(self, db: Database, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._language = normalize_language(db.setting.get("language"))
-        self.setWindowTitle(tr("recurring.apply.title", self._language, default="Apply recurring transactions"))
+        self.setWindowTitle(
+            tr("recurring.apply.title", normalize_language("en"), default="Apply recurring transactions")
+        )
 
         layout = QVBoxLayout(self)
         form = QFormLayout()
@@ -58,8 +59,8 @@ class _RecurringApplyDialog(QDialog):
         self._year.setRange(1900, 9999)
         self._year.setValue(today.year)
 
-        form.addRow(tr("recurring.apply.month", self._language, default="Month (1-12)"), self._month)
-        form.addRow(tr("recurring.apply.year", self._language, default="Year"), self._year)
+        form.addRow(tr("recurring.apply.month", normalize_language("en"), default="Month (1-12)"), self._month)
+        form.addRow(tr("recurring.apply.year", normalize_language("en"), default="Year"), self._year)
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -69,6 +70,11 @@ class _RecurringApplyDialog(QDialog):
 
     def get_period(self) -> tuple[int, int]:
         return self._year.value(), self._month.value()
+
+
+# ---------------------------------------------------------------------------
+# RecurringView
+# ---------------------------------------------------------------------------
 
 
 class RecurringView(QWidget):
@@ -93,11 +99,12 @@ class RecurringView(QWidget):
 
         layout.addWidget(_section_title(_tr_db(self._db, "recurring.title", "Recurring Transactions")))
 
+        # Toolbar
         tb = QHBoxLayout()
         self._btn_add = _make_toolbar_btn(_tr_db(self._db, "btn.add", "+ Add"))
-        self._btn_edit = _make_toolbar_btn(_tr_db(self._db, "btn.edit", "Edit"))
-        self._btn_delete = _make_toolbar_btn(_tr_db(self._db, "btn.delete", "Delete"))
-        self._btn_apply = _make_toolbar_btn(_tr_db(self._db, "menu.recurring.apply", "Apply recurring..."))
+        self._btn_edit = _make_toolbar_btn(_tr_db(self._db, "btn.edit", "✏ Edit"))
+        self._btn_delete = _make_toolbar_btn(_tr_db(self._db, "btn.delete", "🗑 Delete"))
+        self._btn_apply = _make_toolbar_btn(_tr_db(self._db, "menu.recurring.apply", "✅ Apply recurring…"))
         for btn in [self._btn_add, self._btn_edit, self._btn_delete, self._btn_apply]:
             tb.addWidget(btn)
         tb.addStretch()
@@ -201,7 +208,7 @@ class RecurringView(QWidget):
                 ),
             )
             return
-        dlg = _RecurringApplyDialog(self._db, self)
+        dlg = _RecurringApplyDialog(self)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
 
@@ -212,24 +219,14 @@ class RecurringView(QWidget):
         if created_count:
             _notify_info(
                 self,
-                _tr_db(self._db, "recurring.apply.applied_title", "Applied"),
-                _tr_db(
-                    self._db,
-                    "recurring.apply.applied_body",
-                    "Created {count} recurring transaction(s) for {period}.",
-                    params={"count": created_count, "period": period_label},
-                ),
+                "Applied",
+                f"Created {created_count} recurring transaction(s) for {period_label}.",
             )
         else:
             _notify_info(
                 self,
-                _tr_db(self._db, "recurring.apply.already_title", "Already Applied"),
-                _tr_db(
-                    self._db,
-                    "recurring.apply.already_body",
-                    "Recurring transactions have already been applied for {period}.",
-                    params={"period": period_label},
-                ),
+                "Already Applied",
+                f"Recurring transactions have already been applied for {period_label}.",
             )
         self.refresh()
 
@@ -237,10 +234,10 @@ class RecurringView(QWidget):
         if not _select_row_at_pos(self._table, pos):
             return
         menu = QMenu(self)
-        act_edit = menu.addAction(_tr_db(self._db, "common.edit", "Edit"))
-        act_delete = menu.addAction(_tr_db(self._db, "common.delete", "Delete"))
+        act_edit = menu.addAction(_tr_db(self._db, "btn.edit", "✏ Edit"))
+        act_delete = menu.addAction(_tr_db(self._db, "btn.delete", "🗑 Delete"))
         menu.addSeparator()
-        act_apply = menu.addAction(_tr_db(self._db, "menu.recurring.apply", "Apply recurring..."))
+        act_apply = menu.addAction(_tr_db(self._db, "btn.apply_recurring", "Apply recurring…"))
         chosen = menu.exec(self._table.viewport().mapToGlobal(pos))
         if chosen is act_edit:
             self._on_edit()
@@ -265,7 +262,9 @@ class RecurringView(QWidget):
         self._table.setRowCount(len(self._recurring))
         for row, rec in enumerate(self._recurring):
             self._table.setItem(row, 0, QTableWidgetItem(rec.get("account_name") or ""))
-            self._table.setItem(row, 1, QTableWidgetItem(rec.get("type", "")))
+            t = rec.get("type", "")
+            ti = QTableWidgetItem(t)
+            self._table.setItem(row, 1, ti)
             amt = QTableWidgetItem(_fmt_amount(self._db, rec.get("amount", 0)))
             amt.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self._table.setItem(row, 2, amt)
@@ -274,3 +273,8 @@ class RecurringView(QWidget):
             self._table.setItem(row, 5, QTableWidgetItem(rec.get("tag_names") or ""))
             self._table.setItem(row, 6, QTableWidgetItem(rec.get("note") or ""))
             self._table.setItem(row, 7, QTableWidgetItem(str(rec.get("day_of_month", 1))))
+
+
+# ---------------------------------------------------------------------------
+# SettingsView
+# ---------------------------------------------------------------------------

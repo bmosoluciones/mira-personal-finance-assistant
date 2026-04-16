@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -52,18 +53,19 @@ class AccountsView(QWidget):
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(10)
 
-        layout.addWidget(_section_title(_tr_db(self._db, "accounts.title", "Accounts")))
+        layout.addWidget(_section_title(_tr_db(self._db, "accounts.view.title", "Accounts")))
 
+        # Toolbar
         tb = QHBoxLayout()
-        self._btn_add = _make_toolbar_btn(_tr_db(self._db, "accounts.toolbar.add", "+ Add Account"))
-        self._btn_edit = _make_toolbar_btn(_tr_db(self._db, "btn.edit", "Edit"))
-        self._btn_delete = _make_toolbar_btn(_tr_db(self._db, "btn.delete", "Delete"))
-        self._btn_set_default = _make_toolbar_btn(_tr_db(self._db, "accounts.toolbar.set_default", "Set as Default"))
+        self._btn_add = _make_toolbar_btn(_tr_db(self._db, "btn.add_account", "+ Add Account"))
+        self._btn_edit = _make_toolbar_btn(_tr_db(self._db, "btn.edit", "✏ Edit"))
+        self._btn_delete = _make_toolbar_btn(_tr_db(self._db, "btn.delete", "🗑 Delete"))
+        self._btn_set_default = _make_toolbar_btn(_tr_db(self._db, "btn.set_default", "⭐ Set as Default"))
         self._btn_balance_adjustment = _make_toolbar_btn(
             _tr_db(self._db, "btn.balance_adjustment", "~ Balance Adjustment")
         )
-        self._btn_transfer = _make_toolbar_btn(_tr_db(self._db, "btn.transfer", "Transfer"))
-        self._btn_credit_payment = _make_toolbar_btn(_tr_db(self._db, "btn.credit_payment", "Card Payment"))
+        self._btn_transfer = _make_toolbar_btn(_tr_db(self._db, "btn.transfer", "↔ Transfer"))
+        self._btn_credit_payment = _make_toolbar_btn(_tr_db(self._db, "btn.credit_payment", "💳 Card Payment"))
         for btn in [
             self._btn_add,
             self._btn_edit,
@@ -81,7 +83,7 @@ class AccountsView(QWidget):
         self._table.setHorizontalHeaderLabels(
             [
                 _tr_db(self._db, "accounts.col.name", "Account Name"),
-                _tr_db(self._db, "col.type", "Type"),
+                _tr_db(self._db, "accounts.col.type", "Type"),
                 _tr_db(self._db, "accounts.col.currency", "Currency"),
                 _tr_db(self._db, "accounts.col.balance", "Balance"),
                 _tr_db(self._db, "accounts.col.default", "Default"),
@@ -152,6 +154,7 @@ class AccountsView(QWidget):
                 account_type=data["account_type"],
                 opening_balance=data["opening_balance"],
                 currency=data["currency"],
+                set_as_default=bool(data.get("set_as_default", False)),
             )
             self.refresh(selected_account_id=feedback.selected_id)
 
@@ -236,13 +239,13 @@ class AccountsView(QWidget):
             return
         account = self._get_selected()
         menu = QMenu(self)
-        act_edit = menu.addAction(_tr_db(self._db, "common.edit", "Edit"))
-        act_set_default = menu.addAction(_tr_db(self._db, "accounts.toolbar.set_default", "Set as Default"))
+        act_edit = menu.addAction(_tr_db(self._db, "btn.edit", "✏ Edit"))
+        act_set_default = menu.addAction(_tr_db(self._db, "btn.set_default", "⭐ Set as Default"))
         act_adjust = menu.addAction(_tr_db(self._db, "btn.balance_adjustment", "~ Balance Adjustment"))
         act_adjust.setEnabled(self._is_adjustable_account(account))
-        act_transfer = menu.addAction(_tr_db(self._db, "btn.transfer", "Transfer"))
-        act_credit_payment = menu.addAction(_tr_db(self._db, "btn.credit_payment", "Card Payment"))
-        act_delete = menu.addAction(_tr_db(self._db, "common.delete", "Delete"))
+        act_transfer = menu.addAction(_tr_db(self._db, "btn.transfer", "↔ Transfer"))
+        act_credit_payment = menu.addAction(_tr_db(self._db, "btn.credit_payment", "💳 Card Payment"))
+        act_delete = menu.addAction(_tr_db(self._db, "btn.delete", "🗑 Delete"))
         chosen = menu.exec(self._table.viewport().mapToGlobal(pos))
         match chosen:
             case _ if chosen is act_edit:

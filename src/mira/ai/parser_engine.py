@@ -746,3 +746,6 @@ class TransactionParserEngine(BaseEngine):
             "El modo chat con LLM no está disponible porque no hay un modelo GGUF activo. "
             "Selecciona un modelo en Configuración para habilitarlo."
         )
+
+    def set_default_currency(self, currency: str | None) -> None:
+        self._default_currency = str(currency or "").strip().upper() or None

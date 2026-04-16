@@ -70,7 +70,41 @@ class NumberMaskedSpinBox(QDoubleSpinBox):
         return (QValidator.State.Acceptable, text, pos)
 
 
+class FormulaAmountEdit(NumberMaskedSpinBox):
+    """Amount spinbox that also accepts arithmetic formulas starting with ``=``.
+
+    Formulas follow the same rules as budget cells: they must start with ``=``
+    and may contain only ``+``, ``-``, ``*``, ``/`` and parentheses.  When the
+    user commits the input (Enter or focus-out), the formula is evaluated and
+    replaced by the resulting numeric value.
+    """
+
+    def validate(self, text: str, pos: int) -> tuple[QValidator.State, str, int]:  # type: ignore[override]
+        stripped = self._strip_affixes(text)
+        if stripped.startswith("="):
+            # Allow any character while the user is still typing a formula.
+            return (QValidator.State.Intermediate, text, pos)
+        return super().validate(text, pos)
+
+    def fixup(self, text: str) -> str:  # type: ignore[override]
+        """Evaluate a formula string and return the formatted numeric result."""
+        from mira.budget_processor import process_budget_value
+
+        stripped = self._strip_affixes(text)
+        if stripped.startswith("="):
+            try:
+                value = process_budget_value(stripped, number_format=self._config())
+                if value <= 0:
+                    raise ValueError("Amount must be positive.")
+                return self.prefix() + self.textFromValue(value) + self.suffix()
+            except ValueError:
+                # Fall back to the current committed value so the field stays valid.
+                return self.prefix() + self.textFromValue(self.value()) + self.suffix()
+        return super().fixup(text)
+
+
 __all__ = [
+    "FormulaAmountEdit",
     "NumberFormatConfig",
     "NumberMaskedSpinBox",
     "format_number",

@@ -202,6 +202,14 @@ class CategoriesView(QWidget):
 
         layout.addLayout(cols, 1)
 
+        # Link categories button
+        link_row = QHBoxLayout()
+        link_row.addStretch()
+        self._btn_link = _make_toolbar_btn(self._t("categories.link.btn", "🔗 Link"))
+        link_row.addWidget(self._btn_link)
+        link_row.addStretch()
+        layout.addLayout(link_row)
+
         # Connect
         self._btn_add_income.clicked.connect(lambda: self._on_add("income"))
         self._btn_edit_income.clicked.connect(lambda: self._on_edit("income"))
@@ -214,6 +222,8 @@ class CategoriesView(QWidget):
         self._btn_del_expense.clicked.connect(lambda: self._on_delete("expense"))
         self._btn_merge_expense.clicked.connect(lambda: self._on_merge("expense"))
         self._expense_table.customContextMenuRequested.connect(lambda pos: self._open_context_menu("expense", pos))
+
+        self._btn_link.clicked.connect(self._on_link_categories)
 
     def _build_category_tree(self) -> QTreeWidget:
         tree = _CategoryTreeWidget()
@@ -402,6 +412,13 @@ class CategoriesView(QWidget):
         """Public helper used by the main menu to add an expense category."""
         self._on_add("expense")
 
+    def _on_link_categories(self) -> None:
+        from mira.ui.dialogs.link_categories import LinkCategoriesDialog
+
+        dlg = LinkCategoriesDialog(self._db, self._service, self._language, parent=self)
+        dlg.exec()
+        self.refresh()
+
     def refresh(self) -> None:
         self._language = normalize_language(self._db.setting.get("language"))
         self._apply_state(self._service.load_state())
@@ -422,6 +439,7 @@ class CategoriesView(QWidget):
         self._btn_edit_expense.setText(self._t("btn.edit", "✏ Edit"))
         self._btn_del_expense.setText(self._t("btn.delete", "🗑 Delete"))
         self._btn_merge_expense.setText(self._t("categories.merge", "⇄ Merge"))
+        self._btn_link.setText(self._t("categories.link.btn", "🔗 Link"))
 
         def fill_tree(tree: QTreeWidget, roots: list[dict[str, object]]) -> None:
             tree.clear()

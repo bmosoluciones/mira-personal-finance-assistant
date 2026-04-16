@@ -37,6 +37,7 @@ from mira.ui.dialogs._shared import (
     _make_amount_spin,
     _make_balance_spin,
     _make_date_edit,
+    _make_formula_amount_spin,
     _notify_warning,
 )
 from mira.ui.i18n import normalize_language, tr
@@ -64,7 +65,7 @@ class TransactionDialog(QDialog):
                 default="Edit Transaction" if tx else "New Transaction",
             )
         )
-        self.setMinimumWidth(660)
+        self.setMinimumWidth(720)
         self._build_ui()
         if tx:
             self._prefill(tx)
@@ -113,7 +114,7 @@ class TransactionDialog(QDialog):
 
         amount_lbl = QLabel(tr("dialog.transaction.original_amount", self._language, default="Original amount"))
         content_layout.addWidget(amount_lbl)
-        self._amount_spin = _make_amount_spin(self._db)
+        self._amount_spin = _make_formula_amount_spin(self._db)
         self._amount_spin.setPrefix("$")
         self._amount_spin.setDecimals(2)
         self._amount_spin.setButtonSymbols(QDoubleSpinBox.ButtonSymbols.NoButtons)
@@ -142,8 +143,16 @@ class TransactionDialog(QDialog):
         right.setSpacing(10)
         self._classification_form = right
         self._category_combo = QComboBox()
-        self._category_combo.setEditable(False)
+        self._category_combo.setEditable(True)
+        self._category_combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        _cat_completer = self._category_combo.completer()
+        if _cat_completer is not None:
+            _cat_completer.setFilterMode(Qt.MatchFlag.MatchContains)
+            _cat_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self._populate_categories()
+        self._category_combo.lineEdit().setPlaceholderText(
+            tr("dialog.transaction.category.search", self._language, default="Search categories…")
+        )
         right.addRow(tr("dialog.transaction.category", self._language, default="Category:"), self._category_combo)
 
         self._tag_selector = _TagMultiSelectButton(self, lang=normalize_language(self._db.setting.get("language")))
@@ -455,13 +464,25 @@ class TransactionDialog(QDialog):
         self._details_check.setChecked(has_optional)
 
     def _normalized_category(self) -> str | None:
+        # Preferred: data stored on the currently-selected item.
         current_data = self._category_combo.currentData()
         if isinstance(current_data, str) and current_data.strip():
             return current_data.strip()
-        value = self._category_combo.currentText().strip()
-        if value.startswith("🏠"):
-            value = value[1:].strip()
-        return value or None
+        # Fallback for editable combo: if the visible text exactly matches one
+        # of the combo items, return that item's stored data instead of treating
+        # the typed text as a free-form category name.
+        current_text = self._category_combo.currentText().strip()
+        if current_text:
+            idx = self._category_combo.findText(current_text)
+            if idx >= 0:
+                item_data = self._category_combo.itemData(idx)
+                if isinstance(item_data, str) and item_data.strip():
+                    return item_data.strip()
+            # Only accept free-form text when it clearly does not look like a
+            # partial search query (i.e. it was already stored as an explicit
+            # category value that is not present in the current list).
+            return current_text
+        return None
 
     def _on_accept(self) -> None:
         if self._amount_spin.value() <= 0:
@@ -577,7 +598,7 @@ class TransferDialog(QDialog):
         self._credit_payment = credit_payment
         self._syncing_fx_fields = False
         self.setWindowTitle(self._dialog_title())
-        self.setMinimumWidth(660)
+        self.setMinimumWidth(720)
         self._build_ui()
 
     def _dialog_title(self) -> str:

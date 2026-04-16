@@ -412,6 +412,12 @@ class ReportsView(QWidget):
             ]
         )
         self._income_expense_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for column_idx in range(1, self._income_expense_table.columnCount()):
+            self._income_expense_table.horizontalHeader().setSectionResizeMode(
+                column_idx,
+                QHeaderView.ResizeMode.ResizeToContents,
+            )
+        self._income_expense_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._income_expense_table.verticalHeader().setVisible(False)
         self._income_expense_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._income_expense_table.setAlternatingRowColors(True)
@@ -596,6 +602,12 @@ class ReportsView(QWidget):
             ]
         )
         self._budget_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for column_idx in range(1, self._budget_table.columnCount()):
+            self._budget_table.horizontalHeader().setSectionResizeMode(
+                column_idx,
+                QHeaderView.ResizeMode.ResizeToContents,
+            )
+        self._budget_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._budget_table.verticalHeader().setVisible(False)
         self._budget_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._budget_table.setAlternatingRowColors(True)

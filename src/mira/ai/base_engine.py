@@ -24,5 +24,9 @@ class BaseEngine(ABC):
         """Update the active chat language when the engine supports it."""
         _ = language
 
+    def set_default_currency(self, currency: str | None) -> None:
+        """Update the user's default currency when the engine supports it."""
+        _ = currency
+
     def shutdown(self) -> None:
         """Release optional engine resources when the implementation needs it."""

@@ -14,11 +14,13 @@ from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
+    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
     QMessageBox,
+    QScrollArea,
     QSpinBox,
     QStackedWidget,
     QTableWidget,
@@ -304,7 +306,17 @@ class BudgetView(QWidget):
         self._granularity_combo.currentIndexChanged.connect(self._refresh_comparison)
         toolbar.addWidget(self._granularity_combo)
 
-        layout.addLayout(toolbar)
+        toolbar_widget = QWidget()
+        toolbar_widget.setLayout(toolbar)
+        toolbar_scroll = QScrollArea()
+        toolbar_scroll.setWidget(toolbar_widget)
+        toolbar_scroll.setWidgetResizable(True)
+        toolbar_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        toolbar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        toolbar_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        toolbar_scroll.setFixedHeight(toolbar_widget.sizeHint().height() + 4)
+        toolbar_scroll.setStyleSheet("QScrollArea{border:none;background:transparent;}")
+        layout.addWidget(toolbar_scroll)
 
         self._budget_status_lbl = QLabel("")
         self._budget_status_lbl.setWordWrap(True)
@@ -352,6 +364,12 @@ class BudgetView(QWidget):
             ]
         )
         self._budget_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for column_idx in range(1, self._budget_table.columnCount()):
+            self._budget_table.horizontalHeader().setSectionResizeMode(
+                column_idx,
+                QHeaderView.ResizeMode.ResizeToContents,
+            )
+        self._budget_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._budget_table.verticalHeader().setVisible(False)
         self._budget_table.setMinimumHeight(240)
         self._budget_table.cellChanged.connect(self._on_budget_cell_changed)
@@ -376,6 +394,7 @@ class BudgetView(QWidget):
         self._comparison_table = QTableWidget(0, 0)
         self._comparison_table.setStyleSheet(_TABLE_STYLE)
         self._comparison_table.setAlternatingRowColors(True)
+        self._comparison_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._comparison_table.verticalHeader().setVisible(False)
         self._comparison_table.setItemDelegate(_SignalCellDelegate(self._comparison_table))
         comparison_layout.addWidget(self._comparison_table, 1)
@@ -440,6 +459,12 @@ class BudgetView(QWidget):
             ]
         )
         self._monthly_tracking_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for column_idx in range(1, self._monthly_tracking_table.columnCount()):
+            self._monthly_tracking_table.horizontalHeader().setSectionResizeMode(
+                column_idx,
+                QHeaderView.ResizeMode.ResizeToContents,
+            )
+        self._monthly_tracking_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         tracking_layout.addWidget(self._monthly_tracking_table, 1)
 
         reassignment_row = QHBoxLayout()
@@ -1303,6 +1328,11 @@ class BudgetView(QWidget):
         self._comparison_table.setHorizontalHeaderLabels(headers)
         self._comparison_table.setRowCount(len(structure))
         self._comparison_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for column_idx in range(1, self._comparison_table.columnCount()):
+            self._comparison_table.horizontalHeader().setSectionResizeMode(
+                column_idx,
+                QHeaderView.ResizeMode.ResizeToContents,
+            )
 
         for row_idx, (kind, payload) in enumerate(structure):
             if kind == "section":

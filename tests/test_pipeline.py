@@ -524,3 +524,19 @@ def test_pipeline_passes_default_currency_to_engine(tmp_path):
     assert parsed["action"] == "add_expense"
     # base_currency should not be USD when default is NIO
     assert parsed.get("base_currency") != "USD"
+
+
+def test_pipeline_reload_engine_refreshes_parser_default_currency(db: Database) -> None:
+    db.setting.set("default_currency", "USD")
+    pipeline = Pipeline(db=db)
+
+    usd_parsed = pipeline.engine.parse("spent $120 on groceries")
+    assert usd_parsed["base_currency"] == "USD"
+
+    db.setting.set("default_currency", "NIO")
+    pipeline.reload_engine(model_path=None)
+
+    nio_parsed = pipeline.engine.parse("gasté $200 en comida")
+
+    assert nio_parsed["action"] == "add_expense"
+    assert nio_parsed.get("base_currency") != "USD"

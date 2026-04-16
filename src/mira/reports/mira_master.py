@@ -198,6 +198,7 @@ class ReportInputs:
     savings_goals: list[dict[str, Any]]
     relevance_threshold: float = 0.10
     language: str = "en"
+    category_relations: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -2379,6 +2380,66 @@ def _comparison_to_dict(v: ComparisonResult | None) -> dict[str, Any] | None:
     return {"base": v.base, "variance": v.variance, "pct": v.pct, "signal": v.signal}
 
 
+def _build_income_vs_expense_section(
+    category_relations: list[dict[str, Any]],
+    income_by_root: dict[str, float],
+    expense_by_root: dict[str, float],
+) -> list[dict[str, Any]] | None:
+    """Build the Income vs Expenses by Income Category section.
+
+    Returns ``None`` when there are no category relations so the section
+    is omitted from the report.  All monetary amounts come from the
+    already period-filtered ``income_by_root`` and ``expense_by_root``
+    dicts (computed from the report-month transactions).
+
+    Each entry maps one income category to **all** its linked expense
+    categories with a total for direct comparison::
+
+        {
+            "income_category": "Salarios",
+            "income_amount": 2000.00,
+            "expenses": [
+                {"category": "Vivienda", "amount": 300.00},
+                {"category": "Alimentación", "amount": 400.00},
+            ],
+            "expense_total": 700.00,
+        }
+    """
+    if not category_relations:
+        return None
+
+    # Group relations by income category name.
+    grouped: dict[str, list[str]] = {}
+    for rel in category_relations:
+        inc_name = str(rel.get("income_category_name") or "")
+        exp_name = str(rel.get("expense_category_name") or "")
+        if not inc_name or not exp_name:
+            continue
+        grouped.setdefault(inc_name, []).append(exp_name)
+
+    if not grouped:
+        return None
+
+    result: list[dict[str, Any]] = []
+    for inc_name in sorted(grouped):
+        inc_amount = round(income_by_root.get(inc_name, 0.0), 2)
+        expenses: list[dict[str, Any]] = []
+        expense_total = 0.0
+        for exp_name in sorted(grouped[inc_name]):
+            exp_amount = round(expense_by_root.get(exp_name, 0.0), 2)
+            expenses.append({"category": exp_name, "amount": exp_amount})
+            expense_total += exp_amount
+        result.append(
+            {
+                "income_category": inc_name,
+                "income_amount": inc_amount,
+                "expenses": expenses,
+                "expense_total": round(expense_total, 2),
+            }
+        )
+    return result
+
+
 def build_report_payload(inputs: ReportInputs) -> dict[str, Any]:
     """Orchestrate the four specialised components and assemble the report payload."""
     report_language = _normalize_report_language(inputs.language)
@@ -2411,6 +2472,11 @@ def build_report_payload(inputs: ReportInputs) -> dict[str, Any]:
     ).generate()
 
     cc = metrics.credit_card
+    income_vs_expense_by_income = _build_income_vs_expense_section(
+        inputs.category_relations,
+        metrics.income_by_root,
+        metrics.top_category_totals,
+    )
     return {
         "period": {"year": inputs.year, "month": inputs.month},
         "kpis": {
@@ -2534,4 +2600,5 @@ def build_report_payload(inputs: ReportInputs) -> dict[str, Any]:
                 "deviation_pct": metrics.mira_50_30_20.deviation_pct,
             },
         },
+        "income_vs_expense_by_income": income_vs_expense_by_income,
     }
