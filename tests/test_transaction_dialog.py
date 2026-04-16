@@ -72,6 +72,8 @@ def test_transaction_dialog_minimum_width_is_at_least_720(monkeypatch: pytest.Mo
 def test_transaction_dialog_category_combo_is_searchable(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
     _get_qapplication_or_xfail(monkeypatch)
     dialogs_module = importlib.import_module("mira.ui.dialogs")
+    searchable_combo_module = importlib.import_module("mira.ui.widgets.searchable_combo")
+    qtcore = importlib.import_module("PySide6.QtCore")
     qtwidgets = importlib.import_module("PySide6.QtWidgets")
 
     db.account.get_or_create("General")
@@ -80,10 +82,24 @@ def test_transaction_dialog_category_combo_is_searchable(monkeypatch: pytest.Mon
 
     dialog = dialogs_module.TransactionDialog(db)
     try:
-        assert dialog._category_combo.isEditable()
-        assert dialog._category_combo.insertPolicy() == qtwidgets.QComboBox.InsertPolicy.NoInsert
-        completer = dialog._category_combo.completer()
-        assert completer is not None
+        combo = dialog._category_combo
+        # Must be the searchable variant backed by a proxy model
+        assert isinstance(combo, searchable_combo_module.SearchableComboBox)
+        assert combo.isEditable()
+        assert combo.insertPolicy() == qtwidgets.QComboBox.InsertPolicy.NoInsert
+        # Verify proxy-model filtering: typing "fo" should narrow the visible list
+        proxy = combo._proxy_model
+        proxy.setFilterRegularExpression(
+            qtcore.QRegularExpression("fo", qtcore.QRegularExpression.PatternOption.CaseInsensitiveOption)
+        )
+        assert proxy.rowCount() >= 1
+        # All visible items must contain "fo" in their text
+        for row in range(proxy.rowCount()):
+            text = proxy.index(row, 0).data(qtcore.Qt.ItemDataRole.DisplayRole) or ""
+            assert "fo" in text.lower()
+        # Clearing the filter restores the full list
+        proxy.setFilterRegularExpression("")
+        assert proxy.rowCount() == combo.count()
     finally:
         dialog.close()
 

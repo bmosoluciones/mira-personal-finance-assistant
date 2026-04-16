@@ -52,6 +52,7 @@ from mira.ui.views._shared import (
     _tr_db,
 )
 from mira.ui.delegates.cell_delegates import _TypeBadgeDelegate
+from mira.ui.widgets.searchable_combo import SearchableComboBox
 
 
 class TransactionsView(QWidget):
@@ -496,19 +497,11 @@ class TransactionsView(QWidget):
         dlg.setWindowTitle(_tr_db(self._db, "transactions.change_category.title", "Change Category"))
         layout = QVBoxLayout(dlg)
         form = QFormLayout()
-        combo = QComboBox()
-        combo.setEditable(True)
-        combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        completer = combo.completer()
-        if completer is not None:
-            completer.setFilterMode(Qt.MatchFlag.MatchContains)
-            completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        combo = SearchableComboBox()
         combo.addItems(categories)
         idx = categories.index(current) if current in categories else 0
         combo.setCurrentIndex(idx)
-        line_edit = combo.lineEdit()
-        if line_edit is not None:
-            line_edit.setPlaceholderText(_tr_db(self._db, "transactions.change_category.search", "Search categories…"))
+        combo.setPlaceholderText(_tr_db(self._db, "transactions.change_category.search", "Search categories…"))
         form.addRow(
             _tr_db(self._db, "transactions.change_category.label", "Category:"),
             combo,

@@ -440,6 +440,118 @@ class QComboBox(QWidget):
             return -1
 
 
+class _StubIndex:
+    """Minimal QModelIndex stub for QStandardItemModel."""
+
+    def __init__(self, row: int, col: int, model: "QStandardItemModel") -> None:
+        self._row = row
+        self._col = col
+        self._model = model
+
+    def isValid(self) -> bool:
+        return 0 <= self._row < self._model.rowCount()
+
+    def row(self) -> int:
+        return self._row
+
+    def data(self, role=None):
+        item = self._model._rows[self._row] if 0 <= self._row < len(self._model._rows) else None
+        if item is None:
+            return None
+        if role is None or role == 0:  # DisplayRole
+            return item.text()
+        return item._user_data.get(role)
+
+
+class QStandardItem:
+    def __init__(self, text: str = "") -> None:
+        self._text = text
+        self._user_data: dict = {}
+
+    def text(self) -> str:
+        return self._text
+
+    def setData(self, value, role) -> None:
+        self._user_data[role] = value
+
+    def data(self, role):
+        return self._user_data.get(role)
+
+
+class QStandardItemModel:
+    def __init__(self, rows: int = 0, cols: int = 1, parent=None) -> None:
+        self._rows: list[QStandardItem] = []
+        self.rowsInserted = BoundSignal()
+        self.rowsRemoved = BoundSignal()
+        self.modelReset = BoundSignal()
+
+    def appendRow(self, item: "QStandardItem") -> None:
+        self._rows.append(item)
+
+    def rowCount(self, parent=None) -> int:
+        return len(self._rows)
+
+    def index(self, row: int, col: int, parent=None) -> "_StubIndex":
+        return _StubIndex(row, col, self)
+
+    def item(self, row: int, col: int = 0) -> "QStandardItem | None":
+        if 0 <= row < len(self._rows):
+            return self._rows[row]
+        return None
+
+    def data(self, index: "_StubIndex", role=None):
+        return index.data(role)
+
+    def clear(self) -> None:
+        self._rows.clear()
+
+
+class QSortFilterProxyModel:
+    """Minimal stub: no actual filtering – returns all rows from source."""
+
+    def __init__(self, parent=None) -> None:
+        self._source: "QStandardItemModel | None" = None
+        self._filter = ""
+
+    def setSourceModel(self, model: "QStandardItemModel") -> None:
+        self._source = model
+
+    def setFilterCaseSensitivity(self, cs) -> None:
+        pass
+
+    def setFilterKeyColumn(self, col: int) -> None:
+        pass
+
+    def setFilterRegularExpression(self, expr) -> None:
+        if hasattr(expr, "pattern"):
+            self._filter = expr.pattern()
+        else:
+            self._filter = str(expr)
+
+    def rowCount(self, parent=None) -> int:
+        return self._source.rowCount() if self._source else 0
+
+    def index(self, row: int, col: int, parent=None) -> "_StubIndex":
+        return _StubIndex(row, col, self._source) if self._source else _StubIndex(-1, col, QStandardItemModel())
+
+    def mapToSource(self, proxy_idx: "_StubIndex") -> "_StubIndex":
+        return proxy_idx
+
+    def mapFromSource(self, source_idx: "_StubIndex") -> "_StubIndex":
+        return source_idx
+
+
+class QRegularExpression:
+    class PatternOption:
+        CaseInsensitiveOption = 2
+
+    def __init__(self, pattern: str = "", options=None) -> None:
+        self._pattern = pattern
+
+    def pattern(self) -> str:
+        return self._pattern
+
+
 class QCheckBox(QWidget):
     def __init__(self, text: str = "", parent=None) -> None:
         super().__init__(parent)
@@ -905,6 +1017,8 @@ def install_fake_pyside(monkeypatch):
     qtcore.QDate = QDate
     qtcore.QPoint = QPoint
     qtcore.Qt = Qt
+    qtcore.QRegularExpression = QRegularExpression
+    qtcore.QSortFilterProxyModel = QSortFilterProxyModel
 
     qtgui.QAction = QAction
     qtgui.QBrush = QBrush
@@ -913,6 +1027,8 @@ def install_fake_pyside(monkeypatch):
     qtgui.QPalette = QPalette
     qtgui.QPainter = QPainter
     qtgui.QValidator = QValidator
+    qtgui.QStandardItem = QStandardItem
+    qtgui.QStandardItemModel = QStandardItemModel
 
     qtwidgets.QAbstractItemView = QAbstractItemView
     qtwidgets.QApplication = QApplication

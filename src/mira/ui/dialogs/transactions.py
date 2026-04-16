@@ -25,6 +25,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from mira.ui.widgets.searchable_combo import SearchableComboBox
+
 from mira.app.view_services import AccountsViewService
 from mira.db.database import Database
 from mira.ui.dialogs._shared import (
@@ -142,19 +144,11 @@ class TransactionDialog(QDialog):
         right = QFormLayout()
         right.setSpacing(10)
         self._classification_form = right
-        self._category_combo = QComboBox()
-        self._category_combo.setEditable(True)
-        self._category_combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        _cat_completer = self._category_combo.completer()
-        if _cat_completer is not None:
-            _cat_completer.setFilterMode(Qt.MatchFlag.MatchContains)
-            _cat_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self._category_combo = SearchableComboBox()
         self._populate_categories()
-        _cat_line_edit = self._category_combo.lineEdit()
-        if _cat_line_edit is not None:
-            _cat_line_edit.setPlaceholderText(
-                tr("dialog.transaction.category.search", self._language, default="Search categories…")
-            )
+        self._category_combo.setPlaceholderText(
+            tr("dialog.transaction.category.search", self._language, default="Search categories…")
+        )
         right.addRow(tr("dialog.transaction.category", self._language, default="Category:"), self._category_combo)
 
         self._tag_selector = _TagMultiSelectButton(self, lang=normalize_language(self._db.setting.get("language")))
