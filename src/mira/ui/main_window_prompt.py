@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from PySide6.QtCore import QTimer
 from mira.ai.executor import ActionResult
 from mira.ui.i18n import tr
 from mira.ui.notification_service import NotificationService
@@ -57,9 +58,7 @@ class MainWindowPromptMixin:
             return
         started_new_batch = self._chat_state.append_block(block)
         if started_new_batch:
-            from mira.ui import main_window as main_window_module
-
-            main_window_module.QTimer.singleShot(0, self._clear_pending_chat_batch)
+            QTimer.singleShot(0, self._clear_pending_chat_batch)
         self._show_chat_message()
 
     def notify_user_message(self, *args: object, level: str = "info") -> None:

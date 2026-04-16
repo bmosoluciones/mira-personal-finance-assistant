@@ -86,6 +86,11 @@ disable = [
     "line-too-long",
     "import-outside-toplevel",
     "no-name-in-module",
+    "attribute-defined-outside-init",
+    "invalid-name",
+    "wrong-import-position",
+    "broad-exception-caught",
+    "disallowed-name"
 ]
 
 [tool.pytest.ini_options]

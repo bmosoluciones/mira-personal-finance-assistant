@@ -528,6 +528,95 @@ def test_chat_keeps_focus_on_first_message_of_new_batch(
     assert "Tercer mensaje" in window.visible_message
 
 
+def test_main_window_support_import_does_not_import_main_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    import importlib
+    import sys
+
+    module_name = "mira.ui.main_window"
+    sys.modules.pop(module_name, None)
+    sys.modules.pop("mira.ui.main_window_support", None)
+
+    original_import = builtins.__import__
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == module_name or name.startswith(f"{module_name}."):
+            raise AssertionError("Unexpected import of mira.ui.main_window")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    support_module = importlib.import_module("mira.ui.main_window_support")
+
+    assert support_module is not None
+
+
+def test_main_window_prompt_append_assistant_uses_qtimer_without_importing_main_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    import importlib
+    import sys
+
+    from tests.qt_stubs import install_fake_pyside
+
+    sys.modules.pop("mira.ui.main_window_prompt", None)
+    sys.modules.pop("mira.ui.notification_service", None)
+
+    fake_pyside = install_fake_pyside(monkeypatch)
+
+    qtimer_calls: list[callable] = []
+
+    class FakeTimer:
+        @staticmethod
+        def singleShot(delay: int, callback: object) -> None:
+            assert delay == 0
+            assert callable(callback)
+            qtimer_calls.append(callback)
+
+    fake_pyside.QtCore.QTimer = FakeTimer
+    prompt_module = importlib.import_module("mira.ui.main_window_prompt")
+
+    module_name = "mira.ui.main_window"
+    original_import = builtins.__import__
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == module_name or name.startswith(f"{module_name}."):
+            raise AssertionError("Unexpected import of mira.ui.main_window")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    class DummyChatState:
+        def __init__(self) -> None:
+            self.messages: list[str] = []
+            self.current_index = -1
+
+        def append_block(self, block: str) -> bool:
+            self.messages.append(block)
+            self.current_index = len(self.messages) - 1
+            return True
+
+        def current_message(self) -> str | None:
+            return self.messages[self.current_index] if self.messages else None
+
+        def reset_pending_batch(self) -> None:
+            pass
+
+    class DummyWindow:
+        def __init__(self) -> None:
+            self._language = "es"
+            self._chat_state = DummyChatState()
+            self.visible_message = ""
+
+        def _show_chat_message(self) -> None:
+            self.visible_message = self._chat_state.current_message() or ""
+
+        def _clear_pending_chat_batch(self) -> None:
+            self._chat_state.reset_pending_batch()
+
+    window = DummyWindow()
+    prompt_module.MainWindowPromptMixin._append_chat_assistant(window, "Primer mensaje", "Análisis MIRA")
+
+    assert len(qtimer_calls) == 1
+    assert "Primer mensaje" in window.visible_message
+
+
 def test_main_window_no_longer_uses_startup_model_offer() -> None:
     main_window_module = _import_main_window_or_xfail_headless()
     assert not hasattr(main_window_module.MainWindow, "_offer_model_download_if_needed")
