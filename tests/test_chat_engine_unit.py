@@ -24,6 +24,8 @@ def test_base_engine_default_chat_raises_not_implemented() -> None:
 
     assert engine.parse("hola") == {"input": "hola"}
     assert engine.set_language("es") is None
+    assert engine.set_default_currency("EUR") is None
+    assert engine.shutdown() is None
 
 
 def test_llama_cpp_engine_parses_and_chats_with_language_normalization(monkeypatch, tmp_path) -> None:

@@ -539,6 +539,21 @@ class TestCategoryMatching:
         score = executor_module._score_name_similarity("groceries", "groceries and pantry")
         assert score >= executor_module._CATEGORY_MATCH_THRESHOLD
 
+    def test_score_similarity_reverse_containment(self):
+        score = executor_module._score_name_similarity("groceries and pantry", "groceries")
+        assert score >= executor_module._CATEGORY_MATCH_THRESHOLD
+
+    def test_score_similarity_word_overlap_fallback(self):
+        score = executor_module._score_name_similarity("car insurance policy", "insurance car policy")
+        assert score >= executor_module._CATEGORY_MATCH_THRESHOLD
+
     def test_score_similarity_garbage_short_word(self):
         score = executor_module._score_name_similarity("en", "entertainment")
         assert score < executor_module._CATEGORY_MATCH_THRESHOLD
+
+    def test_score_similarity_no_overlap_returns_zero(self):
+        assert executor_module._score_name_similarity("abc", "def") == 0.0
+
+    def test_find_best_category_match_returns_none_when_fuzzy_fallback_fails(self):
+        cats = self._cats([("Food", "expense"), ("Transport", "expense")])
+        assert executor_module._find_best_category_match("car policy", cats) is None
