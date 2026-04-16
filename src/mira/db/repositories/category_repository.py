@@ -13,7 +13,7 @@ from mira.db.helpers import (
     _UNSET,
     SAVINGS_GOALS_DEFAULTS,
 )
-from mira.db.model import Bucket, Category, RecurringTransaction, SavingsGoal, Transaction
+from mira.db.model import Bucket, Category, IncomeExpenseRelation, RecurringTransaction, SavingsGoal, Transaction
 
 
 class CategoryRepository:
@@ -544,3 +544,70 @@ class CategoryRepository:
         rows = Category.select(Category.id, Category.name).where(Category.id.in_(descendant_ids)).dicts()
         names_by_id = {int(row["id"]): str(row["name"]) for row in rows}
         return [names_by_id[descendant_id] for descendant_id in descendant_ids if descendant_id in names_by_id]
+
+    # -- Income-Expense Relation helpers ------------------------------------
+
+    def list_category_relations(self) -> list[dict[str, Any]]:
+        """Return all income↔expense category relations sorted by income then expense name."""
+        ic = Category.alias()
+        ec = Category.alias()
+        query = (
+            IncomeExpenseRelation.select(
+                IncomeExpenseRelation.id,
+                ic.id.alias("income_category_id"),
+                ic.name.alias("income_category_name"),
+                ec.id.alias("expense_category_id"),
+                ec.name.alias("expense_category_name"),
+                IncomeExpenseRelation.created_at,
+            )
+            .join(ic, on=(IncomeExpenseRelation.income_category == ic.id))
+            .switch(IncomeExpenseRelation)
+            .join(ec, on=(IncomeExpenseRelation.expense_category == ec.id))
+            .order_by(ic.name.asc(), ec.name.asc())
+        )
+        return [dict(row) for row in query.dicts()]
+
+    def create_category_relation(self, income_category_id: int, expense_category_id: int) -> dict[str, Any]:
+        """Create a relation between an income and an expense parent category."""
+        income_cat = Category.get_or_none(Category.id == income_category_id)
+        if income_cat is None:
+            raise ValueError(f"Income category {income_category_id} not found")
+        if income_cat.type != "income":
+            raise ValueError(f"Category {income_category_id} is not an income category")
+        if income_cat.parent_id is not None:
+            raise ValueError(f"Category {income_category_id} is not a level-1 (parent) category")
+
+        expense_cat = Category.get_or_none(Category.id == expense_category_id)
+        if expense_cat is None:
+            raise ValueError(f"Expense category {expense_category_id} not found")
+        if expense_cat.type != "expense":
+            raise ValueError(f"Category {expense_category_id} is not an expense category")
+        if expense_cat.parent_id is not None:
+            raise ValueError(f"Category {expense_category_id} is not a level-1 (parent) category")
+
+        existing = IncomeExpenseRelation.get_or_none(
+            IncomeExpenseRelation.expense_category == expense_category_id,
+        )
+        if existing is not None:
+            raise ValueError(f"Expense category {expense_category_id} is already linked to an income category")
+
+        relation = IncomeExpenseRelation.create(
+            income_category=income_category_id,
+            expense_category=expense_category_id,
+        )
+        return {
+            "id": relation.id,
+            "income_category_id": income_category_id,
+            "expense_category_id": expense_category_id,
+        }
+
+    def delete_category_relation(self, relation_id: int) -> None:
+        """Delete a single income↔expense category relation."""
+        deleted = IncomeExpenseRelation.delete().where(IncomeExpenseRelation.id == relation_id).execute()
+        if deleted == 0:
+            raise ValueError(f"Relation {relation_id} not found")
+
+    def get_linked_expense_category_ids(self) -> set[int]:
+        """Return the set of expense category IDs that already have a relation."""
+        rows = IncomeExpenseRelation.select(IncomeExpenseRelation.expense_category).dicts()
+        return {int(row["expense_category"]) for row in rows}

@@ -176,6 +176,18 @@ class CategoryFacade(_DatabaseFacade):
     def descendant_names(self, cat_id: int) -> builtins.list[str]:
         return self._db.get_descendant_category_names(cat_id)
 
+    def list_relations(self) -> builtins.list[dict]:
+        return self._db.list_category_relations()
+
+    def create_relation(self, income_category_id: int, expense_category_id: int) -> dict:
+        return self._db.create_category_relation(income_category_id, expense_category_id)
+
+    def delete_relation(self, relation_id: int) -> None:
+        self._db.delete_category_relation(relation_id)
+
+    def linked_expense_ids(self) -> builtins.set[int]:
+        return self._db.get_linked_expense_category_ids()
+
 
 class TagFacade(_DatabaseFacade):
     def create(self, name: str, color: str = "#888888", icon: str = "") -> dict:

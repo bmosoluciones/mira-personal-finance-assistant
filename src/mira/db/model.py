@@ -304,6 +304,27 @@ class MessageEvent(BaseModel):
         table_name = "message_events"
 
 
+class IncomeExpenseRelation(BaseModel):
+    id = AutoField()
+    income_category = ForeignKeyField(
+        Category,
+        backref="expense_relations",
+        column_name="income_category_id",
+        on_delete="CASCADE",
+    )
+    expense_category = ForeignKeyField(
+        Category,
+        backref="income_relation",
+        column_name="expense_category_id",
+        on_delete="CASCADE",
+    )
+    created_at = DateTimeField(default=datetime.now)
+
+    class Meta:
+        table_name = "income_expense_relations"
+        indexes = ((("expense_category",), True),)
+
+
 ALL_MODELS = [
     Account,
     Transaction,
@@ -322,6 +343,7 @@ ALL_MODELS = [
     AchievementEvent,
     AchievementCounter,
     MessageEvent,
+    IncomeExpenseRelation,
 ]
 
 EXPECTED_TABLES = frozenset(model._meta.table_name for model in ALL_MODELS)
@@ -382,6 +404,17 @@ SCHEMA_INDEX_SPECS: tuple[SchemaIndexSpec, ...] = (
         ("source_event_type", "message_type", "reference_date"),
         unique=True,
         where=("source_event_type = 'app_start' AND message_type = 'daily_context' " "AND reference_date IS NOT NULL"),
+    ),
+    SchemaIndexSpec(
+        "idx_income_expense_relations_income",
+        "income_expense_relations",
+        ("income_category_id",),
+    ),
+    SchemaIndexSpec(
+        "uq_income_expense_relations_expense",
+        "income_expense_relations",
+        ("expense_category_id",),
+        unique=True,
     ),
 )
 
@@ -470,13 +503,6 @@ def inspect_database_schema_details(
         return SchemaInspection(status="current", user_version=stored_user_version, tables=tables)
 
     if minimum_version <= stored_user_version < current_version:
-        if missing_tables:
-            return SchemaInspection(
-                status="invalid",
-                user_version=stored_user_version,
-                tables=tables,
-                error=f"Missing required MIRA tables: {', '.join(sorted(missing_tables))}.",
-            )
         return SchemaInspection(status="migratable", user_version=stored_user_version, tables=tables)
 
     return SchemaInspection(status="legacy", user_version=stored_user_version, tables=tables)

@@ -42,6 +42,7 @@ plugins:
             First Steps: Primeros Pasos
             Interface Guide: Guia de la Interfaz
             Practical Workflows: Flujos Practicos
+            Income-Expense Category Associations: Asociacion de Categorias
             Credit Cards: Tarjetas de Credito
             Natural Language: Lenguaje Natural
             Import, Export and Backup: Importacion, Exportacion y Respaldo
@@ -73,6 +74,7 @@ nav:
   - First Steps: primeros_pasos.md
   - Interface Guide: guia_interfaz.md
   - Practical Workflows: flujos_practicos.md
+  - Income-Expense Category Associations: income_expense_relations.md
   - Credit Cards: tarjetas_credito.md
   - Natural Language: entrada_lenguaje_natural.md
   - Import, Export and Backup: importar_exportar_respaldo.md
