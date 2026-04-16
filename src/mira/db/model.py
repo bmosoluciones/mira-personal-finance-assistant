@@ -346,7 +346,7 @@ ALL_MODELS = [
     IncomeExpenseRelation,
 ]
 
-EXPECTED_TABLES = frozenset(model._meta.table_name for model in ALL_MODELS)
+EXPECTED_TABLES = frozenset(model._meta.table_name for model in ALL_MODELS)  # type: ignore[attr-defined]
 
 # Keep index names explicit for backwards compatibility with existing checks.
 # Peewee handles table creation, but these indexes require stable names and,

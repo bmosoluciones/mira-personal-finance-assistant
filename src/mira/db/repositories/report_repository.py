@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from peewee import JOIN, Case, fn
 
@@ -52,6 +52,33 @@ class ReportRepository:
         def get_category_by_name(self, name: str) -> dict[str, Any] | None: ...
 
         def get_descendant_category_names(self, category_id: int) -> list[str]: ...
+
+    @overload
+    def summarize_financials(
+        self,
+        transactions: list[dict[str, Any]],
+        *,
+        categories: list[dict[str, Any]] | None = ...,
+        as_dict: Literal[True],
+    ) -> dict[str, Any]: ...
+
+    @overload
+    def summarize_financials(
+        self,
+        transactions: list[dict[str, Any]],
+        *,
+        categories: list[dict[str, Any]] | None = ...,
+        as_dict: Literal[False] = ...,
+    ) -> FinancialSummary: ...
+
+    @overload
+    def summarize_financials(
+        self,
+        transactions: list[dict[str, Any]],
+        *,
+        categories: list[dict[str, Any]] | None = ...,
+        as_dict: bool,
+    ) -> FinancialSummary | dict[str, Any]: ...
 
     def summarize_financials(
         self,

@@ -6,7 +6,10 @@ from __future__ import annotations
 import csv
 import logging
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
+
+if TYPE_CHECKING:
+    from openpyxl.cell.cell import Cell as _OpenpyxlCell
 
 from mira.db.money import MONEY_ZERO, MoneyLike, money_to_decimal
 
@@ -130,6 +133,11 @@ def _variance_signal(section: str, variance: float) -> str:
     return "positive" if variance > 0 else "negative"
 
 
+def _wc(cell: Any) -> "_OpenpyxlCell":
+    """Cast an openpyxl cell to a writable Cell (stubs return Union[Cell, ReadOnlyCell, MergedCell])."""
+    return cast("_OpenpyxlCell", cell)
+
+
 def export_budget_comparison_excel(
     db: _DatabaseIOProtocol,
     filepath: str | Path,
@@ -179,7 +187,7 @@ def export_budget_comparison_excel(
     sheet.cell(1, 1, title)
     sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
 
-    meta_rows = [
+    meta_rows: list[tuple[str, str | int | None]] = [
         ("Presupuesto", str(budget["code"])),
         ("Año", int(budget["year"])),
         ("Moneda", str(budget["currency"])),
@@ -222,16 +230,16 @@ def export_budget_comparison_excel(
         bottom=Side(style="thin", color="4A5563"),
     )
 
-    sheet["A1"].fill = title_fill
-    sheet["A1"].font = title_font
-    sheet["A1"].alignment = Alignment(horizontal="left", vertical="center")
+    _wc(sheet["A1"]).fill = title_fill
+    _wc(sheet["A1"]).font = title_font
+    _wc(sheet["A1"]).alignment = Alignment(horizontal="left", vertical="center")
 
     for row_idx in range(2, 7):
-        sheet.cell(row_idx, 1).font = Font(bold=True)
+        _wc(sheet.cell(row_idx, 1)).font = Font(bold=True)
 
     header_row = 8
     for col_idx, header in enumerate(headers, start=1):
-        cell = sheet.cell(header_row, col_idx, header)
+        cell = _wc(sheet.cell(header_row, col_idx, header))
         cell.fill = header_fill
         cell.font = white_font
         cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -241,10 +249,10 @@ def export_budget_comparison_excel(
     for kind, payload in structure:
         if kind == "section":
             for col_idx in range(1, len(headers) + 1):
-                cell = sheet.cell(row_idx, col_idx)
+                cell = _wc(sheet.cell(row_idx, col_idx))
                 cell.fill = section_fill
                 cell.border = thin_border
-            section_cell = sheet.cell(row_idx, 1, str(payload))
+            section_cell = _wc(sheet.cell(row_idx, 1, str(payload)))
             section_cell.font = section_font
             row_idx += 1
             continue
@@ -257,7 +265,7 @@ def export_budget_comparison_excel(
             for period in cast(list[dict[str, Any]], category["periods"]):
                 sheet.cell(row_idx, col_idx, float(period["real"]))
                 sheet.cell(row_idx, col_idx + 1, float(period["budget"]))
-                variance_cell = sheet.cell(row_idx, col_idx + 2, float(period["variance"]))
+                variance_cell = _wc(sheet.cell(row_idx, col_idx + 2, float(period["variance"])))
                 signal = _variance_signal(section, float(period["variance"]))
                 variance_cell.fill = {
                     "positive": positive_fill,
@@ -272,7 +280,7 @@ def export_budget_comparison_excel(
                 col_idx += 3
             sheet.cell(row_idx, col_idx, float(category["annual_real"]))
             sheet.cell(row_idx, col_idx + 1, float(category["annual_budget"]))
-            annual_variance_cell = sheet.cell(row_idx, col_idx + 2, float(category["annual_variance"]))
+            annual_variance_cell = _wc(sheet.cell(row_idx, col_idx + 2, float(category["annual_variance"])))
             annual_signal = _variance_signal(section, float(category["annual_variance"]))
             annual_variance_cell.fill = {
                 "positive": positive_fill,
@@ -298,13 +306,13 @@ def export_budget_comparison_excel(
             )
             period_totals = cast(list[dict[str, Any]], totals[total_key])
             annual_totals = cast(dict[str, Any], totals[f"{total_key}_annual"])
-            title_cell = sheet.cell(row_idx, 1, title_text)
+            title_cell = _wc(sheet.cell(row_idx, 1, title_text))
             title_cell.font = section_font
             col_idx = 2
             for period in period_totals:
                 sheet.cell(row_idx, col_idx, float(period["real"]))
                 sheet.cell(row_idx, col_idx + 1, float(period["budget"]))
-                variance_cell = sheet.cell(row_idx, col_idx + 2, float(period["variance"]))
+                variance_cell = _wc(sheet.cell(row_idx, col_idx + 2, float(period["variance"])))
                 signal = _variance_signal(total_key, float(period["variance"]))
                 variance_cell.fill = {
                     "positive": positive_fill,
@@ -319,7 +327,7 @@ def export_budget_comparison_excel(
                 col_idx += 3
             sheet.cell(row_idx, col_idx, float(annual_totals["real"]))
             sheet.cell(row_idx, col_idx + 1, float(annual_totals["budget"]))
-            annual_variance_cell = sheet.cell(row_idx, col_idx + 2, float(annual_totals["variance"]))
+            annual_variance_cell = _wc(sheet.cell(row_idx, col_idx + 2, float(annual_totals["variance"])))
             annual_signal = _variance_signal(total_key, float(annual_totals["variance"]))
             annual_variance_cell.fill = {
                 "positive": positive_fill,
@@ -332,14 +340,14 @@ def export_budget_comparison_excel(
                 "neutral": neutral_font,
             }[annual_signal]
             for col_idx in range(1, len(headers) + 1):
-                cell = sheet.cell(row_idx, col_idx)
+                cell = _wc(sheet.cell(row_idx, col_idx))
                 if not cell.fill.fill_type:
                     cell.fill = row_fill
                 if col_idx != 1 and not cell.font.bold:
                     cell.font = Font(color="F0F3F7", bold=True)
 
         for col_idx in range(1, len(headers) + 1):
-            cell = sheet.cell(row_idx, col_idx)
+            cell = _wc(sheet.cell(row_idx, col_idx))
             cell.border = thin_border
             if col_idx > 1:
                 cell.alignment = Alignment(horizontal="right", vertical="center")

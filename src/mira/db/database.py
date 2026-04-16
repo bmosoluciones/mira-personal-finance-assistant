@@ -12,7 +12,7 @@ from __future__ import annotations
 import builtins
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, overload
 
 from mira.db import helpers as db_helpers
 from mira.db.backend import DatabaseBackend as _DatabaseBackend
@@ -627,6 +627,33 @@ class ReportFacade(_DatabaseFacade):
 
     def summary(self, since_date: str | None = None) -> dict:
         return self._db.get_summary(since_date=since_date)
+
+    @overload
+    def summarize_financials(
+        self,
+        transactions: list[dict[str, Any]],
+        *,
+        categories: list[dict[str, Any]] | None = ...,
+        as_dict: Literal[True],
+    ) -> dict[str, Money]: ...
+
+    @overload
+    def summarize_financials(
+        self,
+        transactions: list[dict[str, Any]],
+        *,
+        categories: list[dict[str, Any]] | None = ...,
+        as_dict: Literal[False] = ...,
+    ) -> FinancialSummary: ...
+
+    @overload
+    def summarize_financials(
+        self,
+        transactions: list[dict[str, Any]],
+        *,
+        categories: list[dict[str, Any]] | None = ...,
+        as_dict: bool,
+    ) -> FinancialSummary | dict[str, Money]: ...
 
     def summarize_financials(
         self,

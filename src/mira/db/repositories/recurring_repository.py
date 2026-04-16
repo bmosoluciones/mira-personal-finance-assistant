@@ -154,12 +154,12 @@ class RecurringRepository:
                 note=note,
                 day_of_month=day_of_month,
             )
-            rec_id = int(recurring.id)
+            rec_id = int(recurring.id)  # type: ignore[call-overload]
             self._replace_recurring_tags(rec_id, normalized_tag_ids)
-        recurring = self._get_recurring_by_id(int(rec_id))
-        if recurring is None:
+        result = self._get_recurring_by_id(int(rec_id))
+        if result is None:
             raise RuntimeError("Failed to create recurring transaction")
-        return recurring
+        return result
 
     def delete_recurring(self, rec_id: int) -> None:
         RecurringTransaction.delete().where(RecurringTransaction.id == rec_id).execute()

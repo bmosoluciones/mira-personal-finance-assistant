@@ -391,7 +391,7 @@ class BudgetRepository:
             )
         except PeeweeIntegrityError as exc:
             raise DuplicateBudgetCodeError(f"Budget code '{normalized_code}' already exists") from exc
-        budget_id = int(budget_row.id)
+        budget_id = int(budget_row.id)  # type: ignore[call-overload]
         if not had_explicit_default:
             self.set_default_budget_for_year(int(budget_id))
         self._sync_budget_detail_rows(int(budget_id), year)

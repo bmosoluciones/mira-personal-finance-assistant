@@ -315,9 +315,7 @@ def test_contribute_goal_dialog_shows_goal_dropdown_with_multiple_goals(
         dialog.close()
 
 
-def test_contribute_goal_dialog_preselects_by_goal_name_fallback(
-    monkeypatch: pytest.MonkeyPatch, db: Database
-) -> None:
+def test_contribute_goal_dialog_preselects_by_goal_name_fallback(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
     """When selected_goal_id is None the dialog falls back to matching by name."""
     _get_qapplication_or_xfail(monkeypatch)
     dialogs_module = importlib.import_module("mira.ui.dialogs")
@@ -338,9 +336,7 @@ def test_contribute_goal_dialog_preselects_by_goal_name_fallback(
         dialog.close()
 
 
-def test_contribute_goal_dialog_no_dropdown_for_single_call(
-    monkeypatch: pytest.MonkeyPatch, db: Database
-) -> None:
+def test_contribute_goal_dialog_no_dropdown_for_single_call(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
     """ContributeGoalDialog without a goals list must not show a goal combobox."""
     _get_qapplication_or_xfail(monkeypatch)
     dialogs_module = importlib.import_module("mira.ui.dialogs")
@@ -354,9 +350,7 @@ def test_contribute_goal_dialog_no_dropdown_for_single_call(
         dialog.close()
 
 
-def test_contribute_goal_dialog_returns_selected_goal_id(
-    monkeypatch: pytest.MonkeyPatch, db: Database
-) -> None:
+def test_contribute_goal_dialog_returns_selected_goal_id(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
     """get_data() must include goal_id matching the selected combobox entry."""
     _get_qapplication_or_xfail(monkeypatch)
     dialogs_module = importlib.import_module("mira.ui.dialogs")

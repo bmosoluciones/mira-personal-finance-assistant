@@ -121,7 +121,7 @@ class TransactionRepository:
             created_value = created_raw
         return {
             "id": row.id,
-            "account_id": row.account_id,
+            "account_id": row.account_id,  # type: ignore[attr-defined]
             "type": row.type,
             "amount": self._cents_to_decimal(row.amount),
             "description": row.description,
@@ -605,8 +605,8 @@ class TransactionRepository:
             )
             self.update_account_balance(to_account_id, credit_amount)
 
-        expense = self.get_transaction_by_id(int(expense_tx.id))
-        income = self.get_transaction_by_id(int(income_tx.id))
+        expense = self.get_transaction_by_id(int(expense_tx.id))  # type: ignore[arg-type]
+        income = self.get_transaction_by_id(int(income_tx.id))  # type: ignore[arg-type]
         if expense is None or income is None:
             raise RuntimeError("Failed to create transfer transactions")
         return expense, income

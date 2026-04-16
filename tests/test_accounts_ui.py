@@ -295,9 +295,7 @@ def test_account_dialog_set_as_default_unchecked_when_accounts_already_exist(
         dialog.close()
 
 
-def test_account_dialog_no_set_as_default_in_edit_mode(
-    monkeypatch: pytest.MonkeyPatch, db: Database
-) -> None:
+def test_account_dialog_no_set_as_default_in_edit_mode(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
     """The 'set as default' checkbox must NOT appear when editing an existing account."""
     _get_qapplication_or_xfail(monkeypatch)
     account = db.account.get_or_create("Test Account")
@@ -312,9 +310,7 @@ def test_account_dialog_no_set_as_default_in_edit_mode(
         dialog.close()
 
 
-def test_accounts_view_create_account_with_set_as_default(
-    monkeypatch: pytest.MonkeyPatch, db: Database
-) -> None:
+def test_accounts_view_create_account_with_set_as_default(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
     """Adding an account via the view with set_as_default=True makes it the new default."""
     _get_qapplication_or_xfail(monkeypatch)
     views_module = importlib.import_module("mira.ui.views.accounts")

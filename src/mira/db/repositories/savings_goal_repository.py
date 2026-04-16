@@ -88,7 +88,7 @@ class SavingsGoalRepository:
             currency=goal_currency,
             category_id=int(savings_category["id"]),
         )
-        return self.get_savings_goal(int(row.id))
+        return self.get_savings_goal(int(row.id))  # type: ignore[arg-type]
 
     def get_savings_goal_by_name(self, name: str) -> dict | None:
         normalized_name = name.strip()

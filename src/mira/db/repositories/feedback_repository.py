@@ -304,7 +304,7 @@ class FeedbackRepository:
         reference_date: str | None = None,
         source: str | None = None,
         persist: bool = True,
-    ) -> MessageCandidate | None:
+    ) -> dict[str, Any] | None:
         selected = self.resolve_candidate(
             candidates,
             period_key=period_key,
