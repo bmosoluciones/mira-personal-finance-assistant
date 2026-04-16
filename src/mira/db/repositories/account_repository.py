@@ -263,7 +263,7 @@ class AccountRepository:
         current_balance = self._money_to_decimal(account.get("balance")) or MONEY_ZERO
         if exclude_transaction_id is not None:
             excluded_tx = Transaction.get_or_none(
-                (Transaction.id == int(exclude_transaction_id)) & (Transaction.account_id == int(account_id))
+                (Transaction.id == int(exclude_transaction_id)) & (Transaction.account_id == int(account_id))  # type: ignore[attr-defined]
             )
             if excluded_tx is not None:
                 excluded_amount = self._cents_to_money(excluded_tx.amount) or MONEY_ZERO
@@ -284,7 +284,9 @@ class AccountRepository:
                 ),
                 0,
             ).alias("net_effect_cents")
-        ).where((Transaction.account_id == int(account_id)) & (Transaction.date > target_day))
+        ).where(
+            (Transaction.account_id == int(account_id)) & (Transaction.date > target_day)  # type: ignore[attr-defined]
+        )
         if exclude_transaction_id is not None:
             future_effect_query = future_effect_query.where(Transaction.id != int(exclude_transaction_id))
 

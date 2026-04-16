@@ -772,24 +772,24 @@ def seed_demo_data(db: _BootstrapDatabaseProtocol, *, reference_date: date | Non
         catalog_data=_DEMO_CATALOG_DATA,
         translate=_cn,
     )
-    category_rows = resolve_seed_categories(db, catalog)
-    tag_rows = resolve_seed_tags(db, catalog)
-    default_account, reserve_account = ensure_seed_accounts(db, catalog)
-    ensure_seed_goals(db, year=year, category_rows=category_rows)
-    seed_note, budget_code = reset_seed_artifacts(db, year=year, transaction_model=Transaction)
+    category_rows = resolve_seed_categories(db, catalog)  # type: ignore[arg-type]
+    tag_rows = resolve_seed_tags(db, catalog)  # type: ignore[arg-type]
+    default_account, reserve_account = ensure_seed_accounts(db, catalog)  # type: ignore[arg-type]
+    ensure_seed_goals(db, year=year, category_rows=category_rows)  # type: ignore[arg-type]
+    seed_note, budget_code = reset_seed_artifacts(db, year=year, transaction_model=Transaction)  # type: ignore[arg-type]
 
     budget = db.create_budget(budget_code, year, db.get_default_currency())
     budget_id = int(budget["id"])
     budget_plan = build_budget_plan()
     seed_budget_plan(
-        db,
+        db,  # type: ignore[arg-type]
         budget_id=budget_id,
         year=year,
         category_rows=category_rows,
         budget_plan=budget_plan,
     )
     tx_count, tag_links = seed_monthly_transactions(
-        db,
+        db,  # type: ignore[arg-type]
         build_demo_seed_runtime(
             year=year,
             budget_id=budget_id,

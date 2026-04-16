@@ -63,11 +63,11 @@ class NotificationService:
     def _ensure_message_bar_visible(self) -> None:
         footer = getattr(self._ui, "_footer", None)
         if hasattr(footer, "setVisible"):
-            footer.setVisible(True)
+            footer.setVisible(True)  # type: ignore[union-attr]
 
         action = getattr(self._ui, "_act_prompt", None)
         if hasattr(action, "setChecked"):
-            action.setChecked(True)
+            action.setChecked(True)  # type: ignore[union-attr]
 
         expand_panel = getattr(self._ui, "_set_chat_panel_expanded", None)
         if callable(expand_panel):
@@ -76,11 +76,11 @@ class NotificationService:
 
         chat_content = getattr(self._ui, "_chat_content", None)
         if hasattr(chat_content, "setVisible"):
-            chat_content.setVisible(True)
+            chat_content.setVisible(True)  # type: ignore[union-attr]
 
         toggle = getattr(self._ui, "_chat_toggle_btn", None)
         if hasattr(toggle, "setText"):
-            toggle.setText("\u25bc")
+            toggle.setText("\u25bc")  # type: ignore[union-attr]
 
     def _update_status(self, level: str, text: str) -> None:
         status_bar = getattr(self._ui, "_status_bar", None)

@@ -341,6 +341,69 @@ def test_reports_view_ignores_stale_async_failures(monkeypatch) -> None:
     assert view._status_calls[-1] == previous_status
 
 
+def test_reports_view_surfaces_current_async_failure_message(monkeypatch) -> None:
+    install_fake_pyside(monkeypatch)
+    module = fresh_import(
+        monkeypatch,
+        "mira.ui.views.reports",
+        clear_prefixes=("mira.ui.views._shared", "mira.ui.delegates"),
+    )
+    filters = {
+        "account_id": None,
+        "tx_type": "income",
+        "category": None,
+        "tag_id": None,
+        "include_children": False,
+    }
+    view = _make_reports_view_probe(
+        module,
+        since="2026-03-01",
+        until="2026-03-31",
+        filters=filters,
+        has_loaded_data=True,
+    )
+    request_snapshot = view._build_request_snapshot("2026-03-01", "2026-03-31", filters)
+    view._inflight_request_snapshot = request_snapshot
+
+    module.ReportsView._on_report_failed(view, request_snapshot, "boom")
+
+    assert view._report_dirty is True
+    assert view._status_calls[-1] == ("boom", "#F48771")
+
+
+def test_reports_view_uses_localized_failure_fallback_for_empty_messages(monkeypatch) -> None:
+    install_fake_pyside(monkeypatch)
+    module = fresh_import(
+        monkeypatch,
+        "mira.ui.views.reports",
+        clear_prefixes=("mira.ui.views._shared", "mira.ui.delegates"),
+    )
+    filters = {
+        "account_id": None,
+        "tx_type": "income",
+        "category": None,
+        "tag_id": None,
+        "include_children": False,
+    }
+    view = _make_reports_view_probe(
+        module,
+        since="2026-03-01",
+        until="2026-03-31",
+        filters=filters,
+        has_loaded_data=True,
+    )
+    request_snapshot = view._build_request_snapshot("2026-03-01", "2026-03-31", filters)
+    view._inflight_request_snapshot = request_snapshot
+
+    module.ReportsView._on_report_failed(view, request_snapshot, "")
+
+    assert view._report_dirty is True
+    assert view._status_calls[-1] == (
+        "No se pudo cargar el reporte. Revisa los filtros e intenta de nuevo.",
+        "#F48771",
+    )
+
+
 def test_model_download_coordinator_worker_handles_progress_cancel_and_errors(monkeypatch, tmp_path: Path) -> None:
     install_fake_pyside(monkeypatch)
     module = fresh_import(monkeypatch, "mira.ui.coordinators.model_download_coordinator")

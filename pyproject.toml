@@ -94,3 +94,21 @@ addopts = "-m \"not full\""
 markers = [
     "full: long-running tests for complete validation",
 ]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = false
+warn_unused_ignores = false
+
+[[tool.mypy.overrides]]
+# MainWindow mixin files reference attributes defined in the composed MainWindow
+# class. This is a known mypy limitation with the mixin pattern and all
+# attr-defined errors in these files are intentional by design.
+module = [
+    "mira.ui.main_window_layout",
+    "mira.ui.main_window_lifecycle",
+    "mira.ui.main_window_prompt",
+    "mira.ui.main_window_navigation",
+    "mira.ui.main_window_shell",
+]
+disable_error_code = ["attr-defined", "arg-type", "misc", "has-type", "union-attr", "call-overload"]

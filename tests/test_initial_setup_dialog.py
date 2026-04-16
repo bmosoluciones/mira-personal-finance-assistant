@@ -153,6 +153,38 @@ def test_initial_setup_dialog_requires_profile_name_before_continuing(
         dialog.close()
 
 
+def test_initial_setup_dialog_localizes_profile_validation_warning(
+    monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+    shared_module = importlib.import_module("mira.ui.views._shared")
+
+    warnings: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        shared_module,
+        "_notify_warning",
+        lambda _widget, title, message: warnings.append((str(title), str(message))),
+    )
+
+    dialog = dialogs_module.InitialSetupDialog(db)
+
+    try:
+        dialog._wizard_language = "es"
+        dialog._page_profile._name_edit.setText("   ")
+
+        assert dialog._page_profile.validatePage() is False
+        assert warnings == [
+            (
+                "Validación",
+                "El nombre de usuario es requerido. Por favor ingresa un nombre.",
+            )
+        ]
+    finally:
+        dialog.close()
+
+
 def test_initial_setup_dialog_loads_brand_logos(
     monkeypatch: pytest.MonkeyPatch,
     db: Database,

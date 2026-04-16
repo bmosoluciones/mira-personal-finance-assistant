@@ -326,9 +326,9 @@ class TransactionsView(QWidget):
             return
         from mira.ui.dialogs import TransactionDialog
 
-        dlg = TransactionDialog(self._db, tx=tx, parent=self)
-        if dlg.exec() == TransactionDialog.DialogCode.Accepted:
-            data = dlg.get_data()
+        tx_dlg = TransactionDialog(self._db, tx=tx, parent=self)
+        if tx_dlg.exec() == TransactionDialog.DialogCode.Accepted:
+            data = tx_dlg.get_data()
             self._service.update(int(tx["id"]), data)
             self.refresh()
 
@@ -506,10 +506,9 @@ class TransactionsView(QWidget):
         combo.addItems(categories)
         idx = categories.index(current) if current in categories else 0
         combo.setCurrentIndex(idx)
-        if combo.lineEdit() is not None:
-            combo.lineEdit().setPlaceholderText(
-                _tr_db(self._db, "transactions.change_category.search", "Search categories…")
-            )
+        line_edit = combo.lineEdit()
+        if line_edit is not None:
+            line_edit.setPlaceholderText(_tr_db(self._db, "transactions.change_category.search", "Search categories…"))
         form.addRow(
             _tr_db(self._db, "transactions.change_category.label", "Category:"),
             combo,

@@ -605,8 +605,8 @@ class TransactionRepository:
             )
             self.update_account_balance(to_account_id, credit_amount)
 
-        expense = self.get_transaction_by_id(int(expense_tx.id))  # type: ignore[arg-type]
-        income = self.get_transaction_by_id(int(income_tx.id))  # type: ignore[arg-type]
+        expense = self.get_transaction_by_id(int(expense_tx.id))  # type: ignore[call-overload]
+        income = self.get_transaction_by_id(int(income_tx.id))  # type: ignore[call-overload]
         if expense is None or income is None:
             raise RuntimeError("Failed to create transfer transactions")
         return expense, income

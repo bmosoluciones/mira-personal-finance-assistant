@@ -150,9 +150,11 @@ class TransactionDialog(QDialog):
             _cat_completer.setFilterMode(Qt.MatchFlag.MatchContains)
             _cat_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self._populate_categories()
-        self._category_combo.lineEdit().setPlaceholderText(
-            tr("dialog.transaction.category.search", self._language, default="Search categories…")
-        )
+        _cat_line_edit = self._category_combo.lineEdit()
+        if _cat_line_edit is not None:
+            _cat_line_edit.setPlaceholderText(
+                tr("dialog.transaction.category.search", self._language, default="Search categories…")
+            )
         right.addRow(tr("dialog.transaction.category", self._language, default="Category:"), self._category_combo)
 
         self._tag_selector = _TagMultiSelectButton(self, lang=normalize_language(self._db.setting.get("language")))

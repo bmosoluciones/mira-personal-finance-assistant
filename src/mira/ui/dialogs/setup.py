@@ -11,6 +11,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
+    QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
     QLabel,
@@ -258,7 +259,9 @@ class _ProfilePage(QWizardPage):
         if not self._name_edit.text().strip():
             from mira.ui.views._shared import _notify_warning as shared_notify_warning
 
-            lang = self.wizard()._wizard_language if self.wizard() else "en"
+            wizard = self.wizard()
+            setup_wizard = cast("InitialSetupDialog | None", wizard)
+            lang = setup_wizard._wizard_language if setup_wizard else "en"
             shared_notify_warning(
                 self,
                 tr("validation.title", lang, default="Validation"),
@@ -593,7 +596,7 @@ class _AccountsPage(QWizardPage):
             name_edit = cast(QLineEdit, row_spec["name"])
             type_combo = cast(QComboBox, row_spec["type"])
             currency_combo = cast(QComboBox, row_spec["currency"])
-            balance_spin = row_spec["opening_balance"]
+            balance_spin = cast(QDoubleSpinBox, row_spec["opening_balance"])
             name = name_edit.text().strip()
             if not name:
                 continue

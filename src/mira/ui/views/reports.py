@@ -6,7 +6,10 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from PySide6.QtGui import QCloseEvent
 
 from PySide6.QtCharts import (
     QBarCategoryAxis,
@@ -807,7 +810,7 @@ class ReportsView(QWidget):
         self._worker.start()
 
     def _on_report_loaded(self, request_snapshot: object, state: object) -> None:
-        snapshot = request_snapshot
+        snapshot = cast(_ReportRequestSnapshot, request_snapshot)
         if not self._should_apply_completed_request(snapshot):
             self._mark_report_pending()
             return
@@ -820,17 +823,17 @@ class ReportsView(QWidget):
         )
 
     def _on_report_failed(self, request_snapshot: object, message: str) -> None:
-        del message
-        snapshot = request_snapshot
+        snapshot = cast(_ReportRequestSnapshot, request_snapshot)
         if not self._should_apply_completed_request(snapshot):
             self._mark_report_pending()
             return
+        status_message = message or tr(
+            "reports.load_error",
+            self._language,
+            default="The report could not be loaded. Review the filters and try again.",
+        )
         self._set_report_status(
-            tr(
-                "reports.load_error",
-                self._language,
-                default="The report could not be loaded. Review the filters and try again.",
-            ),
+            status_message,
             color="#F48771",
         )
 
@@ -856,9 +859,9 @@ class ReportsView(QWidget):
             self._worker = None
         self._inflight_request_snapshot = None
 
-    def closeEvent(self, event: object) -> None:  # type: ignore[override]
+    def closeEvent(self, event: QCloseEvent) -> None:  # type: ignore[override]
         self._stop_worker()
-        super().closeEvent(event)  # type: ignore[misc]
+        super().closeEvent(event)
 
     def _set_loaded_state(self, state: ReportsLoadedState) -> None:
         self._loaded_state = state

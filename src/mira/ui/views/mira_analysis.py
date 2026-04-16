@@ -6,7 +6,10 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from PySide6.QtGui import QCloseEvent
 
 from PySide6.QtCharts import (
     QBarCategoryAxis,
@@ -788,9 +791,9 @@ class MiraAnalysisView(QWidget):
                 self._worker.wait()
             self._worker = None
 
-    def closeEvent(self, event: object) -> None:  # type: ignore[override]
+    def closeEvent(self, event: QCloseEvent) -> None:  # type: ignore[override]
         self._stop_worker()
-        super().closeEvent(event)  # type: ignore[misc]
+        super().closeEvent(event)
 
     def _on_report_loaded(self, payload: object, emit_to_assistant: bool, year: int, month: int) -> None:
         self._payload = cast(dict[str, Any], payload)
