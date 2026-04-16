@@ -182,7 +182,8 @@ def _eval_node(node: ast.expr) -> float:
         unary_op_type = type(node.op)
         if unary_op_type not in _UNARY_OPS:
             raise ValueError(
-                f"Operation not allowed: '{unary_op_type.__name__}'. " "Only basic operations (+, -, *, /) are supported."
+                f"Operation not allowed: '{unary_op_type.__name__}'. "
+                "Only basic operations (+, -, *, /) are supported."
             )
         operand = _eval_node(node.operand)
         fn = _UNARY_OPS[unary_op_type]

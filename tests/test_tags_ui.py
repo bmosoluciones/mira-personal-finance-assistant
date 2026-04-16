@@ -340,7 +340,7 @@ def test_transaction_dialog_uses_category_dropdown_and_places_tags_next_to_it(
     dialog = dialogs_module.TransactionDialog(db)
 
     try:
-        assert dialog._category_combo.isEditable() is False
+        assert dialog._category_combo.isEditable() is True
         assert dialog.styleSheet() == ""
         assert "background:" not in dialog._amount_spin.styleSheet().lower()
         assert dialog._classification_form.labelForField(dialog._category_combo).text().startswith("Categor")

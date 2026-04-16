@@ -338,8 +338,13 @@ class TransactionsView(QWidget):
             return
         reply = QMessageBox.question(
             self,
-            "Delete Transaction",
-            f"Delete transaction of {_fmt_amount(self._db, tx['amount'])} on {tx['date']}?",
+            _tr_db(self._db, "transactions.delete.title", "Delete Transaction"),
+            _tr_db(
+                self._db,
+                "transactions.delete.body",
+                "Delete transaction of {amount} on {date}?",
+                params={"amount": _fmt_amount(self._db, tx["amount"]), "date": tx["date"]},
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -430,8 +435,8 @@ class TransactionsView(QWidget):
         current_idx = names.index(current_name) if current_name in names else 0
         chosen_name, ok = QInputDialog.getItem(
             self,
-            "Change Account",
-            "Move transaction to account:",
+            _tr_db(self._db, "transactions.change_account.title", "Change Account"),
+            _tr_db(self._db, "transactions.change_account.prompt", "Move transaction to account:"),
             names,
             current_idx,
             False,
@@ -446,8 +451,13 @@ class TransactionsView(QWidget):
 
         reply = QMessageBox.question(
             self,
-            "Change Account",
-            f"Move this transaction to account '{selected_account['name']}'?",
+            _tr_db(self._db, "transactions.change_account.title", "Change Account"),
+            _tr_db(
+                self._db,
+                "transactions.change_account.confirm",
+                "Move this transaction to account '{name}'?",
+                params={"name": selected_account["name"]},
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
@@ -524,7 +534,7 @@ class TransactionsView(QWidget):
                 self._db,
                 "transactions.change_category.confirm",
                 f"Change category to '{new_category}'?",
-                params={"category": new_category},
+                params={"name": new_category},
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )

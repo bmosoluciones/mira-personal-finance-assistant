@@ -41,11 +41,10 @@ from mira.ui.views._shared import (
 class _RecurringApplyDialog(QDialog):
     """Dialog to choose target month/year for applying recurring rules."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, language: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle(
-            tr("recurring.apply.title", normalize_language("en"), default="Apply recurring transactions")
-        )
+        self._language = normalize_language(language)
+        self.setWindowTitle(tr("recurring.apply.title", self._language, default="Apply recurring transactions"))
 
         layout = QVBoxLayout(self)
         form = QFormLayout()
@@ -59,8 +58,8 @@ class _RecurringApplyDialog(QDialog):
         self._year.setRange(1900, 9999)
         self._year.setValue(today.year)
 
-        form.addRow(tr("recurring.apply.month", normalize_language("en"), default="Month (1-12)"), self._month)
-        form.addRow(tr("recurring.apply.year", normalize_language("en"), default="Year"), self._year)
+        form.addRow(tr("recurring.apply.month", self._language, default="Month (1-12)"), self._month)
+        form.addRow(tr("recurring.apply.year", self._language, default="Year"), self._year)
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -208,7 +207,7 @@ class RecurringView(QWidget):
                 ),
             )
             return
-        dlg = _RecurringApplyDialog(self)
+        dlg = _RecurringApplyDialog(normalize_language(self._db.setting.get("language")), self)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
 
@@ -219,14 +218,24 @@ class RecurringView(QWidget):
         if created_count:
             _notify_info(
                 self,
-                "Applied",
-                f"Created {created_count} recurring transaction(s) for {period_label}.",
+                _tr_db(self._db, "recurring.apply.applied_title", "Applied"),
+                _tr_db(
+                    self._db,
+                    "recurring.apply.applied_body",
+                    "Created {count} recurring transaction(s) for {period}.",
+                    params={"count": created_count, "period": period_label},
+                ),
             )
         else:
             _notify_info(
                 self,
-                "Already Applied",
-                f"Recurring transactions have already been applied for {period_label}.",
+                _tr_db(self._db, "recurring.apply.already_title", "Already Applied"),
+                _tr_db(
+                    self._db,
+                    "recurring.apply.already_body",
+                    "Recurring transactions have already been applied for {period}.",
+                    params={"period": period_label},
+                ),
             )
         self.refresh()
 
