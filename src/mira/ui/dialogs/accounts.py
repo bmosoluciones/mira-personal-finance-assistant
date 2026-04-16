@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
-"Account-related dialogs."
+"""Account-related dialogs."""
 
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ class AccountDialog(QDialog):
         account: dict | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the AccountDialog instance."""
         super().__init__(parent)
         self._db = db
         self._account = account
@@ -48,9 +49,11 @@ class AccountDialog(QDialog):
             self._prefill(account)
 
     def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        """Return t."""
         return tr(key, self._language, default=default, params=params)
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         form = QFormLayout()
         form.setSpacing(10)
@@ -118,6 +121,7 @@ class AccountDialog(QDialog):
         self._sync_balance_range()
 
     def _prefill(self, account: dict) -> None:
+        """Return prefill."""
         self._name_edit.setText(account.get("name", ""))
         account_type = str(account.get("account_type", "bank"))
         if account_type == "card":
@@ -133,9 +137,11 @@ class AccountDialog(QDialog):
         self._sync_balance_range()
 
     def _selected_account_type(self) -> str:
+        """Return selected account type."""
         return str(self._type_combo.currentData() or self._type_combo.currentText() or "bank")
 
     def _sync_balance_range(self) -> None:
+        """Return sync balance range."""
         current_value = float(self._balance_spin.value())
         if self._selected_account_type() == "credit":
             self._balance_spin.setRange(-9_999_999.99, 9_999_999.99)
@@ -145,6 +151,7 @@ class AccountDialog(QDialog):
             self._balance_spin.setValue(0.0)
 
     def _on_accept(self) -> None:
+        """Return on accept."""
         if not self._name_edit.text().strip():
             _notify_warning(
                 self,
@@ -155,6 +162,7 @@ class AccountDialog(QDialog):
         self.accept()
 
     def get_data(self) -> dict:
+        """Return get data."""
         data: dict = {
             "name": self._name_edit.text().strip(),
             "account_type": self._selected_account_type(),

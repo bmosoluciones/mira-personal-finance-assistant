@@ -237,6 +237,7 @@ _CATEGORY_FORBIDDEN_TOKENS = frozenset({"account", "cuenta", "my", "mi"})
 
 
 def _extract_report_type(text: str) -> str:
+    """Return extract report type."""
     if re.search(r"\b(balance|net|neto)\b", text, re.IGNORECASE):
         return "balance"
     if re.search(r"\b(cash\s*flow|flujo)\b", text, re.IGNORECASE):
@@ -249,6 +250,7 @@ def _extract_report_type(text: str) -> str:
 
 
 def _extract_period(text: str) -> dict[str, str | None]:
+    """Return extract period."""
     lower = text.lower()
     if "last 3 months" in lower or "últimos 3 meses" in lower or "ultimos 3 meses" in lower:
         return {"preset": "last_3_months", "from": None, "to": None}
@@ -275,6 +277,7 @@ def _extract_period(text: str) -> dict[str, str | None]:
 
 
 def _parse_numeric_token(raw: str) -> float:
+    """Return parse numeric token."""
     token = raw.strip()
     if "," in token and "." in token:
         if token.rfind(",") > token.rfind("."):
@@ -290,6 +293,7 @@ def _parse_numeric_token(raw: str) -> float:
 
 
 def _extract_amount(text: str) -> float | None:
+    """Return extract amount."""
     m = _AMOUNT_PATTERN.search(text)
     if not m:
         return None
@@ -415,6 +419,7 @@ def _extract_currency(text: str, default_currency: str | None = None) -> str | N
 
 
 def _adjust_amount_by_context(amount: float, text: str, *, is_income: bool) -> float:
+    """Return adjust amount by context."""
     if _LUCAS_PATTERN.search(text):
         # Dataset convention: in income phrases "lucas/lukas" usually means
         # thousands; in most expense phrases it does not.
@@ -424,6 +429,7 @@ def _adjust_amount_by_context(amount: float, text: str, *, is_income: bool) -> f
 
 
 def _extract_category(text: str) -> str | None:
+    """Return extract category."""
     for pattern, category in _CATEGORY_KEYWORDS:
         if pattern.search(text):
             return category
@@ -431,6 +437,7 @@ def _extract_category(text: str) -> str | None:
 
 
 def _extract_account(text: str) -> str | None:
+    """Return extract account."""
     for pattern in _ACCOUNT_PATTERNS:
         m = pattern.search(text)
         if m:
@@ -481,6 +488,7 @@ _ACTION_TEMPLATE: dict[str, Any] = {
 
 
 def _build_filters(category: str | None) -> dict[str, Any] | None:
+    """Return build filters."""
     if category is None:
         return None
     return {
@@ -601,6 +609,7 @@ _SPANISH_MESSAGE_HINTS = {
 
 
 def _message_language(text: str | None) -> str:
+    """Return message language."""
     normalized = " ".join(str(text or "").casefold().split())
     words = set(re.findall(r"\w+", normalized, flags=re.UNICODE))
     if re.search(r"[áéíóúñ¿¡]", normalized) or _SPANISH_MESSAGE_HINTS.intersection(words):
@@ -609,10 +618,12 @@ def _message_language(text: str | None) -> str:
 
 
 def _message_text(key: str, raw_text: str | None, *, default: str, params: dict[str, object] | None = None) -> str:
+    """Return message text."""
     return tr(key, _message_language(raw_text), default=default, params=params)
 
 
 def _build_result(signals: ParseSignals, intent: str, default_currency: str | None = None) -> dict[str, Any]:
+    """Return build result."""
     result: dict[str, Any] = dict(_ACTION_TEMPLATE)
 
     freeform_category = _extract_freeform_category(signals.raw_text) if signals.account is None else None
@@ -712,6 +723,7 @@ class TransactionParserEngine(BaseEngine):
         prompts: PromptAssets | None = None,
         default_currency: str | None = None,
     ) -> None:
+        """Initialize the TransactionParserEngine instance."""
         self._prompts = prompts or PromptAssets()
         # ISO-4217 code of the user's default currency from the database.
         # When set it drives the priority logic in _extract_currency:
@@ -722,6 +734,7 @@ class TransactionParserEngine(BaseEngine):
 
     def parse(self, user_input: str) -> dict[str, Any]:
         # Fast path: exact-action lookup.
+        """Return parse."""
         exact_action = self._prompts.get_exact_action(user_input)
         if exact_action is not None:
             return exact_action
@@ -742,10 +755,12 @@ class TransactionParserEngine(BaseEngine):
         return _build_result(signals, intent, self._default_currency)
 
     def chat(self, user_input: str) -> str:
+        """Return chat."""
         return (
             "El modo chat con LLM no está disponible porque no hay un modelo GGUF activo. "
             "Selecciona un modelo en Configuración para habilitarlo."
         )
 
     def set_default_currency(self, currency: str | None) -> None:
+        """Return set default currency."""
         self._default_currency = str(currency or "").strip().upper() or None

@@ -55,6 +55,7 @@ class TransactionDialog(QDialog):
         tx: dict | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the TransactionDialog instance."""
         super().__init__(parent)
         self._db = db
         self._tx = tx
@@ -77,6 +78,7 @@ class TransactionDialog(QDialog):
             self._sync_fx_state()
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
         self._form_scroll = QScrollArea(self)
@@ -272,9 +274,11 @@ class TransactionDialog(QDialog):
         layout.addWidget(self._footer_widget)
 
     def _toggle_optional(self, checked: bool) -> None:
+        """Return toggle optional."""
         self._optional_container.setVisible(checked)
 
     def _selected_account_currency(self) -> str:
+        """Return selected account currency."""
         account_id = self._account_combo.currentData()
         for acc in getattr(self, "_accounts", []):
             if acc["id"] == account_id:
@@ -282,6 +286,7 @@ class TransactionDialog(QDialog):
         return self._db.setting.get_default_currency()
 
     def _sync_fx_state(self) -> None:
+        """Return sync fx state."""
         account_currency = self._selected_account_currency()
         self._account_currency_lbl.setText(
             tr(
@@ -305,12 +310,14 @@ class TransactionDialog(QDialog):
             self._recompute_converted_amount()
 
     def _recompute_converted_amount(self) -> None:
+        """Return recompute converted amount."""
         if not self._fx_check.isChecked():
             return
         converted = self._amount_spin.value() * self._rate_spin.value()
         self._converted_amount_spin.setValue(round(converted, 2))
 
     def _set_type(self, tx_type: str) -> None:
+        """Return set type."""
         self._is_expense = tx_type == "expense"
         self._type_combo.setCurrentText(tx_type)
         active_expense = (
@@ -329,12 +336,14 @@ class TransactionDialog(QDialog):
         self._amount_spin.setStyleSheet(_hero_amount_spin_style(color))
 
     def _populate_accounts(self) -> None:
+        """Return populate accounts."""
         self._account_combo.clear()
         self._accounts = self._db.account.list()
         for acc in self._accounts:
             self._account_combo.addItem(acc["name"], acc["id"])
 
     def _populate_source_currencies(self) -> None:
+        """Return populate source currencies."""
         self._source_currency_combo.clear()
         for currency in self._db.setting.list_currencies(region=None):
             code = str(currency["code"]).strip().upper()
@@ -344,6 +353,7 @@ class TransactionDialog(QDialog):
             self._source_currency_combo.addItem(default_currency, default_currency)
 
     def _set_source_currency_value(self, currency_code: str) -> None:
+        """Return set source currency value."""
         normalized_code = currency_code.strip().upper()
         if not normalized_code:
             self._source_currency_combo.setCurrentIndex(-1)
@@ -356,6 +366,7 @@ class TransactionDialog(QDialog):
         self._source_currency_combo.setCurrentIndex(self._source_currency_combo.count() - 1)
 
     def _populate_categories(self) -> None:
+        """Return populate categories."""
         current_category = self._normalized_category()
         current_type = self._type_combo.currentText() or "expense"
         self._category_combo.clear()
@@ -375,6 +386,7 @@ class TransactionDialog(QDialog):
             self._set_category_combo_value(current_category)
 
     def _set_category_combo_value(self, category: str) -> None:
+        """Return set category combo value."""
         normalized_category = category.strip()
         if not normalized_category:
             self._category_combo.setCurrentIndex(0)
@@ -393,6 +405,7 @@ class TransactionDialog(QDialog):
         self._category_combo.setCurrentIndex(self._category_combo.count() - 1)
 
     def _browse_receipt(self) -> None:
+        """Return browse receipt."""
         from PySide6.QtWidgets import QFileDialog
 
         path, _ = QFileDialog.getOpenFileName(
@@ -409,6 +422,7 @@ class TransactionDialog(QDialog):
             self._receipt_path_edit.setText(path)
 
     def _prefill(self, tx: dict) -> None:
+        """Return prefill."""
         from PySide6.QtCore import QDate
 
         if tx.get("date"):
@@ -461,6 +475,7 @@ class TransactionDialog(QDialog):
 
     def _normalized_category(self) -> str | None:
         # Preferred: data stored on the currently-selected item.
+        """Return normalized category."""
         current_data = self._category_combo.currentData()
         if isinstance(current_data, str) and current_data.strip():
             return current_data.strip()
@@ -481,6 +496,7 @@ class TransactionDialog(QDialog):
         return None
 
     def _on_accept(self) -> None:
+        """Return on accept."""
         if self._amount_spin.value() <= 0:
             _notify_warning(
                 self,
@@ -549,6 +565,7 @@ class TransactionDialog(QDialog):
         self.accept()
 
     def get_data(self) -> dict:
+        """Return get data."""
         original_amount = self._amount_spin.value()
         fx_enabled = self._fx_check.isChecked()
         stored_amount = self._converted_amount_spin.value() if fx_enabled else original_amount
@@ -571,11 +588,13 @@ class TransactionDialog(QDialog):
         }
 
     def _refresh_tag_selector(self, selected_ids: set[int] | list[int] | None = None) -> None:
+        """Return refresh tag selector."""
         if selected_ids is None:
             selected_ids = self._tag_selector.selected_ids()
         self._tag_selector.set_tags(self._db.tag.list(), selected_ids)
 
     def _get_selected_tag_ids(self) -> list[int]:
+        """Return get selected tag ids."""
         return self._tag_selector.selected_ids()
 
 
@@ -589,6 +608,7 @@ class TransferDialog(QDialog):
     """Transfer money between two accounts, including credit card payments."""
 
     def __init__(self, db: Database, parent: QWidget | None = None, *, credit_payment: bool = False) -> None:
+        """Initialize the TransferDialog instance."""
         super().__init__(parent)
         self._db = db
         self._credit_payment = credit_payment
@@ -598,11 +618,13 @@ class TransferDialog(QDialog):
         self._build_ui()
 
     def _dialog_title(self) -> str:
+        """Return dialog title."""
         if self._credit_payment:
             return _transfer_tr(self._db, "dialog.transfer.credit_payment", "Credit card payment")
         return _transfer_tr(self._db, "dialog.transfer.title", "Transfer between accounts")
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
         title = QLabel(self._dialog_title())
@@ -754,9 +776,11 @@ class TransferDialog(QDialog):
 
     @staticmethod
     def _account_currency(acc: dict | None) -> str:
+        """Return account currency."""
         return (acc or {}).get("currency", "NIO")
 
     def _selected_account(self, combo: QComboBox) -> dict | None:
+        """Return selected account."""
         account_id = combo.currentData()
         for acc in self._accounts:
             if acc.get("id") == account_id:
@@ -764,9 +788,11 @@ class TransferDialog(QDialog):
         return None
 
     def _toggle_optional(self, checked: bool) -> None:
+        """Return toggle optional."""
         self._optional_container.setVisible(checked)
 
     def _sync_currency_transfer_fields(self) -> None:
+        """Return sync currency transfer fields."""
         from_acc = self._selected_account(self._from_combo)
         to_acc = self._selected_account(self._to_combo)
         from_cur = self._account_currency(from_acc)
@@ -807,6 +833,7 @@ class TransferDialog(QDialog):
         self._recalculate_from_rate()
 
     def _recalculate_from_rate(self) -> None:
+        """Return recalculate from rate."""
         if self._syncing_fx_fields:
             return
         from_acc = self._selected_account(self._from_combo)
@@ -818,6 +845,7 @@ class TransferDialog(QDialog):
         self._set_converted_amount(self._amount_spin.value() * self._rate_spin.value())
 
     def _recalculate_rate_from_destination(self) -> None:
+        """Return recalculate rate from destination."""
         if self._syncing_fx_fields:
             return
         from_acc = self._selected_account(self._from_combo)
@@ -831,16 +859,19 @@ class TransferDialog(QDialog):
         self._set_rate_value(self._converted_amount_spin.value() / amount)
 
     def _set_rate_value(self, value: float) -> None:
+        """Return set rate value."""
         self._syncing_fx_fields = True
         self._rate_spin.setValue(round(value, 6))
         self._syncing_fx_fields = False
 
     def _set_converted_amount(self, value: float) -> None:
+        """Return set converted amount."""
         self._syncing_fx_fields = True
         self._converted_amount_spin.setValue(round(value, 2))
         self._syncing_fx_fields = False
 
     def _on_accept(self) -> None:
+        """Return on accept."""
         val_title = _transfer_tr(self._db, "dialog.transfer.validation.title", "Validation")
         if self._from_combo.count() == 0 or self._to_combo.count() == 0:
             _notify_warning(
@@ -899,6 +930,7 @@ class TransferDialog(QDialog):
         self.accept()
 
     def get_data(self) -> dict:
+        """Return get data."""
         return {
             "from_account_id": self._from_combo.currentData(),
             "to_account_id": self._to_combo.currentData(),
@@ -923,6 +955,7 @@ class BalanceAdjustmentDialog(QDialog):
         tx: dict | None = None,
         service: AccountsViewService | None = None,
     ) -> None:
+        """Initialize the BalanceAdjustmentDialog instance."""
         super().__init__(parent)
         self._db = db
         self._service = service or AccountsViewService(db)
@@ -941,9 +974,11 @@ class BalanceAdjustmentDialog(QDialog):
         self._refresh_preview()
 
     def _dialog_title(self) -> str:
+        """Return dialog title."""
         return _transfer_tr(self._db, "dialog.adjustment.title", "Balance adjustment")
 
     def _save_button_text(self) -> str:
+        """Return save button text."""
         return (
             _transfer_tr(self._db, "dialog.adjustment.save.edit", "Update adjustment")
             if self._tx is not None
@@ -951,6 +986,7 @@ class BalanceAdjustmentDialog(QDialog):
         )
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
         title = QLabel(self._dialog_title())
@@ -1036,6 +1072,7 @@ class BalanceAdjustmentDialog(QDialog):
         layout.addLayout(action_row)
 
     def _set_account(self, account_id: int) -> None:
+        """Return set account."""
         for index in range(self._account_combo.count()):
             if int(self._account_combo.itemData(index)) == int(account_id):
                 self._account_combo.setCurrentIndex(index)
@@ -1043,10 +1080,12 @@ class BalanceAdjustmentDialog(QDialog):
 
     @staticmethod
     def _signed_amount_from_transaction(tx: dict) -> float:
+        """Return signed amount from transaction."""
         amount = float(tx.get("amount") or 0.0)
         return amount if str(tx.get("type") or "") == "income" else -amount
 
     def _prefill(self, tx: dict) -> None:
+        """Return prefill."""
         self._set_account(int(tx.get("account_id") or 0))
         if tx.get("date"):
             tx_day = date.fromisoformat(str(tx["date"]))
@@ -1057,11 +1096,13 @@ class BalanceAdjustmentDialog(QDialog):
         self._note_edit.setPlainText(str(tx.get("note") or ""))
 
     def _update_amount_style(self) -> None:
+        """Return update amount style."""
         amount = self._signed_amount_spin.value()
         color = "#4EC9B0" if amount > 0 else "#F48771" if amount < 0 else "#D7BA7D"
         self._signed_amount_spin.setStyleSheet(_hero_amount_spin_style(color))
 
     def _refresh_preview(self) -> None:
+        """Return refresh preview."""
         self._update_amount_style()
         account_id = self._account_combo.currentData()
         tx_date = self._date_edit.date().toString("yyyy-MM-dd")
@@ -1087,6 +1128,7 @@ class BalanceAdjustmentDialog(QDialog):
         self._warning_label.setVisible(self._warn_before_creation_date)
 
     def _on_accept(self) -> None:
+        """Return on accept."""
         val_title = _transfer_tr(self._db, "dialog.adjustment.validation.title", "Validation")
         if self._account_combo.count() == 0:
             _notify_warning(
@@ -1127,6 +1169,7 @@ class BalanceAdjustmentDialog(QDialog):
         self.accept()
 
     def get_data(self) -> dict[str, object]:
+        """Return get data."""
         return {
             "account_id": self._account_combo.currentData(),
             "tx_date": self._date_edit.date().toString("yyyy-MM-dd"),

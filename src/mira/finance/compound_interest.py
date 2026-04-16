@@ -13,7 +13,10 @@ from mira.finance.enums import PaymentFrequency
 
 @dataclass(slots=True)
 class CompoundInterestInput:
+    """Represent the CompoundInterestInput class."""
+
     initial_fund: float
+
     annual_rate_percent: float
     capitalization: PaymentFrequency
     years: float
@@ -22,7 +25,10 @@ class CompoundInterestInput:
 
 @dataclass(slots=True)
 class CompoundInterestRow:
+    """Represent the CompoundInterestRow class."""
+
     period: int
+
     label: str
     initial_balance: float
     interest: float
@@ -34,7 +40,10 @@ class CompoundInterestRow:
 
 @dataclass(slots=True)
 class CompoundInterestProjection:
+    """Represent the CompoundInterestProjection class."""
+
     initial_fund: float
+
     annual_rate_percent: float
     capitalization: PaymentFrequency
     years: float
@@ -116,10 +125,12 @@ def calculate_compound_interest_projection(payload: CompoundInterestInput) -> Co
 
 
 def _period_label(period: int, periods_per_year: int) -> str:
+    """Return period label."""
     year = ((period - 1) // periods_per_year) + 1
     position = ((period - 1) % periods_per_year) + 1
     return f"Año {year} / Período {position}"
 
 
 def _dec(value: float) -> Decimal:
+    """Return dec."""
     return Decimal(str(value))

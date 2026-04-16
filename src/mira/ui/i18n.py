@@ -2086,6 +2086,7 @@ _TRANSLATIONS["en"].update(
 
 
 def normalize_language(lang: str | None) -> str:
+    """Return normalize language."""
     if not lang:
         return "en"
     lang = lang.lower()
@@ -2099,6 +2100,7 @@ def tr(
     default: str = "",
     params: Mapping[str, object] | None = None,
 ) -> str:
+    """Return tr."""
     current = _TRANSLATIONS.get(normalize_language(lang), {})
     text = current.get(key) or default or key
     if params:

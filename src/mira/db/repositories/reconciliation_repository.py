@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 import time
 from datetime import datetime
@@ -17,6 +20,7 @@ _ULID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 
 def _encode_crockford(value: int, length: int) -> str:
+    """Return encode crockford."""
     chars = ["0"] * length
     for index in range(length - 1, -1, -1):
         chars[index] = _ULID_ALPHABET[value & 0x1F]
@@ -25,21 +29,40 @@ def _encode_crockford(value: int, length: int) -> str:
 
 
 def _generate_ulid() -> str:
+    """Return generate ulid."""
     timestamp_ms = int(time.time() * 1000)
     return f"{_encode_crockford(timestamp_ms, 10)}{_encode_crockford(randbits(80), 16)}"
 
 
 class ReconciliationRepository:
+    """Represent the ReconciliationRepository class."""
+
     if TYPE_CHECKING:
 
-        def _atomic(self) -> Any: ...
-        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None: ...
-        def _cents_to_decimal(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def get_account_by_id(self, account_id: int) -> dict[str, Any] | None: ...
-        def get_transaction_by_id(self, tx_id: int) -> dict[str, Any] | None: ...
+        def _atomic(self) -> Any:
+            """Return atomic."""
+
+        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
+            """Return money to cents."""
+            ...
+
+        def _cents_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return cents to decimal."""
+            ...
+
+        def get_account_by_id(self, account_id: int) -> dict[str, Any] | None:
+            """Return get account by id."""
+            ...
+
+        def get_transaction_by_id(self, tx_id: int) -> dict[str, Any] | None:
+            """Return get transaction by id."""
+            ...
+
+            ...
 
     @staticmethod
     def _serialize_group(row: ReconciliationGroup) -> dict[str, Any]:
+        """Return serialize group."""
         return {
             "id": str(row.id),
             "account_id": int(row.account_id),  # type: ignore[attr-defined]
@@ -49,6 +72,7 @@ class ReconciliationRepository:
         }
 
     def _serialize_match(self, row: ReconciliationMatch) -> dict[str, Any]:
+        """Return serialize match."""
         return {
             "id": str(row.id),
             "reconciliation_group_id": str(row.reconciliation_group_id),  # type: ignore[attr-defined]
@@ -61,6 +85,7 @@ class ReconciliationRepository:
         }
 
     def list_reconciliation_groups(self, *, account_id: int, date_from: str, date_to: str) -> list[dict[str, Any]]:
+        """Return list reconciliation groups."""
         rows = (
             ReconciliationGroup.select()
             .where(
@@ -81,6 +106,7 @@ class ReconciliationRepository:
         transaction_ids: list[int] | None = None,
         group_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
+        """Return list reconciliation matches."""
         query = ReconciliationMatch.select(ReconciliationMatch, ReconciliationGroup).join(
             ReconciliationGroup, JOIN.INNER, on=(ReconciliationMatch.reconciliation_group == ReconciliationGroup.id)
         )
@@ -100,6 +126,7 @@ class ReconciliationRepository:
         ]
 
     def _update_transaction_reconciled_flags(self, transaction_ids: list[int]) -> None:
+        """Return update transaction reconciled flags."""
         if not transaction_ids:
             return
         unique_ids = sorted({int(item) for item in transaction_ids})
@@ -136,6 +163,7 @@ class ReconciliationRepository:
         system_transaction_ids: list[int],
         external_rows: list[dict[str, Any]],
     ) -> dict[str, Any]:
+        """Return reconcile transactions."""
         if self.get_account_by_id(account_id) is None:
             raise ValueError(f"Account {account_id} not found.")
         tx_ids = sorted({int(item) for item in system_transaction_ids})
@@ -189,6 +217,7 @@ class ReconciliationRepository:
         }
 
     def _cleanup_empty_groups(self, group_ids: list[str]) -> None:
+        """Return cleanup empty groups."""
         if not group_ids:
             return
         for group_id in sorted(set(group_ids)):
@@ -202,6 +231,7 @@ class ReconciliationRepository:
                 ReconciliationGroup.delete().where(ReconciliationGroup.id == group_id).execute()
 
     def clear_reconciliation_for_transactions(self, transaction_ids: list[int]) -> int:
+        """Return clear reconciliation for transactions."""
         tx_ids = sorted({int(item) for item in transaction_ids})
         if not tx_ids:
             return 0
@@ -218,6 +248,7 @@ class ReconciliationRepository:
         return int(deleted)
 
     def clear_reconciliation_groups(self, group_ids: list[str]) -> int:
+        """Return clear reconciliation groups."""
         normalized_group_ids = sorted({str(item) for item in group_ids if str(item).strip()})
         if not normalized_group_ids:
             return 0

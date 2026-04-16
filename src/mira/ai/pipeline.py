@@ -96,6 +96,7 @@ class Pipeline:
         engine: BaseEngine | None = None,
         model_path: str | None = None,
     ) -> None:
+        """Initialize the Pipeline instance."""
         self._db = db
         self._parser: BaseEngine = engine or TransactionParserEngine(
             default_currency=db.setting.get_default_currency(),
@@ -168,9 +169,11 @@ class Pipeline:
             self._parser.set_default_currency(self._db.setting.get_default_currency())
 
     def _parser_error_result(self, user_input: str | None = None) -> ActionResult:
+        """Return parser error result."""
         return ActionResult(success=False, action="none", message=self._parser_error_message(user_input))
 
     def _chat_language(self, user_input: str | None = None) -> str:
+        """Return chat language."""
         if user_input:
             normalized_input = " ".join(str(user_input).casefold().split())
             words = set(re.findall(r"\w+", normalized_input, flags=re.UNICODE))
@@ -179,6 +182,7 @@ class Pipeline:
         return "es" if str(self._db.setting.get("language") or "en").strip().lower() == "es" else "en"
 
     def _parser_error_message(self, user_input: str | None = None) -> str:
+        """Return parser error message."""
         language = self._chat_language(user_input)
         return tr(
             "chat.parser.error",
@@ -187,6 +191,7 @@ class Pipeline:
         )
 
     def _chat_unavailable_message(self, user_input: str | None = None) -> str:
+        """Return chat unavailable message."""
         language = self._chat_language(user_input)
         return tr(
             "chat.unavailable",
@@ -196,17 +201,21 @@ class Pipeline:
 
     @property
     def engine(self) -> BaseEngine:
+        """Return engine."""
         return self._parser
 
     @property
     def chat_engine(self) -> BaseEngine | None:
+        """Return chat engine."""
         return self._chat_engine
 
     @property
     def llm_ready(self) -> bool:
+        """Return llm ready."""
         return self._chat_engine is not None
 
     def shutdown(self) -> None:
+        """Return shutdown."""
         with self._engine_lock:
             if self._chat_engine is not None:
                 self._chat_engine.shutdown()

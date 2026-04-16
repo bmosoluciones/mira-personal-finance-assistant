@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 from typing import TYPE_CHECKING, Any, Literal, overload
 
@@ -21,6 +24,8 @@ from mira.transaction_kinds import analytics_included_expr
 
 
 class ReportRepository:
+    """Represent the ReportRepository class."""
+
     if TYPE_CHECKING:
 
         def get_categories(
@@ -28,7 +33,9 @@ class ReportRepository:
             cat_type: str | None = None,
             *,
             include_savings: bool = True,
-        ) -> list[dict[str, Any]]: ...
+        ) -> list[dict[str, Any]]:
+            """Return get categories."""
+            ...
 
         def get_transactions(
             self,
@@ -45,13 +52,21 @@ class ReportRepository:
             search: str | None = None,
             tag_id: int | None = None,
             include_children: bool = False,
-        ) -> list[dict[str, Any]]: ...
+        ) -> list[dict[str, Any]]:
+            """Return get transactions."""
+            ...
 
-        def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any: ...
+        def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return cents to money."""
+            ...
 
-        def get_category_by_name(self, name: str) -> dict[str, Any] | None: ...
+        def get_category_by_name(self, name: str) -> dict[str, Any] | None:
+            """Return get category by name."""
+            ...
 
-        def get_descendant_category_names(self, category_id: int) -> list[str]: ...
+        def get_descendant_category_names(self, category_id: int) -> list[str]:
+            """Return get descendant category names."""
+            ...
 
     @overload
     def summarize_financials(
@@ -60,7 +75,9 @@ class ReportRepository:
         *,
         categories: list[dict[str, Any]] | None = ...,
         as_dict: Literal[True],
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Return summarize financials."""
+        ...
 
     @overload
     def summarize_financials(
@@ -69,7 +86,9 @@ class ReportRepository:
         *,
         categories: list[dict[str, Any]] | None = ...,
         as_dict: Literal[False] = ...,
-    ) -> FinancialSummary: ...
+    ) -> FinancialSummary:
+        """Return summarize financials."""
+        ...
 
     @overload
     def summarize_financials(
@@ -78,7 +97,9 @@ class ReportRepository:
         *,
         categories: list[dict[str, Any]] | None = ...,
         as_dict: bool,
-    ) -> FinancialSummary | dict[str, Any]: ...
+    ) -> FinancialSummary | dict[str, Any]:
+        """Return summarize financials."""
+        ...
 
     def summarize_financials(
         self,
@@ -87,6 +108,7 @@ class ReportRepository:
         categories: list[dict[str, Any]] | None = None,
         as_dict: bool = False,
     ) -> FinancialSummary | dict[str, Any]:
+        """Return summarize financials."""
         category_rows = categories if categories is not None else self.get_categories()
         lookup = build_savings_lookup(category_rows)
         if as_dict:
@@ -94,6 +116,7 @@ class ReportRepository:
         return summarize_financial_kpis(transactions, lookup)
 
     def get_summary(self, since_date: str | None = None) -> dict[str, Any]:
+        """Return get summary."""
         transactions = self.get_transactions(limit=1_000_000, since_date=since_date)
         summary: FinancialSummary = self.summarize_financials(transactions)
         return {
@@ -114,6 +137,7 @@ class ReportRepository:
         tag_id: int | None = None,
         include_children: bool = False,
     ) -> dict[str, Any]:
+        """Return summarize financials filtered."""
         tx = Transaction.alias()
         linked_category = Category.alias()
         legacy_name_match = fn.LOWER(fn.TRIM(fn.COALESCE(tx.category, ""))) == fn.LOWER(fn.TRIM(linked_category.name))
@@ -168,6 +192,7 @@ class ReportRepository:
         until_date: str | None = None,
         aggregate_by_parent: bool = False,
     ) -> list[dict[str, Any]]:
+        """Return get category summary."""
         tx = Transaction.alias()
         linked_category = Category.alias()
 
@@ -221,6 +246,7 @@ class ReportRepository:
         category_by_name = {str(category["name"]).strip().casefold(): category for category in all_categories}
 
         def _root_name(category_name: str) -> str:
+            """Return root name."""
             category = category_by_name.get(category_name.strip().casefold())
             if category is None:
                 return category_name
@@ -260,6 +286,7 @@ class ReportRepository:
         since_date: str | None = None,
         until_date: str | None = None,
     ) -> dict[int, int]:
+        """Return get tag transaction counts."""
         tx = Transaction.alias()
         tx_tag = TransactionTag.alias()
         query = tx_tag.select(
@@ -279,6 +306,7 @@ class ReportRepository:
         since_date: str | None = None,
         until_date: str | None = None,
     ) -> dict[str, int]:
+        """Return get category transaction counts."""
         category_expr = fn.COALESCE(Transaction.category, "")
         query = Transaction.select(
             category_expr.alias("category"),
@@ -292,6 +320,7 @@ class ReportRepository:
         return {str(row["category"]): int(row["count"]) for row in query.group_by(category_expr).dicts()}
 
     def _transactions_for_month(self, year: int, month: int) -> list[dict[str, Any]]:
+        """Return transactions for month."""
         return mira_master_backend.transactions_for_month(self, year, month)
 
     def get_budget_period_snapshot(
@@ -299,6 +328,7 @@ class ReportRepository:
         year: int,
         month: int,
     ) -> tuple[dict | None, dict[str, dict[str, float]] | None, list[dict[str, Any]] | None]:
+        """Return get budget period snapshot."""
         return mira_master_backend.budget_period_snapshot(self, year, month)
 
     def get_mira_master_report(
@@ -308,6 +338,7 @@ class ReportRepository:
         month: int,
         relevance_threshold: float = 0.10,
     ) -> dict[str, Any]:
+        """Return get mira master report."""
         return mira_master_backend.get_mira_master_report(
             self,
             year=year,
@@ -316,4 +347,5 @@ class ReportRepository:
         )
 
     def get_budget_alerts(self) -> list[dict]:
+        """Return get budget alerts."""
         return mira_master_backend.get_budget_alerts(self)

@@ -24,6 +24,7 @@ import re
 
 
 def _collapse_whitespace(text: str) -> str:
+    """Return collapse whitespace."""
     return re.sub(r"\s+", " ", text.strip())
 
 
@@ -40,6 +41,7 @@ def _normalise_k_suffix(text: str) -> str:
     """Expand numeric 'k' shorthand: 1.5k → 1500, 2k → 2000."""
 
     def _expand(m: re.Match) -> str:
+        """Return expand."""
         return str(int(float(m.group(1)) * 1000))
 
     return re.sub(r"(\d+(?:\.\d+)?)\s*k\b", _expand, text, flags=re.IGNORECASE)

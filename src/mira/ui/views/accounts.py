@@ -41,6 +41,7 @@ class AccountsView(QWidget):
         parent: QWidget | None = None,
         service: AccountsViewService | None = None,
     ) -> None:
+        """Initialize the AccountsView instance."""
         super().__init__(parent)
         self._db = db
         self._service = service or AccountsViewService(db)
@@ -49,6 +50,7 @@ class AccountsView(QWidget):
         self._build_ui()
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(10)
@@ -113,6 +115,7 @@ class AccountsView(QWidget):
         self._table.customContextMenuRequested.connect(self._open_context_menu)
 
     def _get_selected(self) -> dict | None:
+        """Return get selected."""
         row = self._table.currentRow()
         if row < 0 or row >= len(self._accounts):
             return None
@@ -120,6 +123,7 @@ class AccountsView(QWidget):
 
     @staticmethod
     def _format_created_at(value: object) -> str:
+        """Return format created at."""
         if value is None:
             return ""
         if hasattr(value, "strftime"):
@@ -130,23 +134,27 @@ class AccountsView(QWidget):
         return str(value)[:10]
 
     def _find_row_by_account_id(self, account_id: int) -> int:
+        """Return find row by account id."""
         for row, account in enumerate(self._accounts):
             if int(account["id"]) == int(account_id):
                 return row
         return -1
 
     def _select_row(self, row: int) -> None:
+        """Return select row."""
         if row < 0 or row >= self._table.rowCount():
             return
         self._table.setCurrentCell(row, 0)
         self._table.selectRow(row)
 
     def _select_account(self, account_id: int) -> None:
+        """Return select account."""
         row = self._find_row_by_account_id(account_id)
         if row >= 0:
             self._select_row(row)
 
     def _on_add(self) -> None:
+        """Return on add."""
         from mira.ui.dialogs import AccountDialog
 
         dlg = AccountDialog(self._db, parent=self)
@@ -162,6 +170,7 @@ class AccountsView(QWidget):
             self.refresh(selected_account_id=feedback.selected_id)
 
     def _on_edit(self) -> None:
+        """Return on edit."""
         from mira.ui.dialogs import AccountDialog
 
         acc = self._get_selected()
@@ -179,6 +188,7 @@ class AccountsView(QWidget):
             self.refresh(selected_account_id=feedback.selected_id)
 
     def _on_delete(self) -> None:
+        """Return on delete."""
         acc = self._get_selected()
         if acc is None:
             return
@@ -201,6 +211,7 @@ class AccountsView(QWidget):
                 self._select_row(min(next_row, self._table.rowCount() - 1))
 
     def _on_set_default(self) -> None:
+        """Return on set default."""
         acc = self._get_selected()
         if acc is None:
             return
@@ -209,9 +220,11 @@ class AccountsView(QWidget):
 
     @staticmethod
     def _is_adjustable_account(account: dict | None) -> bool:
+        """Return whether adjustable account."""
         return str((account or {}).get("account_type") or "") in {"bank", "credit"}
 
     def _on_balance_adjustment(self) -> None:
+        """Return on balance adjustment."""
         from mira.ui.dialogs import BalanceAdjustmentDialog
 
         selected = self._get_selected()
@@ -222,6 +235,7 @@ class AccountsView(QWidget):
             self.refresh(selected_account_id=feedback.selected_id)
 
     def _on_transfer(self) -> None:
+        """Return on transfer."""
         from mira.ui.dialogs import TransferDialog
 
         dlg = TransferDialog(self._db, parent=self)
@@ -230,6 +244,7 @@ class AccountsView(QWidget):
             self.refresh()
 
     def _on_credit_payment(self) -> None:
+        """Return on credit payment."""
         from mira.ui.dialogs import TransferDialog
 
         dlg = TransferDialog(self._db, parent=self, credit_payment=True)
@@ -238,6 +253,7 @@ class AccountsView(QWidget):
             self.refresh()
 
     def _on_reconcile(self) -> None:
+        """Return on reconcile."""
         from mira.ui.dialogs import ReconciliationDialog
 
         selected = self._get_selected()
@@ -247,6 +263,7 @@ class AccountsView(QWidget):
         self.refresh(selected_account_id=account_id)
 
     def _open_context_menu(self, pos: QPoint) -> None:
+        """Return open context menu."""
         if not _select_row_at_pos(self._table, pos):
             return
         account = self._get_selected()
@@ -293,6 +310,7 @@ class AccountsView(QWidget):
         self._on_reconcile()
 
     def refresh(self, *, selected_account_id: int | None = None) -> None:
+        """Return refresh."""
         if selected_account_id is None:
             current = self._get_selected()
             selected_account_id = int(current["id"]) if current is not None else None
@@ -302,6 +320,7 @@ class AccountsView(QWidget):
             self._select_account(selected_account_id)
 
     def _apply_state(self, state: AccountsViewState) -> None:
+        """Return apply state."""
         self._accounts = list(state.accounts)
         self._table.setRowCount(len(self._accounts))
         for row, acc in enumerate(self._accounts):

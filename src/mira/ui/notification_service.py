@@ -16,18 +16,23 @@ class NotificationService:
     """Show user notifications through the message bar or QMessageBox plus status-bar hints."""
 
     def __init__(self, ui: Any) -> None:
+        """Initialize the NotificationService instance."""
         self._ui = ui
 
     def info(self, title: str, message: str, widget: QWidget | None = None) -> None:
+        """Return info."""
         self._show("info", title, message, widget=widget)
 
     def warning(self, title: str, message: str, widget: QWidget | None = None) -> None:
+        """Return warning."""
         self._show("warning", title, message, widget=widget)
 
     def error(self, title: str, message: str, widget: QWidget | None = None) -> None:
+        """Return error."""
         self._show("error", title, message, widget=widget)
 
     def _show(self, level: str, title: str, message: str, *, widget: QWidget | None) -> None:
+        """Return show."""
         text = str(message or "").strip()
         if not text:
             return
@@ -45,13 +50,16 @@ class NotificationService:
             QMessageBox.information(parent, str(title), text)
 
     def _widget_parent(self) -> QWidget | None:
+        """Return widget parent."""
         return self._ui if isinstance(self._ui, QWidget) else None
 
     def _should_route_to_message_bar(self, title: str) -> bool:
+        """Return whether should route to message bar."""
         normalized_title = " ".join(str(title or "").split()).casefold()
         return "mira" in normalized_title
 
     def _show_in_message_bar(self, title: str, message: str) -> bool:
+        """Return show in message bar."""
         append = getattr(self._ui, "_append_chat_assistant", None)
         if not callable(append):
             return False
@@ -61,6 +69,7 @@ class NotificationService:
         return True
 
     def _ensure_message_bar_visible(self) -> None:
+        """Return ensure message bar visible."""
         footer = getattr(self._ui, "_footer", None)
         if hasattr(footer, "setVisible"):
             footer.setVisible(True)  # type: ignore[union-attr]
@@ -83,6 +92,7 @@ class NotificationService:
             toggle.setText("\u25bc")  # type: ignore[union-attr]
 
     def _update_status(self, level: str, text: str) -> None:
+        """Return update status."""
         status_bar = getattr(self._ui, "_status_bar", None)
         if status_bar is not None:
             timeout = 7000 if level == "error" else 5000

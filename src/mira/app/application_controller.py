@@ -28,10 +28,12 @@ class ApplicationController:
     """Translate pipeline results into semantic application directives."""
 
     def __init__(self, db: Database, pipeline: object) -> None:
+        """Initialize the ApplicationController instance."""
         self._db = db
         self._pipeline = pipeline
 
     def handle_result(self, result: ActionResult) -> ApplicationDirective:
+        """Return handle result."""
         chat_message = str(result.message or "").strip() or None
         show_quick_actions = result.action == "none"
 

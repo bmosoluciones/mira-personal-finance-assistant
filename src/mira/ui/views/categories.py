@@ -41,11 +41,13 @@ class _CategoryTreeWidget(QTreeWidget):
     """Tree widget that uses a single click to select and toggle parent categories."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the _CategoryTreeWidget instance."""
         super().__init__(parent)
         self._consume_parent_release = False
         self.viewport().installEventFilter(self)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        """Return eventFilter."""
         if watched is self.viewport() and isinstance(event, QMouseEvent):
             item = self.itemAt(event.position().toPoint())
             if item is not None and item.childCount() > 0:
@@ -71,9 +73,11 @@ class _CategoryTreeWidget(QTreeWidget):
         return super().eventFilter(watched, event)
 
     def _expanded_item_ids(self) -> set[object]:
+        """Return expanded item ids."""
         expanded_ids: set[object] = set()
 
         def collect(item: QTreeWidgetItem) -> None:
+            """Return collect."""
             item_id = item.data(0, Qt.ItemDataRole.UserRole)
             if item.childCount() > 0 and item.isExpanded() and item_id is not None:
                 expanded_ids.add(item_id)
@@ -89,9 +93,11 @@ class _CategoryTreeWidget(QTreeWidget):
         return expanded_ids
 
     def _restore_expanded_items(self, expanded_ids: set[object]) -> None:
+        """Return restore expanded items."""
         self.collapseAll()
 
         def restore(item: QTreeWidgetItem) -> None:
+            """Return restore."""
             item_id = item.data(0, Qt.ItemDataRole.UserRole)
             if item.childCount() > 0 and item_id in expanded_ids:
                 item.setExpanded(True)
@@ -120,6 +126,7 @@ class CategoriesView(QWidget):
         parent: QWidget | None = None,
         service: CategoriesViewService | None = None,
     ) -> None:
+        """Initialize the CategoriesView instance."""
         super().__init__(parent)
         self._db = db
         self._service = service or CategoriesViewService(db)
@@ -130,9 +137,11 @@ class CategoriesView(QWidget):
         self.refresh()
 
     def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        """Return t."""
         return tr(key, self._language, default=default, params=params)
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(10)
@@ -226,6 +235,7 @@ class CategoriesView(QWidget):
         self._btn_link.clicked.connect(self._on_link_categories)
 
     def _build_category_tree(self) -> QTreeWidget:
+        """Return build category tree."""
         tree = _CategoryTreeWidget()
         tree.setColumnCount(3)
         tree.setRootIsDecorated(True)
@@ -246,6 +256,7 @@ class CategoriesView(QWidget):
         return tree
 
     def _update_category_item_indicator(self, item: QTreeWidgetItem) -> None:
+        """Return update category item indicator."""
         base_label = item.data(0, _CATEGORY_BASE_LABEL_ROLE)
         if not isinstance(base_label, str):
             base_label = item.text(0).strip()
@@ -258,17 +269,20 @@ class CategoriesView(QWidget):
         item.setText(0, f"{prefix}{base_label}")
 
     def _sync_category_tree_indicators(self, tree: QTreeWidget) -> None:
+        """Return sync category tree indicators."""
         for index in range(tree.topLevelItemCount()):
             top_level_item = tree.topLevelItem(index)
             if top_level_item is not None:
                 self._sync_category_item_indicators(top_level_item)
 
     def _sync_category_item_indicators(self, item: QTreeWidgetItem) -> None:
+        """Return sync category item indicators."""
         self._update_category_item_indicator(item)
         for index in range(item.childCount()):
             self._sync_category_item_indicators(item.child(index))
 
     def _selected_category(self, cat_type: str) -> dict | None:
+        """Return selected category."""
         tree = self._income_table if cat_type == "income" else self._expense_table
         item = tree.currentItem()
         if item is None:
@@ -279,6 +293,7 @@ class CategoriesView(QWidget):
         return self._service.get(int(cat_id))
 
     def _on_add(self, cat_type: str) -> None:
+        """Return on add."""
         from mira.ui.dialogs import CategoryDialog
 
         dlg = CategoryDialog(self._db, default_type=cat_type, parent=self)
@@ -307,6 +322,7 @@ class CategoriesView(QWidget):
                 self._select_category(int(feedback.selected_id))
 
     def _on_edit(self, cat_type: str) -> None:
+        """Return on edit."""
         from mira.ui.dialogs import CategoryDialog
 
         cat = self._selected_category(cat_type)
@@ -339,6 +355,7 @@ class CategoriesView(QWidget):
                 self._select_category(int(feedback.selected_id))
 
     def _on_delete(self, cat_type: str) -> None:
+        """Return on delete."""
         cat = self._selected_category(cat_type)
         if cat is None:
             return
@@ -361,6 +378,7 @@ class CategoriesView(QWidget):
             self.refresh()
 
     def _on_merge(self, cat_type: str) -> None:
+        """Return on merge."""
         from mira.ui.dialogs import MergeCategoryDialog
 
         categories = self._income_cats if cat_type == "income" else self._expense_cats
@@ -387,6 +405,7 @@ class CategoriesView(QWidget):
             self._select_category(int(feedback.selected_id))
 
     def _open_context_menu(self, cat_type: str, pos: QPoint) -> None:
+        """Return open context menu."""
         tree = self._income_table if cat_type == "income" else self._expense_table
         selected_item = tree.itemAt(pos)
         if selected_item is None:
@@ -413,6 +432,7 @@ class CategoriesView(QWidget):
         self._on_add("expense")
 
     def _on_link_categories(self) -> None:
+        """Return on link categories."""
         from mira.ui.dialogs.link_categories import LinkCategoriesDialog
 
         dlg = LinkCategoriesDialog(self._db, self._service, self._language, parent=self)
@@ -420,10 +440,12 @@ class CategoriesView(QWidget):
         self.refresh()
 
     def refresh(self) -> None:
+        """Return refresh."""
         self._language = normalize_language(self._db.setting.get("language"))
         self._apply_state(self._service.load_state())
 
     def _apply_state(self, state: CategoriesViewState) -> None:
+        """Return apply state."""
         self._income_cats = list(state.income_categories)
         self._expense_cats = list(state.expense_categories)
         cat_counts = dict(state.monthly_counts)
@@ -442,6 +464,7 @@ class CategoriesView(QWidget):
         self._btn_link.setText(self._t("categories.link.btn", "🔗 Link"))
 
         def fill_tree(tree: QTreeWidget, roots: list[dict[str, object]]) -> None:
+            """Return fill tree."""
             tree.clear()
             tree.setHeaderLabels(
                 [
@@ -452,6 +475,7 @@ class CategoriesView(QWidget):
             )
 
             def add_node(parent_item: QTreeWidgetItem | None, cat: dict) -> int:
+                """Return add node."""
                 icon = str(cat.get("icon") or "")
                 label = f"{icon} {cat['name']}".strip()
                 own_count = cat_counts.get(str(cat["name"]), 0)
@@ -482,6 +506,7 @@ class CategoriesView(QWidget):
         fill_tree(self._expense_table, list(state.expense_tree))
 
     def _select_category(self, category_id: int) -> None:
+        """Return select category."""
         for tree in [self._income_table, self._expense_table]:
             pending = [tree.topLevelItem(index) for index in range(tree.topLevelItemCount())]
             while pending:

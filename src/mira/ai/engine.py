@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def _looks_like_raspberry_pi() -> bool:
+    """Return looks like raspberry pi."""
     profile = os.getenv("MIRA_LLAMA_PROFILE", "").strip().lower()
     if profile in {"raspberry", "raspberry-pi", "rpi"}:
         return True

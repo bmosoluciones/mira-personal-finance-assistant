@@ -44,15 +44,18 @@ _FEW_SHOT_EXAMPLES = [
 
 
 def _normalize_exact_example_key(text: str) -> str:
+    """Return normalize exact example key."""
     return " ".join(text.strip().casefold().split())
 
 
 def _normalize_pipeline_exact_example_key(text: str) -> str:
+    """Return normalize pipeline exact example key."""
     normalized = normalise(text)
     return " ".join(normalized.strip().casefold().split())
 
 
 def _parse_example_float(raw: str | None) -> float | None:
+    """Return parse example float."""
     value = str(raw or "").strip()
     if not value:
         return None
@@ -63,6 +66,7 @@ def _parse_example_float(raw: str | None) -> float | None:
 
 
 def _parse_example_list(raw: str | None) -> list[str] | None:
+    """Return parse example list."""
     value = str(raw or "").strip()
     if not value:
         return None
@@ -71,6 +75,7 @@ def _parse_example_list(raw: str | None) -> list[str] | None:
 
 @lru_cache(maxsize=1)
 def _load_exact_example_action_maps() -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    """Return load exact example action maps."""
     examples_path = Path(__file__).with_name("nl_examples.csv")
     if not examples_path.is_file():
         return {}, {}
@@ -161,14 +166,17 @@ def _load_exact_example_action_maps() -> tuple[dict[str, dict[str, Any]], dict[s
 
 
 def _load_exact_example_actions() -> dict[str, dict[str, Any]]:
+    """Return load exact example actions."""
     return _load_exact_example_action_maps()[0]
 
 
 def _load_pipeline_exact_example_actions() -> dict[str, dict[str, Any]]:
+    """Return load pipeline exact example actions."""
     return _load_exact_example_action_maps()[1]
 
 
 def _clear_exact_example_action_caches() -> None:
+    """Return clear exact example action caches."""
     _load_exact_example_action_maps.cache_clear()
 
 
@@ -177,6 +185,7 @@ _load_pipeline_exact_example_actions.cache_clear = _clear_exact_example_action_c
 
 
 def _exact_example_action(user_input: str) -> dict[str, Any] | None:
+    """Return exact example action."""
     exact_actions = _load_exact_example_actions()
     action = exact_actions.get(_normalize_exact_example_key(user_input))
     if action is None:
@@ -188,6 +197,7 @@ def _exact_example_action(user_input: str) -> dict[str, Any] | None:
 
 
 def _build_prompt(user_input: str) -> str:
+    """Return build prompt."""
     lines = [_SYSTEM_PROMPT]
     for user_msg, assistant_msg in _FEW_SHOT_EXAMPLES:
         lines.append(f"User: {user_msg}")
@@ -201,7 +211,9 @@ class PromptAssets:
     """Prompt builder and exact-example provider."""
 
     def build_parser_prompt(self, user_input: str) -> str:
+        """Return build parser prompt."""
         return _build_prompt(user_input)
 
     def get_exact_action(self, user_input: str) -> dict[str, Any] | None:
+        """Return get exact action."""
         return _exact_example_action(user_input)

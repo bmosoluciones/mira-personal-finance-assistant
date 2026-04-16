@@ -42,6 +42,7 @@ class _RecurringApplyDialog(QDialog):
     """Dialog to choose target month/year for applying recurring rules."""
 
     def __init__(self, language: str, parent: QWidget | None = None) -> None:
+        """Initialize the _RecurringApplyDialog instance."""
         super().__init__(parent)
         self._language = normalize_language(language)
         self.setWindowTitle(tr("recurring.apply.title", self._language, default="Apply recurring transactions"))
@@ -68,6 +69,7 @@ class _RecurringApplyDialog(QDialog):
         layout.addWidget(buttons)
 
     def get_period(self) -> tuple[int, int]:
+        """Return get period."""
         return self._year.value(), self._month.value()
 
 
@@ -85,6 +87,7 @@ class RecurringView(QWidget):
         parent: QWidget | None = None,
         service: RecurringViewService | None = None,
     ) -> None:
+        """Initialize the RecurringView instance."""
         super().__init__(parent)
         self._db = db
         self._service = service or RecurringViewService(db)
@@ -92,6 +95,7 @@ class RecurringView(QWidget):
         self._build_ui()
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(10)
@@ -139,12 +143,14 @@ class RecurringView(QWidget):
         self._table.customContextMenuRequested.connect(self._open_context_menu)
 
     def _get_selected(self) -> dict | None:
+        """Return get selected."""
         row = self._table.currentRow()
         if row < 0 or row >= len(self._recurring):
             return None
         return self._recurring[row]
 
     def _on_add(self) -> None:
+        """Return on add."""
         from mira.ui.dialogs import RecurringDialog
 
         dlg = RecurringDialog(self._db, parent=self)
@@ -154,6 +160,7 @@ class RecurringView(QWidget):
             self.refresh()
 
     def _on_delete(self) -> None:
+        """Return on delete."""
         rec = self._get_selected()
         if rec is None:
             return
@@ -176,6 +183,7 @@ class RecurringView(QWidget):
             self.refresh()
 
     def _on_edit(self) -> None:
+        """Return on edit."""
         from mira.ui.dialogs import RecurringDialog
 
         rec = self._get_selected()
@@ -194,6 +202,7 @@ class RecurringView(QWidget):
         self.refresh()
 
     def _on_apply(self) -> None:
+        """Return on apply."""
         if not self._recurring:
             self.refresh()
         if not self._recurring:
@@ -240,6 +249,7 @@ class RecurringView(QWidget):
         self.refresh()
 
     def _open_context_menu(self, pos: QPoint) -> None:
+        """Return open context menu."""
         if not _select_row_at_pos(self._table, pos):
             return
         menu = QMenu(self)
@@ -264,9 +274,11 @@ class RecurringView(QWidget):
         self._on_apply()
 
     def refresh(self) -> None:
+        """Return refresh."""
         self._apply_state(self._service.load_state())
 
     def _apply_state(self, state: RecurringViewState) -> None:
+        """Return apply state."""
         self._recurring = list(state.recurring)
         self._table.setRowCount(len(self._recurring))
         for row, rec in enumerate(self._recurring):

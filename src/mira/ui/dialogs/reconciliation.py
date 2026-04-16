@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -35,6 +37,8 @@ from mira.ui.views._shared import (
 
 
 class ReconciliationDialog(QDialog):
+    """Represent the ReconciliationDialog class."""
+
     def __init__(
         self,
         db: Database,
@@ -43,6 +47,7 @@ class ReconciliationDialog(QDialog):
         account_id: int | None = None,
         service: ReconciliationViewService | None = None,
     ) -> None:
+        """Initialize the ReconciliationDialog instance."""
         super().__init__(parent)
         self._db = db
         self._service = service or ReconciliationViewService(db)
@@ -56,6 +61,7 @@ class ReconciliationDialog(QDialog):
         self._refresh_state()
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         root = QVBoxLayout(self)
         root.setContentsMargins(16, 14, 16, 14)
         root.setSpacing(10)
@@ -146,6 +152,7 @@ class ReconciliationDialog(QDialog):
         self._btn_clear.clicked.connect(self._clear_selected)
 
     def _populate_accounts(self) -> None:
+        """Return populate accounts."""
         self._account_combo.blockSignals(True)
         self._account_combo.clear()
         for account in self._service.list_accounts():
@@ -157,16 +164,20 @@ class ReconciliationDialog(QDialog):
         self._account_combo.blockSignals(False)
 
     def _current_account_id(self) -> int | None:
+        """Return current account id."""
         data = self._account_combo.currentData()
         return int(data) if data is not None else None
 
     def _current_date_from(self) -> str:
+        """Return current date from."""
         return self._date_from.date().toString("yyyy-MM-dd")
 
     def _current_date_to(self) -> str:
+        """Return current date to."""
         return self._date_to.date().toString("yyyy-MM-dd")
 
     def _refresh_state(self) -> None:
+        """Return refresh state."""
         account_id = self._current_account_id()
         if account_id is None:
             return
@@ -268,6 +279,7 @@ class ReconciliationDialog(QDialog):
         )
 
     def _load_excel(self) -> None:
+        """Return load excel."""
         from PySide6.QtWidgets import QFileDialog
 
         path, _ = QFileDialog.getOpenFileName(
@@ -330,10 +342,12 @@ class ReconciliationDialog(QDialog):
         self._refresh_state()
 
     def _selected_external_rows(self) -> tuple[ReconciliationExternalRow, ...]:
+        """Return selected external rows."""
         selected = sorted({idx.row() for idx in self._external_table.selectionModel().selectedRows()})
         return tuple(self._external_rows[index] for index in selected if 0 <= index < len(self._external_rows))
 
     def _selected_system_transaction_ids(self) -> list[int]:
+        """Return selected system transaction ids."""
         selected = sorted({idx.row() for idx in self._system_table.selectionModel().selectedRows()})
         tx_ids: list[int] = []
         for row in selected:
@@ -345,6 +359,7 @@ class ReconciliationDialog(QDialog):
         return tx_ids
 
     def _reconcile_selected(self) -> None:
+        """Return reconcile selected."""
         account_id = self._current_account_id()
         if account_id is None:
             return
@@ -405,6 +420,7 @@ class ReconciliationDialog(QDialog):
         self._refresh_state()
 
     def _clear_selected(self) -> None:
+        """Return clear selected."""
         tx_ids = self._selected_system_transaction_ids()
         if not tx_ids:
             _notify_warning(

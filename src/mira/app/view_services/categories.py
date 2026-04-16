@@ -15,7 +15,10 @@ from mira.db.database import Database
 
 @dataclass(frozen=True)
 class CategoriesViewState:
+    """Represent the CategoriesViewState class."""
+
     income_categories: list[dict[str, Any]]
+
     expense_categories: list[dict[str, Any]]
     income_tree: list[dict[str, Any]]
     expense_tree: list[dict[str, Any]]
@@ -26,9 +29,11 @@ class CategoriesViewService:
     """Move category data loading and commands out of the QWidget."""
 
     def __init__(self, db: Database) -> None:
+        """Initialize the CategoriesViewService instance."""
         self._db = db
 
     def load_state(self) -> CategoriesViewState:
+        """Return load state."""
         since = date.today().replace(day=1).isoformat()
         return CategoriesViewState(
             income_categories=self._db.category.list("income"),
@@ -39,6 +44,7 @@ class CategoriesViewService:
         )
 
     def get(self, category_id: int) -> dict[str, Any] | None:
+        """Return get."""
         return self._db.category.get(category_id)
 
     def create(
@@ -50,6 +56,7 @@ class CategoriesViewService:
         icon: str = "",
         parent_id: int | None = None,
     ) -> OperationFeedback:
+        """Return create."""
         created = self._db.category.create(
             name,
             cat_type,
@@ -69,6 +76,7 @@ class CategoriesViewService:
         icon: str = "",
         parent_id: int | None = None,
     ) -> OperationFeedback:
+        """Return update."""
         self._db.category.update(
             category_id,
             name,
@@ -80,10 +88,12 @@ class CategoriesViewService:
         return OperationFeedback(selected_id=int(category_id))
 
     def delete(self, category_id: int) -> OperationFeedback:
+        """Return delete."""
         self._db.category.delete(category_id)
         return OperationFeedback()
 
     def merge(self, source_id: int, target_id: int) -> OperationFeedback:
+        """Return merge."""
         merged = self._db.category.merge(source_id, target_id)
         target = merged.get("target") if isinstance(merged, dict) else None
         selected_id = int(target["id"]) if isinstance(target, dict) and target.get("id") is not None else int(target_id)
@@ -92,12 +102,15 @@ class CategoriesViewService:
     # -- Income-Expense Relation helpers ------------------------------------
 
     def list_relations(self) -> list[dict[str, Any]]:
+        """Return list relations."""
         return self._db.category.list_relations()
 
     def create_relation(self, income_category_id: int, expense_category_id: int) -> dict[str, Any]:
+        """Return create relation."""
         return self._db.category.create_relation(income_category_id, expense_category_id)
 
     def delete_relation(self, relation_id: int) -> None:
+        """Return delete relation."""
         self._db.category.delete_relation(relation_id)
 
     def parent_income_categories(self) -> list[dict[str, Any]]:

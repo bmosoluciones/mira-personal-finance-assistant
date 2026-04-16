@@ -12,10 +12,12 @@ class NavigationCoordinator:
     """Keep sidebar selection and stacked widget in sync."""
 
     def __init__(self, stack: QStackedWidget, nav_list: QListWidget) -> None:
+        """Initialize the NavigationCoordinator instance."""
         self._stack = stack
         self._nav_list = nav_list
 
     def go(self, index: int) -> QWidget | None:
+        """Return go."""
         self._stack.setCurrentIndex(index)
         if self._nav_list.currentRow() != index:
             self._nav_list.blockSignals(True)

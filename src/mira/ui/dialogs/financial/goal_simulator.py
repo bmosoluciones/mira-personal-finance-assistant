@@ -37,6 +37,7 @@ class GoalScenarioDialog(QDialog):
     """Simulate savings scenarios and optionally open the goal creation flow."""
 
     def __init__(self, language: str, currency: str, parent: QWidget | None = None) -> None:
+        """Initialize the GoalScenarioDialog instance."""
         super().__init__(parent)
         self._language = language
         self._currency = currency.strip().upper() or "USD"
@@ -55,6 +56,7 @@ class GoalScenarioDialog(QDialog):
         self._recalculate()
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
 
@@ -187,6 +189,7 @@ class GoalScenarioDialog(QDialog):
                 widget.valueChanged.connect(self._recalculate)
 
     def _recalculate(self) -> None:
+        """Return recalculate."""
         using_auto = self._auto_contribution.isChecked()
         self._periodic_contribution.setEnabled(not using_auto)
 
@@ -310,6 +313,7 @@ class GoalScenarioDialog(QDialog):
         self._chart_view.setChart(chart)
 
     def _create_goal_from_scenario(self) -> None:
+        """Return create goal from scenario."""
         if self._latest is None:
             return
 
@@ -347,16 +351,20 @@ class GoalScenarioDialog(QDialog):
 
     @property
     def should_open_goal_form(self) -> bool:
+        """Return whether should open goal form."""
         return self._request_open_goal_form
 
     @property
     def goal_prefill(self) -> dict[str, object] | None:
+        """Return goal prefill."""
         return self._goal_prefill
 
     @staticmethod
     def _target_date_from_years(years: float) -> str:
+        """Return target date from years."""
         days = max(1, int(round(years * 365)))
         return (date.today() + timedelta(days=days)).isoformat()
 
     def _fmt_currency(self, value: float) -> str:
+        """Return fmt currency."""
         return f"{self._currency} {value:,.2f}"

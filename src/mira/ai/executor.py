@@ -542,18 +542,22 @@ class ActionResult:
 
 
 def _period_range(period: dict[str, Any] | None) -> tuple[str | None, str | None, str]:
+    """Return period range."""
     return ExecutorSummaryTools.period_range(period, today=date.today())
 
 
 def _format_money(value: Any) -> str:
+    """Return format money."""
     return ExecutorSummaryTools.format_money(value)
 
 
 def _compute_summary(db: Database, transactions: list[dict[str, Any]]) -> dict[str, Money]:
+    """Return compute summary."""
     return ExecutorSummaryTools.compute_summary(db, transactions)
 
 
 def _executor_language(db: Database) -> str:
+    """Return executor language."""
     return normalize_language(db.setting.get("language"))
 
 
@@ -564,6 +568,7 @@ def _executor_tr(
     *,
     params: dict[str, object] | None = None,
 ) -> str:
+    """Return executor tr."""
     return tr(key, _executor_language(db), default=default, params=params)
 
 
@@ -571,6 +576,7 @@ class Executor:
     """Executes structured MIRA actions against the database."""
 
     def __init__(self, db: Database) -> None:
+        """Initialize the Executor instance."""
         self._db = db
         self._account_resolver = ExecutorAccountResolver(db)
         self._category_resolver = ExecutorCategoryResolver(db, matcher=_find_best_category_match)
@@ -615,15 +621,19 @@ class Executor:
         return handler(action)
 
     def _add_income(self, action: dict[str, Any]) -> ActionResult:
+        """Return add income."""
         return self._transaction_recorder.add_income(action)
 
     def _add_expense(self, action: dict[str, Any]) -> ActionResult:
+        """Return add expense."""
         return self._transaction_recorder.add_expense(action)
 
     def _report(self, action: dict[str, Any]) -> ActionResult:
+        """Return report."""
         return self._report_builder.build_report(action)
 
     def _none(self, action: dict[str, Any]) -> ActionResult:
+        """Return none."""
         msg = action.get("message") or _executor_tr(
             self._db,
             "chat.none.generic",
@@ -632,6 +642,7 @@ class Executor:
         return ActionResult(success=True, action="none", message=str(msg))
 
     def _data_analysis(self, action: dict[str, Any]) -> ActionResult:
+        """Return data analysis."""
         period = action.get("period") or {}
         msg = _executor_tr(
             self._db,

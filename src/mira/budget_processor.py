@@ -48,17 +48,20 @@ _UNSUPPORTED_GROUPER_CHARS = {"[", "]", "{", "}"}
 
 
 def _normalise_number_format(number_format: NumberFormatConfig | None) -> NumberFormatConfig:
+    """Return normalise number format."""
     config = number_format or NumberFormatConfig()
     return coerce_number_format_config(config.thousands_sep, config.decimal_sep)
 
 
 def _ensure_finite_number(value: float) -> float:
+    """Return ensure finite number."""
     if not math.isfinite(value):
         raise ValueError("Budget values must be finite numbers.")
     return float(value)
 
 
 def _ensure_positive_budget_value(value: float) -> float:
+    """Return ensure positive budget value."""
     numeric = _ensure_finite_number(value)
     if numeric < 0:
         raise ValueError(f"Only positive values are allowed in budget cells. Got: {numeric}.")
@@ -66,6 +69,7 @@ def _ensure_positive_budget_value(value: float) -> float:
 
 
 def _looks_like_formula(raw: str) -> bool:
+    """Return looks like formula."""
     stripped = raw.strip()
     if not any(ch.isdigit() for ch in stripped):
         return False
@@ -77,6 +81,7 @@ def _looks_like_formula(raw: str) -> bool:
 
 
 def _parse_plain_budget_number(raw: str, number_format: NumberFormatConfig) -> float:
+    """Return parse plain budget number."""
     stripped = raw.strip()
     sign = 1.0
     if stripped[:1] in "+-":
@@ -88,6 +93,7 @@ def _parse_plain_budget_number(raw: str, number_format: NumberFormatConfig) -> f
 
 
 def _starts_number(expr: str, index: int, number_format: NumberFormatConfig) -> bool:
+    """Return starts number."""
     char = expr[index]
     if char.isdigit():
         return True
@@ -95,6 +101,7 @@ def _starts_number(expr: str, index: int, number_format: NumberFormatConfig) -> 
 
 
 def _normalise_formula(expr: str, number_format: NumberFormatConfig) -> str:
+    """Return normalise formula."""
     allowed_chars = set("0123456789 ()+-*/\u00a0") | {number_format.thousands_sep, number_format.decimal_sep}
     number_token_chars = set("0123456789 \u00a0") | {number_format.thousands_sep, number_format.decimal_sep}
     parts: list[str] = []

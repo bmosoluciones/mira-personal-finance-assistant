@@ -31,6 +31,7 @@ class LoanAmortizationDialog(QDialog):
     """Loan amortization calculator."""
 
     def __init__(self, language: str, currency: str, parent: QWidget | None = None) -> None:
+        """Initialize the LoanAmortizationDialog instance."""
         super().__init__(parent)
         self._language = language
         self._currency = currency.strip().upper() or "USD"
@@ -46,6 +47,7 @@ class LoanAmortizationDialog(QDialog):
         self._recalculate()
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
 
@@ -142,6 +144,7 @@ class LoanAmortizationDialog(QDialog):
                 widget.valueChanged.connect(self._recalculate)
 
     def _recalculate(self) -> None:
+        """Return recalculate."""
         projection = calculate_loan_amortization(
             LoanAmortizationInput(
                 loan_amount=self._loan_amount.value(),
@@ -240,4 +243,5 @@ class LoanAmortizationDialog(QDialog):
         self._chart_view.setChart(chart)
 
     def _fmt_currency(self, value: float) -> str:
+        """Return fmt currency."""
         return f"{self._currency} {value:,.2f}"

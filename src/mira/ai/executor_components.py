@@ -17,13 +17,17 @@ from mira.ui.i18n import normalize_language, tr
 
 @dataclass(frozen=True)
 class CreditCardDetectionPatterns:
+    """Represent the CreditCardDetectionPatterns class."""
+
     has_card_reference: Any
+
     card_payment: Any
     card_payment_target: Any
     card_usage: Any
 
 
 def _component_language(db: Database) -> str:
+    """Return component language."""
     return normalize_language(db.setting.get("language"))
 
 
@@ -34,11 +38,15 @@ def _component_tr(
     *,
     params: dict[str, object] | None = None,
 ) -> str:
+    """Return component tr."""
     return tr(key, _component_language(db), default=default, params=params)
 
 
 class ExecutorAccountResolver:
+    """Represent the ExecutorAccountResolver class."""
+
     def __init__(self, db: Database) -> None:
+        """Initialize the ExecutorAccountResolver instance."""
         self._db = db
 
     def mentioned_accounts(
@@ -47,6 +55,7 @@ class ExecutorAccountResolver:
         *,
         account_types: tuple[str, ...] | None = None,
     ) -> list[dict[str, Any]]:
+        """Return mentioned accounts."""
         if not text:
             return []
         return self._db.account.find_mentions(text, account_types=account_types)
@@ -57,6 +66,7 @@ class ExecutorAccountResolver:
         *,
         account_types: tuple[str, ...] | None = None,
     ) -> dict[str, Any] | None:
+        """Return resolve known account."""
         if not requested_name or not requested_name.strip():
             return None
 
@@ -72,6 +82,7 @@ class ExecutorAccountResolver:
         return None
 
     def default_account(self, *, account_types: tuple[str, ...] | None = None) -> dict[str, Any] | None:
+        """Return default account."""
         default = self._db.account.get_default()
         if default is not None:
             if account_types is None or str(default.get("account_type") or "") in set(account_types):
@@ -89,6 +100,7 @@ class ExecutorAccountResolver:
         raw_text: str | None = None,
         account_types: tuple[str, ...] | None = None,
     ) -> tuple[str, dict[str, Any]]:
+        """Return resolve account."""
         known = self.resolve_known_account(requested_name, account_types=account_types)
         if known is not None:
             return str(known.get("name") or requested_name or ""), known
@@ -112,11 +124,15 @@ class ExecutorAccountResolver:
 
 
 class ExecutorCategoryResolver:
+    """Represent the ExecutorCategoryResolver class."""
+
     def __init__(self, db: Database, *, matcher: Any) -> None:
+        """Initialize the ExecutorCategoryResolver instance."""
         self._db = db
         self._matcher = matcher
 
     def resolve_category(self, action: dict[str, Any], cat_type: str) -> str | None:
+        """Return resolve category."""
         category = action.get("category")
         if not isinstance(category, str):
             return None
@@ -136,6 +152,8 @@ class ExecutorCategoryResolver:
 
 
 class ExecutorCreditCardHelper:
+    """Represent the ExecutorCreditCardHelper class."""
+
     def __init__(
         self,
         db: Database,
@@ -145,6 +163,7 @@ class ExecutorCreditCardHelper:
         action_result_cls: type,
         format_money: Any,
     ) -> None:
+        """Initialize the ExecutorCreditCardHelper instance."""
         self._db = db
         self._accounts = account_resolver
         self._patterns = patterns
@@ -152,9 +171,11 @@ class ExecutorCreditCardHelper:
         self._format_money = format_money
 
     def has_card_reference(self, text: str | None) -> bool:
+        """Return whether  card reference."""
         return bool(text and self._patterns.has_card_reference.search(text))
 
     def looks_like_credit_card_payment(self, text: str | None) -> bool:
+        """Return looks like credit card payment."""
         if not text:
             return False
         has_payment_verb = self._patterns.card_payment.search(text) is not None
@@ -166,6 +187,7 @@ class ExecutorCreditCardHelper:
         return self._patterns.card_usage.search(text) is None
 
     def looks_like_credit_card_purchase(self, text: str | None) -> bool:
+        """Return looks like credit card purchase."""
         if not text:
             return False
         return (
@@ -174,6 +196,7 @@ class ExecutorCreditCardHelper:
         )
 
     def resolve_credit_payment_target(self, action: dict[str, Any]) -> dict[str, Any] | None:
+        """Return resolve credit payment target."""
         requested = action.get("account")
         raw_text = cast(str | None, action.get("description"))
         explicit = self._accounts.resolve_known_account(cast(str | None, requested), account_types=("credit",))
@@ -192,6 +215,7 @@ class ExecutorCreditCardHelper:
         return None
 
     def resolve_credit_payment_source(self, raw_text: str | None) -> dict[str, Any] | None:
+        """Return resolve credit payment source."""
         mentioned = self._accounts.mentioned_accounts(raw_text, account_types=("bank", "cash"))
         match len(mentioned):
             case 1:
@@ -201,6 +225,7 @@ class ExecutorCreditCardHelper:
         return self._accounts.default_account(account_types=("bank", "cash"))
 
     def maybe_record_credit_card_payment(self, action: dict[str, Any]):
+        """Return maybe record credit card payment."""
         raw_text = cast(str | None, action.get("description"))
         if not self.looks_like_credit_card_payment(raw_text):
             return None
@@ -272,6 +297,7 @@ class ExecutorCreditCardHelper:
         )
 
     def resolve_expense_account(self, action: dict[str, Any]):
+        """Return resolve expense account."""
         raw_text = cast(str | None, action.get("description"))
         explicit = self._accounts.resolve_known_account(cast(str | None, action.get("account")))
         if explicit is not None:
@@ -310,6 +336,8 @@ class ExecutorCreditCardHelper:
 
 
 class ExecutorReportBuilder:
+    """Represent the ExecutorReportBuilder class."""
+
     def __init__(
         self,
         db: Database,
@@ -318,6 +346,7 @@ class ExecutorReportBuilder:
         compute_summary: Any,
         format_money: Any,
     ) -> None:
+        """Initialize the ExecutorReportBuilder instance."""
         self._db = db
         self._action_result_cls = action_result_cls
         self._compute_summary = compute_summary
@@ -325,6 +354,7 @@ class ExecutorReportBuilder:
 
     @staticmethod
     def period_range(period: dict[str, Any] | None) -> tuple[str | None, str | None, str]:
+        """Return period range."""
         today = date.today()
         if not period:
             start = today.replace(day=1)
@@ -362,6 +392,7 @@ class ExecutorReportBuilder:
         return start.isoformat(), today.isoformat(), "this_month"
 
     def build_report(self, action: dict[str, Any]):
+        """Return build report."""
         report_type = action.get("report_type") or "summary"
         since_date, until_date, period_preset = self.period_range(action.get("period"))
         filters = action.get("filters") or {}
@@ -469,8 +500,11 @@ class ExecutorReportBuilder:
 
 
 class ExecutorSummaryTools:
+    """Represent the ExecutorSummaryTools class."""
+
     @staticmethod
     def period_range(period: dict[str, Any] | None, *, today: date | None = None) -> tuple[str | None, str | None, str]:
+        """Return period range."""
         today_value = today or date.today()
         if not period:
             start = today_value.replace(day=1)
@@ -505,11 +539,13 @@ class ExecutorSummaryTools:
 
     @staticmethod
     def format_money(value: Any) -> str:
+        """Return format money."""
         amount = money_to_decimal(value) or MONEY_ZERO
         return f"{amount:,.2f}"
 
     @staticmethod
     def compute_summary(db: Database, transactions: list[dict[str, Any]]) -> dict[str, Money]:
+        """Return compute summary."""
         summary = db.report.summarize_financials(transactions)
         return {
             "total_income": summary.income,
@@ -520,6 +556,8 @@ class ExecutorSummaryTools:
 
 
 class ExecutorTransactionRecorder:
+    """Represent the ExecutorTransactionRecorder class."""
+
     def __init__(
         self,
         db: Database,
@@ -530,6 +568,7 @@ class ExecutorTransactionRecorder:
         category_resolver: ExecutorCategoryResolver,
         credit_card_helper: ExecutorCreditCardHelper,
     ) -> None:
+        """Initialize the ExecutorTransactionRecorder instance."""
         self._db = db
         self._action_result_cls = action_result_cls
         self._format_money = format_money
@@ -538,6 +577,7 @@ class ExecutorTransactionRecorder:
         self._credit_card_helper = credit_card_helper
 
     def add_income(self, action: dict[str, Any]):
+        """Return add income."""
         raw_text = cast(str | None, action.get("description"))
         account_name, account = self._account_resolver.resolve_account(
             cast(str | None, action.get("account")), raw_text=raw_text
@@ -586,6 +626,7 @@ class ExecutorTransactionRecorder:
         )
 
     def add_expense(self, action: dict[str, Any]):
+        """Return add expense."""
         if (payment_result := self._credit_card_helper.maybe_record_credit_card_payment(action)) is not None:
             return payment_result
 

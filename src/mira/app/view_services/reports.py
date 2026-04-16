@@ -18,21 +18,30 @@ from mira.transaction_kinds import is_analytics_excluded_transaction, is_balance
 
 @dataclass(frozen=True)
 class ReportFilterOptions:
+    """Represent the ReportFilterOptions class."""
+
     accounts: list[dict[str, Any]]
+
     categories: list[dict[str, Any]]
     tags: list[dict[str, Any]]
 
 
 @dataclass(frozen=True)
 class ReportsComparisons:
+    """Represent the ReportsComparisons class."""
+
     current: dict[str, float]
+
     previous: dict[str, float]
     yoy: dict[str, float]
 
 
 @dataclass(frozen=True)
 class ReportsLoadedState:
+    """Represent the ReportsLoadedState class."""
+
     transactions: list[dict[str, Any]]
+
     tags_by_tx: dict[int, list[dict[str, Any]]]
     by_month: dict[str, dict[str, float]]
     by_month_account: dict[tuple[str, str], dict[str, float]]
@@ -49,7 +58,10 @@ class ReportsLoadedState:
 
 @dataclass(frozen=True)
 class PresentationCell:
+    """Represent the PresentationCell class."""
+
     text: str
+
     signal: str | None = None
     badge_kind: str | None = None
     align_right: bool = False
@@ -57,40 +69,57 @@ class PresentationCell:
 
 @dataclass(frozen=True)
 class PresentationRow:
+    """Represent the PresentationRow class."""
+
     cells: tuple[PresentationCell, ...]
 
 
 @dataclass(frozen=True)
 class BarChartSeries:
+    """Represent the BarChartSeries class."""
+
     name: str
+
     values: tuple[float, ...]
     color_key: str
 
 
 @dataclass(frozen=True)
 class LineChartSeries:
+    """Represent the LineChartSeries class."""
+
     name: str
+
     points: tuple[tuple[float, float], ...]
     color_key: str
 
 
 @dataclass(frozen=True)
 class PieChartSlice:
+    """Represent the PieChartSlice class."""
+
     label: str
+
     value: float
     color: str
 
 
 @dataclass(frozen=True)
 class BarChartState:
+    """Represent the BarChartState class."""
+
     title: str
+
     categories: tuple[str, ...]
     series: tuple[BarChartSeries, ...]
 
 
 @dataclass(frozen=True)
 class BarLineChartState:
+    """Represent the BarLineChartState class."""
+
     title: str
+
     categories: tuple[str, ...]
     bar_series: tuple[BarChartSeries, ...]
     line_series: tuple[LineChartSeries, ...]
@@ -98,26 +127,38 @@ class BarLineChartState:
 
 @dataclass(frozen=True)
 class PieChartState:
+    """Represent the PieChartState class."""
+
     title: str
+
     slices: tuple[PieChartSlice, ...]
     hole_size: float = 0.0
 
 
 @dataclass(frozen=True)
 class ReportsComparisonState:
+    """Represent the ReportsComparisonState class."""
+
     previous_text: str
+
     yoy_text: str
 
 
 @dataclass(frozen=True)
 class ReportsTableSection:
+    """Represent the ReportsTableSection class."""
+
     rows: tuple[PresentationRow, ...]
+
     chart: BarChartState
 
 
 @dataclass(frozen=True)
 class ReportsCategorySection:
+    """Represent the ReportsCategorySection class."""
+
     title: str
+
     back_enabled: bool
     rows: tuple[PresentationRow, ...]
     top_rows: tuple[PresentationRow, ...]
@@ -126,13 +167,19 @@ class ReportsCategorySection:
 
 @dataclass(frozen=True)
 class ReportsCashFlowSection:
+    """Represent the ReportsCashFlowSection class."""
+
     rows: tuple[PresentationRow, ...]
+
     chart: BarLineChartState
 
 
 @dataclass(frozen=True)
 class ReportsTagSection:
+    """Represent the ReportsTagSection class."""
+
     rows: tuple[PresentationRow, ...]
+
     matrix_headers: tuple[str, ...]
     matrix_rows: tuple[PresentationRow, ...]
     chart: PieChartState
@@ -140,25 +187,37 @@ class ReportsTagSection:
 
 @dataclass(frozen=True)
 class ReportsBudgetSection:
+    """Represent the ReportsBudgetSection class."""
+
     rows: tuple[PresentationRow, ...]
+
     chart: BarChartState
 
 
 @dataclass(frozen=True)
 class ReportsAccountBalanceSection:
+    """Represent the ReportsAccountBalanceSection class."""
+
     summary_text: str
+
     rows: tuple[PresentationRow, ...]
 
 
 @dataclass(frozen=True)
 class ReportsTransactionItem:
+    """Represent the ReportsTransactionItem class."""
+
     row: PresentationRow
+
     detail_fields: tuple[tuple[str, str], ...]
 
 
 @dataclass(frozen=True)
 class ReportsTransactionPage:
+    """Represent the ReportsTransactionPage class."""
+
     items: tuple[ReportsTransactionItem, ...]
+
     page_text: str
     previous_enabled: bool
     next_enabled: bool
@@ -166,7 +225,10 @@ class ReportsTransactionPage:
 
 @dataclass(frozen=True)
 class ReportsPresentationState:
+    """Represent the ReportsPresentationState class."""
+
     comparisons: ReportsComparisonState
+
     total: ReportsTableSection
     category: ReportsCategorySection
     account_trend: ReportsTableSection
@@ -179,7 +241,10 @@ class ReportsPresentationState:
 
 @dataclass(frozen=True)
 class _TransactionPresentation:
+    """Represent the _TransactionPresentation class."""
+
     type_text: str
+
     badge_kind: str
 
 
@@ -187,9 +252,11 @@ class ReportsViewService:
     """Move report data loading and aggregation out of the QWidget."""
 
     def __init__(self, db: Database) -> None:
+        """Initialize the ReportsViewService instance."""
         self._db = db
 
     def load_filter_options(self) -> ReportFilterOptions:
+        """Return load filter options."""
         return ReportFilterOptions(
             accounts=self._db.account.list(),
             categories=self._db.category.list(),
@@ -197,9 +264,11 @@ class ReportsViewService:
         )
 
     def load_account_balance_report(self) -> dict[str, Any]:
+        """Return load account balance report."""
         return cast(dict[str, Any], self._db.account.get_balance_report())
 
     def load_budget_comparison(self, year: int) -> dict[str, Any] | None:
+        """Return load budget comparison."""
         selected = self._db.budget.get_default_for_year(year)
         if selected is None:
             return None
@@ -209,6 +278,7 @@ class ReportsViewService:
             return None
 
     def load_report_state(self, *, since: str, until: str, filters: dict[str, Any]) -> ReportsLoadedState:
+        """Return load report state."""
         start_d = date.fromisoformat(since)
         end_d = date.fromisoformat(until)
         span = (end_d - start_d).days + 1
@@ -245,9 +315,11 @@ class ReportsViewService:
         )
 
     def build_state_from_transactions(self, txs: list[dict[str, Any]], *, year: int) -> ReportsLoadedState:
+        """Return build state from transactions."""
         return self._build_loaded_state(txs, comparisons=None, year=year)
 
     def _summary_from_transactions(self, txs: list[dict[str, Any]]) -> dict[str, float]:
+        """Return summary from transactions."""
         summary = self._db.report.summarize_financials(txs, as_dict=True)
         return {
             "income": float(summary["income"]),
@@ -256,6 +328,7 @@ class ReportsViewService:
         }
 
     def _summary_for_period(self, *, since_date: str, until_date: str, filters: dict[str, Any]) -> dict[str, float]:
+        """Return summary for period."""
         summary = self._db.report.summarize_financials_filtered(
             tx_type=filters.get("tx_type"),
             account_id=filters.get("account_id"),
@@ -278,6 +351,7 @@ class ReportsViewService:
         comparisons: ReportsComparisons | None,
         year: int,
     ) -> ReportsLoadedState:
+        """Return build loaded state."""
         report_txs = [tx for tx in txs if not is_analytics_excluded_transaction(tx)]
         by_month: dict[str, dict[str, float]] = {}
         by_month_account: dict[tuple[str, str], dict[str, float]] = {}
@@ -373,6 +447,7 @@ class ReportsViewStateBuilder:
     """Build table-ready and chart-ready presentation state for reports."""
 
     def __init__(self, db: Database) -> None:
+        """Initialize the ReportsViewStateBuilder instance."""
         self._db = db
 
     def build_state(
@@ -383,6 +458,7 @@ class ReportsViewStateBuilder:
         tx_page: int,
         tx_page_size: int,
     ) -> ReportsPresentationState:
+        """Return build state."""
         context = PresentationContext.from_db(self._db)
         return ReportsPresentationState(
             comparisons=self._build_comparisons(state.comparisons, context),
@@ -397,6 +473,7 @@ class ReportsViewStateBuilder:
         )
 
     def build_account_balance_preview(self, report: dict[str, Any]) -> ReportsAccountBalanceSection:
+        """Return build account balance preview."""
         return self._build_account_balance_section(report, PresentationContext.from_db(self._db))
 
     def _build_comparisons(
@@ -404,10 +481,12 @@ class ReportsViewStateBuilder:
         comparisons: ReportsComparisons | None,
         context: PresentationContext,
     ) -> ReportsComparisonState:
+        """Return build comparisons."""
         if comparisons is None:
             return ReportsComparisonState(previous_text="", yoy_text="")
 
         def _pct(cur: float, base: float) -> float:
+            """Return pct."""
             if abs(base) < 1e-9:
                 return 0.0
             return ((cur - base) / abs(base)) * 100
@@ -442,6 +521,7 @@ class ReportsViewStateBuilder:
         return ReportsComparisonState(previous_text=prev_text, yoy_text=yoy_text)
 
     def _build_total_section(self, state: ReportsLoadedState, context: PresentationContext) -> ReportsTableSection:
+        """Return build total section."""
         months = tuple(sorted(state.by_month.keys()))
         rows: list[PresentationRow] = []
         income_values: list[float] = []
@@ -501,6 +581,7 @@ class ReportsViewStateBuilder:
         *,
         category_drill_root: str | None,
     ) -> ReportsCategorySection:
+        """Return build category section."""
         if category_drill_root is None:
             data = state.category_root_data
             title = context.translate("reports.category.root", "Level: Parent categories")
@@ -558,6 +639,7 @@ class ReportsViewStateBuilder:
         state: ReportsLoadedState,
         context: PresentationContext,
     ) -> ReportsTableSection:
+        """Return build account trend section."""
         keys = tuple(sorted(state.by_month_account.keys()))
         rows: list[PresentationRow] = []
         by_account_total: dict[str, float] = {}
@@ -597,6 +679,7 @@ class ReportsViewStateBuilder:
         state: ReportsLoadedState,
         context: PresentationContext,
     ) -> ReportsCashFlowSection:
+        """Return build cash flow section."""
         months = tuple(sorted(state.by_month.keys()))
         rows: list[PresentationRow] = []
         flow_values: list[float] = []
@@ -642,6 +725,7 @@ class ReportsViewStateBuilder:
         return ReportsCashFlowSection(rows=tuple(rows), chart=chart)
 
     def _build_tag_section(self, state: ReportsLoadedState, context: PresentationContext) -> ReportsTagSection:
+        """Return build tag section."""
         ranked = sorted(state.by_tag_amount.items(), key=lambda item: item[1], reverse=True)
         rows: list[PresentationRow] = []
         slices: list[PieChartSlice] = []
@@ -697,6 +781,7 @@ class ReportsViewStateBuilder:
         comparison: dict[str, Any] | None,
         context: PresentationContext,
     ) -> ReportsBudgetSection:
+        """Return build budget section."""
         rows: list[PresentationRow] = []
         labels: list[str] = []
         budget_values: list[float] = []
@@ -749,6 +834,7 @@ class ReportsViewStateBuilder:
         report: dict[str, Any],
         context: PresentationContext,
     ) -> ReportsAccountBalanceSection:
+        """Return build account balance section."""
         rows_data = cast(list[dict[str, Any]], report.get("rows") or [])
         currency = str(report.get("default_currency") or context.default_currency).upper()
         consolidated_total = float(report.get("consolidated_total") or 0.0)
@@ -791,6 +877,7 @@ class ReportsViewStateBuilder:
         tx_page: int,
         tx_page_size: int,
     ) -> ReportsTransactionPage:
+        """Return build transactions page."""
         total_pages = max(1, (len(state.transactions) + tx_page_size - 1) // tx_page_size)
         current_page = max(0, min(total_pages - 1, tx_page))
         start = current_page * tx_page_size
@@ -849,6 +936,7 @@ class ReportsViewStateBuilder:
         )
 
     def _transaction_type(self, tx: dict[str, Any], savings_categories: set[str]) -> _TransactionPresentation:
+        """Return transaction type."""
         if is_balance_adjustment_transaction(tx):
             return _TransactionPresentation(type_text="~ adjustment", badge_kind="adjustment")
         if int(tx.get("is_transfer") or 0) == 1:

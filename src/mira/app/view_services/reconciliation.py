@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
 
 import hashlib
@@ -17,12 +19,14 @@ from mira.transaction_kinds import is_balance_adjustment_transaction
 
 
 def _normalize_header(value: object) -> str:
+    """Return normalize header."""
     text = unicodedata.normalize("NFKD", str(value or "").strip())
     folded = "".join(char for char in text if not unicodedata.combining(char))
     return folded.casefold()
 
 
 def _parse_excel_date(value: object) -> str:
+    """Return parse excel date."""
     if isinstance(value, datetime):
         return value.date().isoformat()
     if isinstance(value, date):
@@ -44,6 +48,7 @@ def _parse_excel_date(value: object) -> str:
 
 
 def _parse_excel_amount(value: object, *, field_name: str) -> float | None:
+    """Return parse excel amount."""
     if value is None:
         return None
     if isinstance(value, (int, float)):
@@ -58,6 +63,7 @@ def _parse_excel_amount(value: object, *, field_name: str) -> float | None:
 
 
 def _fingerprint_external_row(*, tx_date: str, reference: str, description: str, amount: float) -> str:
+    """Return fingerprint external row."""
     payload = "|".join(
         (
             tx_date,
@@ -71,14 +77,20 @@ def _fingerprint_external_row(*, tx_date: str, reference: str, description: str,
 
 @dataclass(frozen=True)
 class ReconciliationParams:
+    """Represent the ReconciliationParams class."""
+
     account_id: int | None
+
     date_from: str
     date_to: str
 
 
 @dataclass(frozen=True)
 class ReconciliationPanelSummary:
+    """Represent the ReconciliationPanelSummary class."""
+
     opening_balance: float
+
     total_income: float
     total_expense: float
     closing_balance: float
@@ -88,7 +100,10 @@ class ReconciliationPanelSummary:
 
 @dataclass(frozen=True)
 class ReconciliationPreviewIssue:
+    """Represent the ReconciliationPreviewIssue class."""
+
     row_number: int
+
     raw_date: str
     reference: str
     description: str
@@ -99,7 +114,10 @@ class ReconciliationPreviewIssue:
 
 @dataclass(frozen=True)
 class ReconciliationExternalRow:
+    """Represent the ReconciliationExternalRow class."""
+
     row_number: int
+
     date: str
     reference: str
     description: str
@@ -112,7 +130,10 @@ class ReconciliationExternalRow:
 
 @dataclass(frozen=True)
 class ReconciliationSystemRow:
+    """Represent the ReconciliationSystemRow class."""
+
     transaction_id: int
+
     date: str
     description: str
     amount: float
@@ -126,19 +147,26 @@ class ReconciliationSystemRow:
 
 @dataclass(frozen=True)
 class ReconciliationImportPreview:
+    """Represent the ReconciliationImportPreview class."""
+
     filepath: str
+
     valid_rows: tuple[ReconciliationExternalRow, ...]
     invalid_rows: tuple[ReconciliationPreviewIssue, ...]
     missing_columns: tuple[str, ...]
 
     @property
     def has_blocking_error(self) -> bool:
+        """Return whether  blocking error."""
         return bool(self.missing_columns)
 
 
 @dataclass(frozen=True)
 class ReconciliationViewState:
+    """Represent the ReconciliationViewState class."""
+
     params: ReconciliationParams
+
     accounts: tuple[dict[str, Any], ...]
     external_summary: ReconciliationPanelSummary
     system_summary: ReconciliationPanelSummary
@@ -149,6 +177,8 @@ class ReconciliationViewState:
 
 
 class ReconciliationViewService:
+    """Represent the ReconciliationViewService class."""
+
     _REQUIRED_COLUMNS = {
         "fecha": "Fecha",
         "referencia": "Referencia",
@@ -158,12 +188,15 @@ class ReconciliationViewService:
     }
 
     def __init__(self, db: Database) -> None:
+        """Initialize the ReconciliationViewService instance."""
         self._db = db
 
     def list_accounts(self) -> tuple[dict[str, Any], ...]:
+        """Return list accounts."""
         return tuple(self._db.account.list())
 
     def parse_excel(self, filepath: str) -> ReconciliationImportPreview:
+        """Return parse excel."""
         workbook = load_workbook(filepath, read_only=True, data_only=True)
         try:
             worksheet = workbook.active
@@ -255,6 +288,7 @@ class ReconciliationViewService:
         external_row: ReconciliationExternalRow,
         system_rows: tuple[ReconciliationSystemRow, ...],
     ) -> tuple[int, ...]:
+        """Return suggestions for external row."""
         candidates: list[tuple[int, int]] = []
         external_day = date.fromisoformat(external_row.date)
         for system_row in system_rows:
@@ -290,6 +324,7 @@ class ReconciliationViewService:
         external_rows: tuple[ReconciliationExternalRow, ...] = (),
         external_opening_balance: float = 0.0,
     ) -> ReconciliationViewState:
+        """Return load state."""
         account = self._db.account.get(account_id)
         if account is None:
             raise ValueError(f"Account {account_id} not found.")
@@ -392,6 +427,7 @@ class ReconciliationViewService:
         system_transaction_ids: list[int],
         external_rows: tuple[ReconciliationExternalRow, ...],
     ) -> dict[str, Any]:
+        """Return reconcile selection."""
         return self._db.reconciliation.reconcile(
             account_id=account_id,
             date_from=date_from,
@@ -410,4 +446,5 @@ class ReconciliationViewService:
         )
 
     def clear_reconciliation_for_transactions(self, transaction_ids: list[int]) -> int:
+        """Return clear reconciliation for transactions."""
         return self._db.reconciliation.clear_for_transactions(transaction_ids)

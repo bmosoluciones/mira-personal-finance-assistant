@@ -55,16 +55,20 @@ class AnalyticsPalette:
     waterfall: Mapping[WaterfallStepKind, str]
 
     def palette_hex(self, index: int) -> str:
+        """Return palette hex."""
         return self.multicolor[index % len(self.multicolor)]
 
     def semantic_hex(self, role: AnalyticsSemanticRole) -> str:
+        """Return semantic hex."""
         return self.semantic[role]
 
     def waterfall_hex(self, kind: WaterfallStepKind) -> str:
+        """Return waterfall hex."""
         return self.waterfall[kind]
 
 
 def try_parse_waterfall_step_kind(value: object) -> WaterfallStepKind | None:
+    """Return try parse waterfall step kind."""
     if not value:
         return None
     try:
@@ -131,6 +135,7 @@ class PresentationContext:
 
     @classmethod
     def from_db(cls, db: Database) -> PresentationContext:
+        """Return from db."""
         language = normalize_language(db.setting.get("language"))
         return cls(
             language=language,
@@ -150,17 +155,21 @@ class PresentationContext:
         *,
         params: dict[str, object] | None = None,
     ) -> str:
+        """Return translate."""
         return tr(key, self.language, default=default, params=params)
 
     def format_amount(self, amount: float, *, decimals: int = 2) -> str:
+        """Return format amount."""
         return _format_number(float(amount), self.number_format, decimals=decimals, grouping=True)
 
     def format_amount_with_currency(self, amount: float, currency: str | None, *, decimals: int = 2) -> str:
+        """Return format amount with currency."""
         normalized_currency = str(currency or "").strip().upper()
         formatted_amount = self.format_amount(amount, decimals=decimals)
         return f"{normalized_currency} {formatted_amount}" if normalized_currency else formatted_amount
 
     def account_type_label(self, account_type: str) -> str:
+        """Return account type label."""
         normalized = str(account_type or "bank").strip().lower()
         if normalized == "card":
             normalized = "credit"

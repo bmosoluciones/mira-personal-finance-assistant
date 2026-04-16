@@ -13,7 +13,10 @@ from mira.number_format import get_number_format_config, validate_number_format_
 
 @dataclass(frozen=True)
 class SettingsViewState:
+    """Represent the SettingsViewState class."""
+
     username: str
+
     language: str
     theme: str
     default_currency: str
@@ -27,9 +30,11 @@ class SettingsViewService:
     """Centralize settings persistence for the QWidget."""
 
     def __init__(self, db: Database) -> None:
+        """Initialize the SettingsViewService instance."""
         self._db = db
 
     def load_state(self) -> SettingsViewState:
+        """Return load state."""
         number_format = get_number_format_config(self._db.setting)
         return SettingsViewState(
             username=str(self._db.setting.get("username") or ""),
@@ -54,6 +59,7 @@ class SettingsViewService:
         preferred_model: str,
         interaction_mode: str,
     ) -> SettingsViewState:
+        """Return save."""
         number_format = validate_number_format_config(thousands_sep, decimal_sep)
         self._db.setting.set("username", username)
         self._db.setting.set("language", language)

@@ -27,6 +27,7 @@ class BudgetCreateDialog(QDialog):
     """Create a new annual budget."""
 
     def __init__(self, db: Database, parent=None) -> None:
+        """Initialize the BudgetCreateDialog instance."""
         super().__init__(parent)
         self._db = db
         self._language = normalize_language(self._db.setting.get("language"))
@@ -35,6 +36,7 @@ class BudgetCreateDialog(QDialog):
         self._build_ui()
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         form = QFormLayout()
         form.setSpacing(10)
@@ -82,6 +84,7 @@ class BudgetCreateDialog(QDialog):
         layout.addWidget(buttons)
 
     def _on_accept(self) -> None:
+        """Return on accept."""
         if not self._code_edit.text().strip():
             _notify_warning(
                 self,
@@ -103,6 +106,7 @@ class BudgetCreateDialog(QDialog):
         self.accept()
 
     def get_data(self) -> dict:
+        """Return get data."""
         return {
             "code": self._code_edit.text().strip(),
             "year": int(self._year_spin.value()),

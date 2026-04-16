@@ -30,10 +30,12 @@ class ModelLifecycle:
     """Resolve model selection and keep interaction mode consistent."""
 
     def __init__(self, db: Database, pipeline: Pipeline) -> None:
+        """Initialize the ModelLifecycle instance."""
         self._db = db
         self._pipeline = pipeline
 
     def resolve_model_path(self, active_runtime_path: str | None) -> str | None:
+        """Return resolve model path."""
         selected_path = self._selected_model_path()
         if selected_path is not None:
             return selected_path
@@ -42,18 +44,22 @@ class ModelLifecycle:
         return runtime_model_path or None
 
     def reload_selected_model(self, active_runtime_path: str | None, interaction_mode: str) -> ModelLifecycleState:
+        """Return reload selected model."""
         model_path = self.resolve_model_path(active_runtime_path)
         self._pipeline.reload_engine(model_path=model_path)
         return self._build_state(active_runtime_path=model_path, interaction_mode=interaction_mode)
 
     def sync_engine_info(self, active_runtime_path: str | None) -> ModelLifecycleState:
+        """Return sync engine info."""
         interaction_mode = str(self._db.setting.get("llm_interaction_mode") or "assistant")
         return self._build_state(active_runtime_path=active_runtime_path, interaction_mode=interaction_mode)
 
     def _selected_model_name(self) -> str:
+        """Return selected model name."""
         return str(self._db.setting.get("preferred_model") or "").strip()
 
     def _selected_model_path(self) -> str | None:
+        """Return selected model path."""
         selected_model = self._selected_model_name()
         if not selected_model:
             return None
@@ -64,9 +70,11 @@ class ModelLifecycle:
         return str(model_path)
 
     def _language(self) -> str:
+        """Return language."""
         return normalize_language(self._db.setting.get("language"))
 
     def _build_state(self, *, active_runtime_path: str | None, interaction_mode: str) -> ModelLifecycleState:
+        """Return build state."""
         language = self._language()
         parser_type = type(self._pipeline.engine).__name__
         chat_engine = getattr(self._pipeline, "chat_engine", None)

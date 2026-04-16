@@ -11,7 +11,10 @@ from mira.ui.i18n import tr
 
 
 class MainWindowShellMixin:
+    """Represent the MainWindowShellMixin class."""
+
     def _resize_to_screen(self) -> None:
+        """Return resize to screen."""
         screen = QApplication.primaryScreen()
         if screen is None:
             self.resize(1180, 720)
@@ -20,6 +23,7 @@ class MainWindowShellMixin:
         self.resize(min(1180, int(available.width() * 0.85)), min(720, int(available.height() * 0.88)))
 
     def _toggle_sidebar(self) -> None:
+        """Return toggle sidebar."""
         if self._act_sidebar is None:
             return
         visible = self._act_sidebar.isChecked()
@@ -28,22 +32,26 @@ class MainWindowShellMixin:
             self._logo_panel.setVisible(visible)
 
     def _toggle_prompt_panel(self) -> None:
+        """Return toggle prompt panel."""
         if self._act_prompt is None:
             return
         self._footer.setVisible(self._act_prompt.isChecked())
 
     def _toggle_chat_content(self) -> None:
+        """Return toggle chat content."""
         visible = not self._chat_content.isVisible()
         self._chat_content.setVisible(visible)
         if hasattr(self, "_chat_toggle_btn"):
             self._chat_toggle_btn.setText("▼" if visible else "▲")
 
     def _refresh_all(self) -> None:
+        """Return refresh all."""
         self._view_dashboard.refresh()
         if hasattr((view := self._stack.currentWidget()), "refresh") and view is not self._view_dashboard:
             view.refresh()
 
     def _show_daily_contextual_message_if_needed(self) -> None:
+        """Return show daily contextual message if needed."""
         if (payload := self._db.feedback.pop_daily_contextual_message()) is None:
             return
         self.notify_user_message(
@@ -53,17 +61,20 @@ class MainWindowShellMixin:
 
     @staticmethod
     def _normalize_theme(theme: str | None) -> str:
+        """Return normalize theme."""
         valid = set(MainWindowShellMixin._qt_material_themes())
         return theme if theme in valid else "dark_teal.xml"
 
     @staticmethod
     def _qt_material_themes() -> list[str]:
+        """Return qt material themes."""
         import qt_material  # noqa: PLC0415
 
         return qt_material.list_themes()
 
     @staticmethod
     def _apply_theme(theme: str) -> None:
+        """Return apply theme."""
         if (app := QApplication.instance()) is None:
             return
         import qt_material  # noqa: PLC0415

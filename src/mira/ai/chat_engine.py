@@ -19,11 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 def _normalize_chat_language(language: str | None) -> str:
+    """Return normalize chat language."""
     normalized = str(language or "en").strip().lower()
     return "es" if normalized == "es" else "en"
 
 
 def _load_llama_class() -> type[Any]:
+    """Return load llama class."""
     try:
         llama_module = importlib.import_module("llama_cpp")
     except ImportError as exc:
@@ -42,6 +44,7 @@ class LlamaCppEngine(BaseEngine):
         language: str = "en",
         **kwargs: Any,
     ) -> None:
+        """Initialize the LlamaCppEngine instance."""
         self._model_path = Path(model_path)
         self._prompts = prompts or PromptAssets()
         self._language = _normalize_chat_language(language)
@@ -58,6 +61,7 @@ class LlamaCppEngine(BaseEngine):
         logger.info("Model loaded.")
 
     def parse(self, user_input: str) -> dict[str, Any]:
+        """Return parse."""
         prompt = self._prompts.build_parser_prompt(user_input)
         output = self._llm(
             prompt,
@@ -70,9 +74,11 @@ class LlamaCppEngine(BaseEngine):
         return json.loads(raw)
 
     def set_language(self, language: str) -> None:
+        """Return set language."""
         self._language = _normalize_chat_language(language)
 
     def chat(self, user_input: str) -> str:
+        """Return chat."""
         prompt = (
             build_chat_system_prompt(self._language) + " Reply conversationally in the user's language. "
             "Do not force JSON in this mode.\n"

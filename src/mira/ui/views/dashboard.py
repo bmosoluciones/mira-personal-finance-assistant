@@ -46,6 +46,7 @@ class DashboardView(QWidget):
     _FILTER_MONTHS = [0, 3, 6]
 
     def __init__(self, db: Database, parent: QWidget | None = None) -> None:
+        """Initialize the DashboardView instance."""
         super().__init__(parent)
         self._db = db
         self._filter_idx: int = 0  # 0=Este Mes, 1=Últimos 3 Meses, 2=Últimos 6 Meses
@@ -57,6 +58,7 @@ class DashboardView(QWidget):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(10)
@@ -130,11 +132,13 @@ class DashboardView(QWidget):
     # ------------------------------------------------------------------
 
     def _on_filter(self, idx: int) -> None:
+        """Return on filter."""
         self._filter_idx = idx
         self._update_filter_styles()
         self.refresh()
 
     def _update_filter_styles(self) -> None:
+        """Return update filter styles."""
         active = (
             "QPushButton{border:2px solid palette(mid);border-radius:4px;padding:3px 11px;"
             "font-size:12px;font-weight:700;}"
@@ -147,6 +151,7 @@ class DashboardView(QWidget):
             btn.setStyleSheet(active if i == self._filter_idx else inactive)
 
     def _get_since_date(self) -> str:
+        """Return get since date."""
         today = date.today()
         months = self._FILTER_MONTHS[self._filter_idx]
         if months == 0:
@@ -159,12 +164,14 @@ class DashboardView(QWidget):
         return date(year, month, 1).isoformat()
 
     def _get_selected_recent_tx(self) -> dict | None:
+        """Return get selected recent tx."""
         row = self._tx_table.currentRow()
         if row < 0 or row >= len(self._recent_txs):
             return None
         return self._recent_txs[row]
 
     def _on_recent_edit(self) -> None:
+        """Return on recent edit."""
         from mira.ui.dialogs import TransactionDialog
 
         tx = self._get_selected_recent_tx()
@@ -198,6 +205,7 @@ class DashboardView(QWidget):
         self.refresh()
 
     def _on_recent_delete(self) -> None:
+        """Return on recent delete."""
         tx = self._get_selected_recent_tx()
         if tx is None:
             _notify_info(
@@ -222,6 +230,7 @@ class DashboardView(QWidget):
             self.refresh()
 
     def _open_recent_context_menu(self, pos: QPoint) -> None:
+        """Return open recent context menu."""
         if not _select_row_at_pos(self._tx_table, pos):
             return
         menu = QMenu(self)
@@ -238,6 +247,7 @@ class DashboardView(QWidget):
     # ------------------------------------------------------------------
 
     def refresh(self) -> None:
+        """Return refresh."""
         since_date = self._get_since_date()
         summary = self._db.report.get_summary(since_date=since_date)
 

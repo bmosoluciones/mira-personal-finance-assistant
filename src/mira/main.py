@@ -78,6 +78,7 @@ def _check_display_available() -> None:
 
 
 def _parse_args() -> argparse.Namespace:
+    """Return parse args."""
     parser = argparse.ArgumentParser(
         prog="mira",
         description="MIRA – Personal Finance Assistant",

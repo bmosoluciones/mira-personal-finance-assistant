@@ -41,6 +41,7 @@ class CategoryDialog(QDialog):
         default_type: str = "expense",
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the CategoryDialog instance."""
         super().__init__(parent)
         self._db = db
         self._category = category
@@ -59,6 +60,7 @@ class CategoryDialog(QDialog):
             self._prefill(category)
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         form = QFormLayout()
         form.setSpacing(10)
@@ -115,6 +117,7 @@ class CategoryDialog(QDialog):
         self._populate_parents()
 
     def _update_color_preview(self, color_value: str) -> None:
+        """Return update color preview."""
         color = QColor(color_value)
         if not color.isValid():
             color = QColor("#888888")
@@ -125,6 +128,7 @@ class CategoryDialog(QDialog):
         )
 
     def _choose_color(self) -> None:
+        """Return choose color."""
         color = QColorDialog.getColor(
             QColor(self._selected_color),
             self,
@@ -134,6 +138,7 @@ class CategoryDialog(QDialog):
             self._update_color_preview(color.name())
 
     def _prefill(self, cat: dict) -> None:
+        """Return prefill."""
         self._name_edit.setText(cat.get("name", ""))
         if (idx := self._type_combo.findData(cat.get("type", "expense"))) >= 0:
             self._type_combo.setCurrentIndex(idx)
@@ -143,6 +148,7 @@ class CategoryDialog(QDialog):
             self._parent_combo.setCurrentIndex(idx)
 
     def _on_accept(self) -> None:
+        """Return on accept."""
         if not self._name_edit.text().strip():
             _notify_warning(
                 self,
@@ -155,6 +161,7 @@ class CategoryDialog(QDialog):
         self.accept()
 
     def get_data(self) -> dict:
+        """Return get data."""
         icon_value = (self._icon_combo.currentData() or self._icon_combo.currentText()).strip()
         return {
             "name": self._name_edit.text().strip(),
@@ -165,6 +172,7 @@ class CategoryDialog(QDialog):
         }
 
     def _populate_parents(self) -> None:
+        """Return populate parents."""
         cat_type = str(self._type_combo.currentData() or "expense")
         all_cats = [cat for cat in self._db.category.list(cat_type) if cat.get("parent_id") is None]
         current_id = self._category["id"] if self._category and "id" in self._category else None
@@ -180,6 +188,7 @@ class MergeCategoryDialog(QDialog):
     """Merge one category into another category of the same type."""
 
     def __init__(self, db: Database, cat_type: str, parent: QWidget | None = None) -> None:
+        """Initialize the MergeCategoryDialog instance."""
         super().__init__(parent)
         self._db = db
         self._cat_type = cat_type
@@ -190,6 +199,7 @@ class MergeCategoryDialog(QDialog):
         self._build_ui()
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         form = QFormLayout()
         form.setSpacing(10)
@@ -223,6 +233,7 @@ class MergeCategoryDialog(QDialog):
         layout.addWidget(buttons)
 
     def _on_accept(self) -> None:
+        """Return on accept."""
         if self._source_combo.currentData() == self._target_combo.currentData():
             _notify_warning(
                 self,
@@ -237,6 +248,7 @@ class MergeCategoryDialog(QDialog):
         self.accept()
 
     def get_data(self) -> dict:
+        """Return get data."""
         return {
             "source_id": int(self._source_combo.currentData()),
             "target_id": int(self._target_combo.currentData()),

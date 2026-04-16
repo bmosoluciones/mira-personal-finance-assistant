@@ -25,21 +25,30 @@ CURRENCY_CODES = db_helpers.CURRENCY_CODES
 
 
 class _DatabaseFacade:
+    """Represent the _DatabaseFacade class."""
+
     def __init__(self, db: _DatabaseBackend) -> None:
+        """Initialize the _DatabaseFacade instance."""
         self._db = db
 
 
 class AccountFacade(_DatabaseFacade):
+    """Represent the AccountFacade class."""
+
     def list(self, account_types: tuple[str, ...] | None = None) -> list[dict]:
+        """Return list."""
         return self._db.get_accounts(account_types)
 
     def get(self, account_id: int) -> dict | None:
+        """Return get."""
         return self._db.get_account_by_id(account_id)
 
     def find_by_name(self, name: str) -> dict | None:
+        """Return find by name."""
         return self._db.get_account_by_name(name)
 
     def get_or_create(self, name: str) -> dict:
+        """Return get or create."""
         return self._db.get_or_create_account(name)
 
     def create(
@@ -49,30 +58,39 @@ class AccountFacade(_DatabaseFacade):
         opening_balance: MoneyLike = 0,
         currency: str | None = None,
     ) -> dict:
+        """Return create."""
         return self._db.add_account(name, account_type, opening_balance, currency)
 
     def update(self, account_id: int, name: str, account_type: str, currency: str | None = None) -> None:
+        """Return update."""
         self._db.update_account(account_id, name, account_type, currency)
 
     def delete(self, account_id: int) -> None:
+        """Return delete."""
         self._db.delete_account(account_id)
 
     def set_default(self, account_id: int) -> None:
+        """Return set default."""
         self._db.set_default_account(account_id)
 
     def get_default(self) -> dict | None:
+        """Return get default."""
         return self._db.get_default_account()
 
     def list_credit(self) -> builtins.list[dict]:
+        """Return list credit."""
         return self._db.get_credit_accounts()
 
     def is_credit(self, account_id: int) -> bool:
+        """Return whether credit."""
         return self._db.is_credit_account(account_id)
 
     def find_mentions(self, text: str, *, account_types: tuple[str, ...] | None = None) -> builtins.list[dict]:
+        """Return find mentions."""
         return self._db.find_account_mentions(text, account_types=account_types)
 
     def get_balance_report(self) -> dict[str, Any]:
+        """Return get balance report."""
         return self._db.get_account_balance_report()
 
     def balance_as_of(
@@ -82,6 +100,7 @@ class AccountFacade(_DatabaseFacade):
         *,
         exclude_transaction_id: int | None = None,
     ) -> dict[str, Any]:
+        """Return balance as of."""
         return self._db.get_account_balance_as_of(
             account_id,
             on_date,
@@ -89,17 +108,23 @@ class AccountFacade(_DatabaseFacade):
         )
 
     def update_balance(self, account_id: int, delta: MoneyLike) -> None:
+        """Return update balance."""
         self._db.update_account_balance(account_id, delta)
 
 
 class CategoryFacade(_DatabaseFacade):
+    """Represent the CategoryFacade class."""
+
     def list(self, cat_type: str | None = None, *, include_savings: bool = True) -> list[dict]:
+        """Return list."""
         return self._db.get_categories(cat_type, include_savings=include_savings)
 
     def get(self, cat_id: int) -> dict | None:
+        """Return get."""
         return self._db.get_category_by_id(cat_id)
 
     def find_by_name(self, name: str, cat_type: str | None = None) -> dict | None:
+        """Return find by name."""
         return self._db.get_category_by_name(name, cat_type)
 
     def create(
@@ -111,6 +136,7 @@ class CategoryFacade(_DatabaseFacade):
         is_savings: bool = False,
         icon: str = "",
     ) -> dict:
+        """Return create."""
         return self._db.add_category(
             name,
             cat_type,
@@ -129,6 +155,7 @@ class CategoryFacade(_DatabaseFacade):
         is_savings: bool = False,
         icon: str = "",
     ) -> dict:
+        """Return get or create."""
         return self._db.get_or_create_category(
             name,
             cat_type,
@@ -148,6 +175,7 @@ class CategoryFacade(_DatabaseFacade):
         parent_id: int | None = None,
         icon: str = "",
     ) -> None:
+        """Return update."""
         self._db.update_category(
             cat_id,
             name,
@@ -159,82 +187,111 @@ class CategoryFacade(_DatabaseFacade):
         )
 
     def list_subcategories(self, parent_id: int) -> builtins.list[dict]:
+        """Return list subcategories."""
         return self._db.get_subcategories(parent_id)
 
     def delete(self, cat_id: int) -> None:
+        """Return delete."""
         self._db.delete_category(cat_id)
 
     def merge(self, source_cat_id: int, target_cat_id: int) -> dict:
+        """Return merge."""
         return self._db.merge_categories(source_cat_id, target_cat_id)
 
     def tree(self, cat_type: str | None = None, *, include_savings: bool = True) -> builtins.list[dict]:
+        """Return tree."""
         return self._db.get_categories_tree(cat_type, include_savings=include_savings)
 
     def descendant_ids(self, cat_id: int) -> builtins.list[int]:
+        """Return descendant ids."""
         return self._db.get_category_with_descendants(cat_id)
 
     def descendant_names(self, cat_id: int) -> builtins.list[str]:
+        """Return descendant names."""
         return self._db.get_descendant_category_names(cat_id)
 
     def list_relations(self) -> builtins.list[dict]:
+        """Return list relations."""
         return self._db.list_category_relations()
 
     def create_relation(self, income_category_id: int, expense_category_id: int) -> dict:
+        """Return create relation."""
         return self._db.create_category_relation(income_category_id, expense_category_id)
 
     def delete_relation(self, relation_id: int) -> None:
+        """Return delete relation."""
         self._db.delete_category_relation(relation_id)
 
     def linked_expense_ids(self) -> builtins.set[int]:
+        """Return linked expense ids."""
         return self._db.get_linked_expense_category_ids()
 
 
 class TagFacade(_DatabaseFacade):
+    """Represent the TagFacade class."""
+
     def create(self, name: str, color: str = "#888888", icon: str = "") -> dict:
+        """Return create."""
         return self._db.add_tag(name, color=color, icon=icon)
 
     def list(self) -> list[dict]:
+        """Return list."""
         return self._db.get_tags()
 
     def get(self, tag_id: int) -> dict | None:
+        """Return get."""
         return self._db.get_tag_by_id(tag_id)
 
     def find_by_name(self, name: str) -> dict | None:
+        """Return find by name."""
         return self._db.get_tag_by_name(name)
 
     def update(self, tag_id: int, name: str, color: str, icon: str = "") -> None:
+        """Return update."""
         self._db.update_tag(tag_id, name, color, icon=icon)
 
     def delete(self, tag_id: int) -> None:
+        """Return delete."""
         self._db.delete_tag(tag_id)
 
     def list_for_transaction(self, transaction_id: int) -> builtins.list[dict]:
+        """Return list for transaction."""
         return self._db.get_transaction_tags(transaction_id)
 
     def set_for_transaction(self, transaction_id: int, tag_ids: builtins.list[int]) -> None:
+        """Return set for transaction."""
         self._db.set_transaction_tags(transaction_id, tag_ids)
 
     def add_to_transaction(self, transaction_id: int, tag_id: int) -> None:
+        """Return add to transaction."""
         self._db.add_transaction_tag(transaction_id, tag_id)
 
     def remove_from_transaction(self, transaction_id: int, tag_id: int) -> None:
+        """Return remove from transaction."""
         self._db.remove_transaction_tag(transaction_id, tag_id)
 
     def list_bulk_for_transactions(self, transaction_ids: builtins.list[int]) -> dict[int, builtins.list[dict]]:
+        """Return list bulk for transactions."""
         return self._db.get_transactions_tags_bulk(transaction_ids)
 
     def list_for_recurring(self, recurring_id: int) -> builtins.list[dict]:
+        """Return list for recurring."""
         return self._db.get_recurring_tags(recurring_id)
 
     def set_for_recurring(self, recurring_id: int, tag_ids: builtins.list[int]) -> None:
+        """Return set for recurring."""
         self._db.set_recurring_tags(recurring_id, tag_ids)
 
     def list_bulk_for_recurring(self, recurring_ids: builtins.list[int]) -> dict[int, builtins.list[dict]]:
+        """Return list bulk for recurring."""
         return self._db.get_recurring_tags_bulk(recurring_ids)
 
 
 class TransactionFacade(_DatabaseFacade):
+    """Represent the TransactionFacade class."""
+
     def build_monthly_context(self, tx: dict[str, Any]) -> dict[str, Any]:
+        """Return build monthly context."""
         return self._db.build_monthly_context(tx)
 
     def create(
@@ -257,6 +314,7 @@ class TransactionFacade(_DatabaseFacade):
         category_id: int | None = None,
         source: str | None = None,
     ) -> dict:
+        """Return create."""
         return self._db.add_transaction(
             account_id=account_id,
             tx_type=tx_type,
@@ -277,6 +335,7 @@ class TransactionFacade(_DatabaseFacade):
         )
 
     def get(self, tx_id: int) -> dict | None:
+        """Return get."""
         return self._db.get_transaction_by_id(tx_id)
 
     def list(
@@ -295,6 +354,7 @@ class TransactionFacade(_DatabaseFacade):
         tag_id: int | None = None,
         include_children: bool = False,
     ) -> list[dict]:
+        """Return list."""
         return self._db.get_transactions(
             limit=limit,
             tx_type=tx_type,
@@ -311,15 +371,19 @@ class TransactionFacade(_DatabaseFacade):
         )
 
     def update(self, tx_id: int, **kwargs: object) -> dict:
+        """Return update."""
         return self._db.update_transaction(tx_id, **kwargs)
 
     def delete(self, tx_id: int) -> None:
+        """Return delete."""
         self._db.delete_transaction(tx_id)
 
     def update_account(self, tx_id: int, account_id: int) -> dict:
+        """Return update account."""
         return self._db.update_transaction_account(tx_id, account_id)
 
     def update_category(self, tx_id: int, category: str | None) -> dict:
+        """Return update category."""
         return self._db.update_transaction_category(tx_id, category)
 
     def transfer_between_accounts(
@@ -333,6 +397,7 @@ class TransactionFacade(_DatabaseFacade):
         converted_amount: MoneyLike | None = None,
         description: str | None = None,
     ) -> tuple[dict, dict]:
+        """Return transfer between accounts."""
         return self._db.transfer_between_accounts(
             from_account_id,
             to_account_id,
@@ -356,6 +421,7 @@ class TransactionFacade(_DatabaseFacade):
         converted_amount: MoneyLike | None = None,
         description: str | None = None,
     ) -> tuple[dict, dict]:
+        """Return record credit card payment."""
         return self._db.record_credit_card_payment(
             from_account_id,
             credit_account_id,
@@ -375,6 +441,7 @@ class TransactionFacade(_DatabaseFacade):
         tx_date: str | None = None,
         note: str | None = None,
     ) -> dict[str, Any]:
+        """Return record balance adjustment."""
         return self._db.record_balance_adjustment(
             account_id,
             signed_amount,
@@ -391,6 +458,7 @@ class TransactionFacade(_DatabaseFacade):
         tx_date: str | None = None,
         note: str | None = None,
     ) -> dict[str, Any]:
+        """Return update balance adjustment."""
         return self._db.update_balance_adjustment(
             tx_id,
             account_id,
@@ -401,7 +469,10 @@ class TransactionFacade(_DatabaseFacade):
 
 
 class ReconciliationFacade(_DatabaseFacade):
+    """Represent the ReconciliationFacade class."""
+
     def list_groups(self, *, account_id: int, date_from: str, date_to: str) -> list[dict[str, Any]]:
+        """Return list groups."""
         return self._db.list_reconciliation_groups(account_id=account_id, date_from=date_from, date_to=date_to)
 
     def list_matches(
@@ -413,6 +484,7 @@ class ReconciliationFacade(_DatabaseFacade):
         transaction_ids: list[int] | None = None,
         group_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
+        """Return list matches."""
         return self._db.list_reconciliation_matches(
             account_id=account_id,
             date_from=date_from,
@@ -430,6 +502,7 @@ class ReconciliationFacade(_DatabaseFacade):
         system_transaction_ids: list[int],
         external_rows: list[dict[str, Any]],
     ) -> dict[str, Any]:
+        """Return reconcile."""
         return self._db.reconcile_transactions(
             account_id=account_id,
             date_from=date_from,
@@ -439,17 +512,23 @@ class ReconciliationFacade(_DatabaseFacade):
         )
 
     def clear_for_transactions(self, transaction_ids: list[int]) -> int:
+        """Return clear for transactions."""
         return self._db.clear_reconciliation_for_transactions(transaction_ids)
 
     def clear_groups(self, group_ids: list[str]) -> int:
+        """Return clear groups."""
         return self._db.clear_reconciliation_groups(group_ids)
 
 
 class RecurringFacade(_DatabaseFacade):
+    """Represent the RecurringFacade class."""
+
     def list(self) -> list[dict]:
+        """Return list."""
         return self._db.get_recurring()
 
     def get(self, recurring_id: int) -> dict | None:
+        """Return get."""
         return self._db._get_recurring_by_id(recurring_id)
 
     def create(
@@ -465,6 +544,7 @@ class RecurringFacade(_DatabaseFacade):
         category_id: int | None = None,
         tag_ids: builtins.list[int] | None = None,
     ) -> dict:
+        """Return create."""
         return self._db.add_recurring(
             account_id=account_id,
             tx_type=tx_type,
@@ -478,16 +558,21 @@ class RecurringFacade(_DatabaseFacade):
         )
 
     def update(self, recurring_id: int, **kwargs: object) -> dict:
+        """Return update."""
         return self._db.update_recurring(recurring_id, **kwargs)
 
     def delete(self, recurring_id: int) -> None:
+        """Return delete."""
         self._db.delete_recurring(recurring_id)
 
     def apply_for_month(self, year: int, month: int) -> builtins.list[dict]:
+        """Return apply for month."""
         return self._db.apply_recurring_for_month(year, month)
 
 
 class SavingsGoalFacade(_DatabaseFacade):
+    """Represent the SavingsGoalFacade class."""
+
     def create(
         self,
         name: str,
@@ -497,6 +582,7 @@ class SavingsGoalFacade(_DatabaseFacade):
         currency: str | None = None,
         category_name: str | None = None,
     ) -> dict:
+        """Return create."""
         return self._db.add_savings_goal(
             name,
             target_amount,
@@ -506,12 +592,15 @@ class SavingsGoalFacade(_DatabaseFacade):
         )
 
     def get(self, goal_id: int) -> dict:
+        """Return get."""
         return self._db.get_savings_goal(goal_id)
 
     def find_by_name(self, name: str) -> dict | None:
+        """Return find by name."""
         return self._db.get_savings_goal_by_name(name)
 
     def list(self) -> list[dict]:
+        """Return list."""
         return self._db.get_savings_goals()
 
     def get_or_create(
@@ -523,6 +612,7 @@ class SavingsGoalFacade(_DatabaseFacade):
         currency: str | None = None,
         category_name: str | None = None,
     ) -> dict:
+        """Return get or create."""
         return self._db.get_or_create_savings_goal(
             name,
             target_amount,
@@ -532,6 +622,7 @@ class SavingsGoalFacade(_DatabaseFacade):
         )
 
     def contribute(self, goal_id: int, amount: MoneyLike) -> dict:
+        """Return contribute."""
         return self._db.contribute_to_goal(goal_id, amount)
 
     def update(
@@ -542,6 +633,7 @@ class SavingsGoalFacade(_DatabaseFacade):
         target_amount: MoneyLike,
         target_date: str | None = None,
     ) -> dict:
+        """Return update."""
         return self._db.update_savings_goal(
             goal_id,
             name=name,
@@ -550,23 +642,31 @@ class SavingsGoalFacade(_DatabaseFacade):
         )
 
     def delete(self, goal_id: int) -> None:
+        """Return delete."""
         self._db.delete_savings_goal(goal_id)
 
 
 class SettingFacade(_DatabaseFacade):
+    """Represent the SettingFacade class."""
+
     def get(self, key: str) -> str | None:
+        """Return get."""
         return self._db.get_setting(key)
 
     def set(self, key: str, value: str) -> None:
+        """Return set."""
         self._db.set_setting(key, value)
 
     def get_default_currency(self) -> str:
+        """Return get default currency."""
         return self._db.get_default_currency()
 
     def get_savings_goals_parent_name(self) -> str:
+        """Return get savings goals parent name."""
         return self._db.get_savings_goals_parent_name()
 
     def list_currencies(self, region: str | None = "americas") -> list[dict]:
+        """Return list currencies."""
         return self._db.get_currencies(region=region)
 
     def seed_initial_data(
@@ -578,6 +678,7 @@ class SettingFacade(_DatabaseFacade):
         language: str = "en",
         update_existing_category_metadata: bool = True,
     ) -> None:
+        """Return seed initial data."""
         self._db.seed_initial_data(
             include_default_categories=include_default_categories,
             account_names=account_names,
@@ -587,36 +688,48 @@ class SettingFacade(_DatabaseFacade):
         )
 
     def seed_demo_data(self, *, reference_date: date | None = None) -> dict[str, Any]:
+        """Return seed demo data."""
         return self._db.seed_demo_data(reference_date=reference_date)
 
 
 class BudgetFacade(_DatabaseFacade):
+    """Represent the BudgetFacade class."""
+
     def __init__(self, db: _DatabaseBackend, io_service: DatabaseIOService) -> None:
+        """Initialize the BudgetFacade instance."""
         super().__init__(db)
         self._io_service = io_service
 
     def get_current(self) -> dict | None:
+        """Return get current."""
         return self._db.get_active_budget()
 
     def list(self, year: int | None = None) -> list[dict]:
+        """Return list."""
         return self._db.list_budgets(year=year)
 
     def get(self, budget_id: int) -> dict | None:
+        """Return get."""
         return self._db.get_budget_by_id(budget_id)
 
     def find_by_code(self, code: str) -> dict | None:
+        """Return find by code."""
         return self._db.get_budget_by_code(code)
 
     def get_default_for_year(self, year: int) -> dict | None:
+        """Return get default for year."""
         return self._db.get_default_budget_for_year(year)
 
     def set_default_for_year(self, budget_id: int) -> None:
+        """Return set default for year."""
         self._db.set_default_budget_for_year(budget_id)
 
     def create(self, code: str, year: int, currency: str | None = None) -> dict:
+        """Return create."""
         return self._db.create_budget(code, year, currency=currency)
 
     def delete(self, budget_id: int) -> None:
+        """Return delete."""
         self._db.delete_budget(budget_id)
 
     def upsert_amount(
@@ -627,21 +740,27 @@ class BudgetFacade(_DatabaseFacade):
         month: int,
         amount: MoneyLike,
     ) -> None:
+        """Return upsert amount."""
         self._db.upsert_budget_amount(budget_id, category_id, year, month, amount)
 
     def get_matrix(self, budget_id: int) -> dict[str, object]:
+        """Return get matrix."""
         return self._db.get_budget_matrix(budget_id)
 
     def has_values(self, budget_id: int) -> bool:
+        """Return whether  values."""
         return self._db.budget_has_values(budget_id)
 
     def propose(self, budget_id: int) -> dict[str, object]:
+        """Return propose."""
         return self._db.propose_budget(budget_id)
 
     def compare(self, budget_id: int, granularity: str = "quarterly") -> dict[str, object]:
+        """Return compare."""
         return self._db.get_budget_comparison(budget_id, granularity=granularity)
 
     def get_monthly_tracking(self, budget_id: int, year: int, month: int) -> dict[str, Any]:
+        """Return get monthly tracking."""
         return self._db.get_monthly_budget_tracking(budget_id, year, month)
 
     def reassign_monthly(
@@ -653,6 +772,7 @@ class BudgetFacade(_DatabaseFacade):
         target_category_id: int,
         amount: float,
     ) -> dict[str, Any]:
+        """Return reassign monthly."""
         return self._db.reassign_monthly_budget(
             budget_id,
             year,
@@ -663,14 +783,19 @@ class BudgetFacade(_DatabaseFacade):
         )
 
     def export_comparison_excel(self, filepath: str | Path, budget_id: int, *, granularity: str = "quarterly") -> int:
+        """Return export comparison excel."""
         return self._io_service.export_budget_comparison_excel(filepath, budget_id, granularity=granularity)
 
 
 class ReportFacade(_DatabaseFacade):
+    """Represent the ReportFacade class."""
+
     def get_summary(self, since_date: str | None = None) -> dict:
+        """Return get summary."""
         return self.summary(since_date=since_date)
 
     def summary(self, since_date: str | None = None) -> dict:
+        """Return summary."""
         return self._db.get_summary(since_date=since_date)
 
     @overload
@@ -680,7 +805,9 @@ class ReportFacade(_DatabaseFacade):
         *,
         categories: list[dict[str, Any]] | None = ...,
         as_dict: Literal[True],
-    ) -> dict[str, Money]: ...
+    ) -> dict[str, Money]:
+        """Return summarize financials."""
+        ...
 
     @overload
     def summarize_financials(
@@ -689,7 +816,9 @@ class ReportFacade(_DatabaseFacade):
         *,
         categories: list[dict[str, Any]] | None = ...,
         as_dict: Literal[False] = ...,
-    ) -> FinancialSummary: ...
+    ) -> FinancialSummary:
+        """Return summarize financials."""
+        ...
 
     @overload
     def summarize_financials(
@@ -698,7 +827,9 @@ class ReportFacade(_DatabaseFacade):
         *,
         categories: list[dict[str, Any]] | None = ...,
         as_dict: bool,
-    ) -> FinancialSummary | dict[str, Money]: ...
+    ) -> FinancialSummary | dict[str, Money]:
+        """Return summarize financials."""
+        ...
 
     def summarize_financials(
         self,
@@ -707,6 +838,7 @@ class ReportFacade(_DatabaseFacade):
         categories: list[dict[str, Any]] | None = None,
         as_dict: bool = False,
     ) -> FinancialSummary | dict[str, Money]:
+        """Return summarize financials."""
         return self._db.summarize_financials(transactions, categories=categories, as_dict=as_dict)
 
     def summarize_financials_filtered(
@@ -720,6 +852,7 @@ class ReportFacade(_DatabaseFacade):
         tag_id: int | None = None,
         include_children: bool = False,
     ) -> dict[str, Money]:
+        """Return summarize financials filtered."""
         return self._db.summarize_financials_filtered(
             tx_type=tx_type,
             account_id=account_id,
@@ -737,6 +870,7 @@ class ReportFacade(_DatabaseFacade):
         until_date: str | None = None,
         aggregate_by_parent: bool = False,
     ) -> list[dict]:
+        """Return get category summary."""
         return self.category_summary(
             since_date=since_date,
             until_date=until_date,
@@ -750,6 +884,7 @@ class ReportFacade(_DatabaseFacade):
         until_date: str | None = None,
         aggregate_by_parent: bool = False,
     ) -> list[dict]:
+        """Return category summary."""
         return self._db.get_category_summary(
             since_date=since_date,
             until_date=until_date,
@@ -762,6 +897,7 @@ class ReportFacade(_DatabaseFacade):
         since_date: str | None = None,
         until_date: str | None = None,
     ) -> dict[int, int]:
+        """Return tag transaction counts."""
         return self._db.get_tag_transaction_counts(since_date=since_date, until_date=until_date)
 
     def category_transaction_counts(
@@ -770,6 +906,7 @@ class ReportFacade(_DatabaseFacade):
         since_date: str | None = None,
         until_date: str | None = None,
     ) -> dict[str, int]:
+        """Return category transaction counts."""
         return self._db.get_category_transaction_counts(since_date=since_date, until_date=until_date)
 
     def get_mira_master_report(
@@ -779,6 +916,7 @@ class ReportFacade(_DatabaseFacade):
         month: int,
         relevance_threshold: float = 0.10,
     ) -> dict[str, Any]:
+        """Return get mira master report."""
         return self._db.get_mira_master_report(
             year=year,
             month=month,
@@ -786,6 +924,7 @@ class ReportFacade(_DatabaseFacade):
         )
 
     def get_budget_alerts(self) -> list[dict]:
+        """Return get budget alerts."""
         return self._db.get_budget_alerts()
 
     def budget_period_snapshot(
@@ -793,14 +932,19 @@ class ReportFacade(_DatabaseFacade):
         year: int,
         month: int,
     ) -> tuple[dict | None, dict[str, dict[str, float]] | None, list[dict[str, Any]] | None]:
+        """Return budget period snapshot."""
         return self._db.get_budget_period_snapshot(year, month)
 
 
 class BucketFacade(_DatabaseFacade):
+    """Represent the BucketFacade class."""
+
     def list(self) -> list[dict]:
+        """Return list."""
         return self._db.get_buckets()
 
     def find_by_name(self, name: str) -> dict | None:
+        """Return find by name."""
         return self._db.get_bucket_by_name(name)
 
     def upsert(
@@ -812,6 +956,7 @@ class BucketFacade(_DatabaseFacade):
         end_day: int = 31,
         alert_threshold: float = 0.75,
     ) -> dict:
+        """Return upsert."""
         return self._db.upsert_bucket(
             name,
             budget_amount,
@@ -822,31 +967,43 @@ class BucketFacade(_DatabaseFacade):
         )
 
     def update_spent(self, bucket_name: str, amount: MoneyLike) -> None:
+        """Return update spent."""
         self._db.update_bucket_spent(bucket_name, amount)
 
     def delete(self, name: str) -> None:
+        """Return delete."""
         self._db.delete_bucket(name)
 
 
 class BackupFacade(_DatabaseFacade):
+    """Represent the BackupFacade class."""
+
     def create(self, filepath: str | Path) -> Path:
+        """Return create."""
         return self._db.create_backup(filepath)
 
     def restore(self, filepath: str | Path) -> RestoreResult:
+        """Return restore."""
         return self._db.restore(filepath)
 
 
 class FeedbackFacade(_DatabaseFacade):
+    """Represent the FeedbackFacade class."""
+
     def pop_daily_contextual_message(self, *, on_date: date | None = None) -> dict[str, Any] | None:
+        """Return pop daily contextual message."""
         return self._db.pop_daily_contextual_message(on_date=on_date)
 
     def get_achievement_counter(self, counter_key: str) -> int:
+        """Return get achievement counter."""
         return self._db.get_achievement_counter(counter_key)
 
     def increment_achievement_counter(self, counter_key: str, *, step: int = 1) -> tuple[int, int]:
+        """Return increment achievement counter."""
         return self._db.increment_achievement_counter(counter_key, step=step)
 
     def month_savings_amount(self, year: int, month: int) -> float:
+        """Return month savings amount."""
         return self._db.get_month_savings_amount(year, month)
 
     def resolve_single_message(
@@ -860,6 +1017,7 @@ class FeedbackFacade(_DatabaseFacade):
         source: str | None = None,
         persist: bool = True,
     ) -> dict[str, Any] | None:
+        """Return resolve single message."""
         from mira.db.repositories.feedback_repository import MessageCandidate
 
         typed_candidates = []
@@ -893,7 +1051,10 @@ class FeedbackFacade(_DatabaseFacade):
 
 
 class IOFacade:
+    """Represent the IOFacade class."""
+
     def __init__(self, io_service: DatabaseIOService) -> None:
+        """Initialize the IOFacade instance."""
         self._io_service = io_service
 
     def export_transactions_csv(
@@ -907,6 +1068,7 @@ class IOFacade:
         category: str | None = None,
         search: str | None = None,
     ) -> int:
+        """Return export transactions csv."""
         return self._io_service.export_transactions_csv(
             filepath,
             tx_type=tx_type,
@@ -924,9 +1086,11 @@ class IOFacade:
         *,
         granularity: str = "quarterly",
     ) -> int:
+        """Return export budget comparison excel."""
         return self._io_service.export_budget_comparison_excel(filepath, budget_id, granularity=granularity)
 
     def import_transactions_csv(self, filepath: str) -> tuple[int, int]:
+        """Return import transactions csv."""
         return self._io_service.import_transactions_csv(filepath)
 
 
@@ -934,6 +1098,7 @@ class Database:
     """Umbrella database entrypoint composed of logical public facades."""
 
     def __init__(self, path: str | Path | None = None) -> None:
+        """Initialize the Database instance."""
         self._backend = _DatabaseBackend(path=path)
         self._io_service = DatabaseIOService(self._backend)
         self.account = AccountFacade(self._backend)
@@ -953,10 +1118,13 @@ class Database:
 
     @property
     def path(self) -> Path:
+        """Return path."""
         return self._backend.path
 
     def connect(self) -> None:
+        """Return connect."""
         self._backend.connect()
 
     def close(self) -> None:
+        """Return close."""
         self._backend.close()

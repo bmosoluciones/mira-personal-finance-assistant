@@ -265,6 +265,7 @@ class MetricsResult:
 
 
 def _normalize_report_language(language: str | None) -> str:
+    """Return normalize report language."""
     return "es" if str(language or "").strip().lower() == "es" else "en"
 
 
@@ -275,6 +276,7 @@ def _report_text(
     *,
     params: dict[str, Any] | None = None,
 ) -> str:
+    """Return report text."""
     text = {"es": es, "en": en}.get(language) or en
     if params:
         return text.format(**params)
@@ -282,28 +284,33 @@ def _report_text(
 
 
 def month_bounds(year: int, month: int) -> tuple[date, date]:
+    """Return month bounds."""
     last_day = calendar.monthrange(year, month)[1]
     return date(year, month, 1), date(year, month, last_day)
 
 
 def shift_month(year: int, month: int, delta: int) -> tuple[int, int]:
+    """Return shift month."""
     idx = (year * 12 + (month - 1)) + delta
     return idx // 12, (idx % 12) + 1
 
 
 def pct_change(current: float, previous: float) -> float | None:
+    """Return pct change."""
     if abs(previous) < 1e-9:
         return None
     return ((current - previous) / abs(previous)) * 100.0
 
 
 def safe_ratio(numerator: float, denominator: float) -> float | None:
+    """Return safe ratio."""
     if abs(denominator) < 1e-9:
         return None
     return numerator / denominator
 
 
 def _tx_text(tx: dict[str, Any]) -> str:
+    """Return tx text."""
     category = str(tx.get("category") or "").casefold()
     description = str(tx.get("description") or "").casefold()
     note = str(tx.get("note") or "").casefold()
@@ -311,6 +318,7 @@ def _tx_text(tx: dict[str, Any]) -> str:
 
 
 def _month_summary(transactions: list[dict[str, Any]], savings_lookup) -> SummaryMetrics:
+    """Return month summary."""
     summary: FinancialSummary = summarize_financial_kpis(transactions, savings_lookup)
     debt_payment_total = 0.0
     refunds_total = 0.0
@@ -344,6 +352,7 @@ def _month_summary(transactions: list[dict[str, Any]], savings_lookup) -> Summar
 
 
 def _trend_signal(section: str, variance: float | None) -> str:
+    """Return trend signal."""
     if variance is None or abs(variance) < 0.005:
         return "neutral"
     if section in {"income", "savings", "net"}:
@@ -352,6 +361,7 @@ def _trend_signal(section: str, variance: float | None) -> str:
 
 
 def _message_level_priority(level: str) -> int:
+    """Return message level priority."""
     return {"critical": 0, "warning": 1, "info": 2, "success": 3}.get(level, 4)
 
 
@@ -359,6 +369,7 @@ def _build_lifestyle_inflation_metrics(
     income_growth_pct: float | None,
     expense_growth_pct: float | None,
 ) -> LifestyleInflationMetrics:
+    """Return build lifestyle inflation metrics."""
     ratio = None
     safe_income_growth = income_growth_pct if income_growth_pct is not None else 0.0
     if (
@@ -386,6 +397,7 @@ def _build_goal_contribution_metrics(
     month_transactions: list[dict[str, Any]],
     savings_goals: list[dict[str, Any]],
 ) -> GoalContributionMetrics:
+    """Return build goal contribution metrics."""
     goal_category_names: dict[int, str] = {}
     for goal in savings_goals:
         category_id = goal.get("category_id")
@@ -429,6 +441,7 @@ def _build_savings_efficiency_metrics(
     goal_contribution_amount: float,
     has_active_goals: bool,
 ) -> SavingsEfficiencyMetrics:
+    """Return build savings efficiency metrics."""
     efficiency_pct = None
     if net_amount > 0:
         efficiency_pct = (goal_contribution_amount / net_amount) * 100.0
@@ -445,6 +458,7 @@ def _build_savings_efficiency_metrics(
 
 
 def _build_freedom_margin_metrics(income_total: float, total_expense: float) -> FreedomMarginMetrics:
+    """Return build freedom margin metrics."""
     if income_total <= 0:
         return FreedomMarginMetrics(pct=None, zone=None, label=None, is_red_alert=False)
 
@@ -473,6 +487,7 @@ def _build_freedom_margin_metrics(income_total: float, total_expense: float) -> 
 
 
 def _build_goal_completion_index(goal_rows: list[GoalRow], active_goals: list[GoalRow]) -> float | None:
+    """Return build goal completion index."""
     if active_goals:
         return round(sum(goal.progress_pct for goal in active_goals) / len(active_goals), 2)
     if goal_rows:
@@ -481,12 +496,14 @@ def _build_goal_completion_index(goal_rows: list[GoalRow], active_goals: list[Go
 
 
 def _mean(values: list[float]) -> float | None:
+    """Return mean."""
     if not values:
         return None
     return sum(values) / len(values)
 
 
 def _stddev(values: list[float]) -> float | None:
+    """Return stddev."""
     if len(values) < 2:
         return 0.0 if values else None
     avg = _mean(values)
@@ -501,6 +518,7 @@ def _classify_pct_trend(
     *,
     stable_threshold: float = 3.0,
 ) -> str:
+    """Return classify pct trend."""
     if pct_value is None:
         return "insufficient_history"
     if pct_value >= stable_threshold:
@@ -511,6 +529,7 @@ def _classify_pct_trend(
 
 
 def _build_trend_metric(current_value: float, previous_value: float | None) -> dict[str, Any]:
+    """Return build trend metric."""
     pct_value = pct_change(current_value, previous_value) if previous_value is not None else None
     return {
         "current": round(current_value, 2),
@@ -521,6 +540,7 @@ def _build_trend_metric(current_value: float, previous_value: float | None) -> d
 
 
 def _project_next_value(series: list[float]) -> float | None:
+    """Return project next value."""
     if not series:
         return None
     if len(series) == 1:
@@ -533,6 +553,7 @@ def _project_next_value(series: list[float]) -> float | None:
 
 
 def _build_financial_balance_metric(income_total: float, total_expense: float) -> dict[str, Any]:
+    """Return build financial balance metric."""
     if income_total <= 0:
         return {"classification": "insufficient_income", "gap_amount": round(income_total - total_expense, 2)}
 
@@ -551,6 +572,7 @@ def _build_financial_balance_metric(income_total: float, total_expense: float) -
 
 
 def _build_cashflow_stability_metric(net_series: list[float], income_series: list[float]) -> dict[str, Any]:
+    """Return build cashflow stability metric."""
     if len(net_series) < 3:
         return {"classification": "insufficient_history", "volatility_pct": None}
     avg_income = _mean([value for value in income_series if value > 0]) or 0.0
@@ -569,6 +591,7 @@ def _build_cashflow_stability_metric(net_series: list[float], income_series: lis
 
 
 def _build_spending_efficiency_metric(income_total: float, total_expense: float) -> dict[str, Any]:
+    """Return build spending efficiency metric."""
     if income_total <= 0:
         return {"classification": "insufficient_income", "spent_pct": None, "retained_pct": None}
     spent_pct = (total_expense / income_total) * 100.0
@@ -592,6 +615,7 @@ def _build_spending_efficiency_metric(income_total: float, total_expense: float)
 
 
 def _build_expense_drift_metric(expense_series: list[float]) -> dict[str, Any]:
+    """Return build expense drift metric."""
     if len(expense_series) < 4:
         return {"direction": "insufficient_history", "pct": None}
     split_index = max(1, len(expense_series) // 2)
@@ -611,6 +635,7 @@ def _build_deficit_risk_metric(
     expense_trend: dict[str, Any],
     projected_net: float | None,
 ) -> dict[str, Any]:
+    """Return build deficit risk metric."""
     score = 10.0
     if current_net < 0:
         score += 35.0
@@ -633,6 +658,7 @@ def _build_deficit_risk_metric(
 
 
 def _build_income_fragility_metric(income_series: list[float], income_trend: dict[str, Any]) -> dict[str, Any]:
+    """Return build income fragility metric."""
     positive_income = [value for value in income_series if value > 0]
     avg_income = _mean(positive_income) or 0.0
     if avg_income <= 0:
@@ -660,6 +686,7 @@ def _build_financial_momentum_metric(
     income_trend: dict[str, Any],
     expense_trend: dict[str, Any],
 ) -> dict[str, Any]:
+    """Return build financial momentum metric."""
     gap_dir = str(gap_trend.get("direction") or "")
     income_dir = str(income_trend.get("direction") or "")
     expense_dir = str(expense_trend.get("direction") or "")
@@ -682,6 +709,7 @@ def _build_financial_momentum_metric(
 
 
 def _build_week_spread_metric(total_expense: float, daily_expense_totals: dict[str, float]) -> dict[str, Any]:
+    """Return build week spread metric."""
     if total_expense <= 0 or not daily_expense_totals:
         return {"classification": "no_expense", "top3_share_pct": None, "active_days": 0}
     top3_share = (sum(sorted(daily_expense_totals.values(), reverse=True)[:3]) / total_expense) * 100.0
@@ -704,6 +732,7 @@ def _build_spending_pattern_metric(
     daily_expense_totals: dict[str, float],
     expense_trend: dict[str, Any],
 ) -> dict[str, Any]:
+    """Return build spending pattern metric."""
     spread = _build_week_spread_metric(total_expense, daily_expense_totals)
     spread_classification = str(spread.get("classification") or "")
     if spread_classification == "concentrated":
@@ -726,6 +755,7 @@ def _build_runway_trend_metric(
     current_days: int,
     previous_days: int,
 ) -> dict[str, Any]:
+    """Return build runway trend metric."""
     if account_balance_total <= 0 or current_expense_total <= 0 or previous_expense_total <= 0:
         return {"direction": "insufficient_history", "pct": None}
     current_runway = account_balance_total / (current_expense_total / current_days)
@@ -746,6 +776,7 @@ def _build_expense_control_metric(
     expense_drift: dict[str, Any],
     spending_pattern: dict[str, Any],
 ) -> dict[str, Any]:
+    """Return build expense control metric."""
     pattern = str(spending_pattern.get("classification") or "")
     trend = str(expense_trend.get("direction") or "")
     drift = str(expense_drift.get("direction") or "")
@@ -762,6 +793,7 @@ def _build_expense_control_metric(
 
 
 def _build_income_control_metric(income_fragility: dict[str, Any]) -> dict[str, Any]:
+    """Return build income control metric."""
     fragility = str(income_fragility.get("classification") or "")
     if fragility == "high":
         classification = "fragile"
@@ -775,6 +807,7 @@ def _build_income_control_metric(income_fragility: dict[str, Any]) -> dict[str, 
 
 
 def _build_cashflow_projection_metric(income_series: list[float], expense_series: list[float]) -> dict[str, Any]:
+    """Return build cashflow projection metric."""
     projected_income = _project_next_value(income_series[-3:] if len(income_series) >= 3 else income_series)
     projected_expense = _project_next_value(expense_series[-3:] if len(expense_series) >= 3 else expense_series)
     if projected_income is None or projected_expense is None:
@@ -806,6 +839,7 @@ def _build_sustainability_score(
     deficit_risk: dict[str, Any],
     income_fragility: dict[str, Any],
 ) -> dict[str, Any]:
+    """Return build sustainability score."""
     score = 50.0
     balance_classification = str(financial_balance.get("classification") or "")
     if balance_classification == "healthy":
@@ -849,12 +883,14 @@ class GoalProgressAnalyzer:
         *,
         language: str = "en",
     ) -> None:
+        """Initialize the GoalProgressAnalyzer instance."""
         self._goals = savings_goals
         self._year = year
         self._month = month
         self._language = _normalize_report_language(language)
 
     def _t(self, es: str, en: str, *, params: dict[str, Any] | None = None) -> str:
+        """Return t."""
         return _report_text(self._language, es, en, params=params)
 
     def analyze(self) -> GoalAnalysisResult:
@@ -974,6 +1010,7 @@ class ReportMetricsCalculator:
     """Computes KPIs, comparisons, and advanced financial metrics from transaction data."""
 
     def __init__(self, inputs: ReportInputs, goal_result: GoalAnalysisResult) -> None:
+        """Initialize the ReportMetricsCalculator instance."""
         self._inputs = inputs
         self._goal_result = goal_result
         self._language = _normalize_report_language(inputs.language)
@@ -988,9 +1025,11 @@ class ReportMetricsCalculator:
         )
 
     def _t(self, es: str, en: str, *, params: dict[str, Any] | None = None) -> str:
+        """Return t."""
         return _report_text(self._language, es, en, params=params)
 
     def _compute_credit_card_stats(self) -> CreditCardStats:
+        """Return compute credit card stats."""
         credit_account_ids = {
             int(account["id"])
             for account in self._inputs.accounts
@@ -1032,6 +1071,7 @@ class ReportMetricsCalculator:
     def _compute_trailing_data(
         self,
     ) -> tuple[AvgMetrics, AvgMetrics, list[SummaryMetrics]]:
+        """Return compute trailing data."""
         trailing_3_summaries = [_month_summary(items, self._savings_lookup) for items in self._inputs.trailing_3]
         trailing_6_summaries = [
             _month_summary(items, self._savings_lookup) for _y, _m, items in self._inputs.comparison_trailing_6
@@ -1041,6 +1081,7 @@ class ReportMetricsCalculator:
         ]
 
         def _avg(summaries: list[SummaryMetrics], attr: str) -> float | None:
+            """Return avg."""
             if not summaries:
                 return None
             return round(sum(getattr(s, attr) for s in summaries) / len(summaries), 2)
@@ -1060,6 +1101,7 @@ class ReportMetricsCalculator:
         return avg_3, avg_6, historical_6_summaries
 
     def _compute_ytd(self) -> list[dict[str, Any]]:
+        """Return compute ytd."""
         ytd: list[dict[str, Any]] = []
         cum_income = 0.0
         cum_expense = 0.0
@@ -1084,6 +1126,7 @@ class ReportMetricsCalculator:
         return ytd
 
     def _build_category_metadata(self) -> tuple[dict[int, Any], dict[str, Any], dict[str, Any]]:
+        """Return build category metadata."""
         by_id: dict[int, Any] = {int(cat["id"]): cat for cat in self._inputs.categories if cat.get("id") is not None}
         roots_meta: dict[str, dict[str, Any]] = {}
         root_rollup_meta: dict[str, dict[str, Any]] = {}
@@ -1167,6 +1210,7 @@ class ReportMetricsCalculator:
         roots_meta: dict[str, Any],
         root_rollup_meta: dict[str, Any],
     ) -> dict[str, Any]:
+        """Return process transactions."""
         top_category_totals: dict[str, float] = defaultdict(float)
         top_category_children: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         tag_totals: dict[str, float] = defaultdict(float)
@@ -1245,6 +1289,7 @@ class ReportMetricsCalculator:
         }
 
     def _build_waterfall_categories(self, waterfall_expense_totals: dict[str, float]) -> dict[str, Any]:
+        """Return build waterfall categories."""
         waterfall_category_totals = sorted(
             ((name, round(amount, 2)) for name, amount in waterfall_expense_totals.items() if amount > 0),
             key=lambda item: item[1],
@@ -1277,7 +1322,10 @@ class ReportMetricsCalculator:
         }
 
     def _build_stacked_history(self, roots_meta: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+        """Return build stacked history."""
+
         def _monthly_root_stack(monthly_txs: list[dict[str, Any]], section: str) -> dict[str, float]:
+            """Return monthly root stack."""
             acc: dict[str, float] = defaultdict(float)
             for tx in monthly_txs:
                 tx_type = str(tx.get("type") or "")
@@ -1303,6 +1351,7 @@ class ReportMetricsCalculator:
         return stacked_6
 
     def _build_budget_context(self) -> BudgetContextData:
+        """Return build budget context."""
         if self._inputs.budget is None or self._inputs.budget_monthly_by_type is None:
             return BudgetContextData(
                 has_budget=False,
@@ -1386,6 +1435,7 @@ class ReportMetricsCalculator:
         debt_payment_total = current_summary.debt_payment
 
         def _compare_value(current: float, base: float | None, section: str) -> ComparisonResult:
+            """Return compare value."""
             variance = None if base is None else round(current - base, 2)
             pct = pct_change(current, base) if base is not None else None
             return ComparisonResult(base=base, variance=variance, pct=pct, signal=_trend_signal(section, variance))
@@ -1645,6 +1695,7 @@ class WaterfallChartBuilder:
         all_waterfall_category_totals: list[tuple[str, float]],
         language: str = "en",
     ) -> None:
+        """Initialize the WaterfallChartBuilder instance."""
         self._income_total = income_total
         self._net_after_expenses = net_after_expenses
         self._displayed_categories = displayed_categories
@@ -1655,6 +1706,7 @@ class WaterfallChartBuilder:
         self._language = _normalize_report_language(language)
 
     def _t(self, es: str, en: str, *, params: dict[str, Any] | None = None) -> str:
+        """Return t."""
         return _report_text(self._language, es, en, params=params)
 
     def build(self) -> dict[str, Any]:
@@ -1750,6 +1802,7 @@ class MessageBuilder:
     """
 
     def __init__(self) -> None:
+        """Initialize the MessageBuilder instance."""
         self._messages: list[dict[str, Any]] = []
 
     def add(self, code: str, level: str, text: str, *, always: bool = False, pct: float | None = None) -> None:
@@ -1775,6 +1828,7 @@ class ReportMessageGenerator:
         relevance_threshold: float = 0.10,
         language: str = "en",
     ) -> None:
+        """Initialize the ReportMessageGenerator instance."""
         self._metrics = metrics
         self._goal_data = goal_data
         self._savings_goals = savings_goals
@@ -1784,9 +1838,11 @@ class ReportMessageGenerator:
         self._language = _normalize_report_language(language)
 
     def _t(self, es: str, en: str, *, params: dict[str, Any] | None = None) -> str:
+        """Return t."""
         return _report_text(self._language, es, en, params=params)
 
     def _generate_income_vs_previous(self, builder: MessageBuilder) -> None:
+        """Return generate income vs previous."""
         income_vs_previous = self._metrics.income_vs_previous
         income_prev_pct = income_vs_previous.pct
         lifestyle_inflation_metrics = self._metrics.lifestyle_inflation_metrics
@@ -1859,6 +1915,7 @@ class ReportMessageGenerator:
                 )
 
     def _generate_budget_messages(self, builder: MessageBuilder) -> None:
+        """Return generate budget messages."""
         budget_context = self._metrics.budget_context
         income_vs_budget = self._metrics.income_vs_budget
         expense_vs_budget = self._metrics.expense_vs_budget
@@ -1916,6 +1973,7 @@ class ReportMessageGenerator:
             )
 
     def _generate_net_messages(self, builder: MessageBuilder) -> None:
+        """Return generate net messages."""
         current_summary = self._metrics.current_summary
         savings_efficiency_metrics = self._metrics.savings_efficiency_metrics
         if current_summary.net < 0:
@@ -1953,6 +2011,7 @@ class ReportMessageGenerator:
                 )
 
     def _generate_debt_messages(self, builder: MessageBuilder) -> None:
+        """Return generate debt messages."""
         debt_payment_total = self._metrics.debt_payment_total
         debt_payment_income_pct = self._metrics.debt_payment_income_pct
         debt_payment_expense_pct = self._metrics.debt_payment_expense_pct
@@ -2027,6 +2086,7 @@ class ReportMessageGenerator:
                 )
 
     def _generate_spending_pattern_messages(self, builder: MessageBuilder) -> None:
+        """Return generate spending pattern messages."""
         total_expense = self._metrics.total_expense
         weekend_total = self._metrics.weekend_total
         weekend_days = self._metrics.weekend_days
@@ -2085,6 +2145,7 @@ class ReportMessageGenerator:
             )
 
     def _generate_burn_rate_message(self, builder: MessageBuilder) -> None:
+        """Return generate burn rate message."""
         burn_days = self._metrics.burn_days
         if burn_days is not None:
             builder.add(
@@ -2098,6 +2159,7 @@ class ReportMessageGenerator:
             )
 
     def _generate_goal_messages(self, builder: MessageBuilder) -> None:
+        """Return generate goal messages."""
         avg_3 = self._metrics.avg_3
         current_summary = self._metrics.current_summary
         completed_goals = self._goal_data.completed_goals
@@ -2215,6 +2277,7 @@ class ReportMessageGenerator:
                 break
 
     def _generate_50_30_20_message(self, builder: MessageBuilder) -> None:
+        """Return generate 50 30 20 message."""
         mira_50_30_20 = self._metrics.mira_50_30_20
         builder.add(
             "mira_50_30_20",
@@ -2232,6 +2295,7 @@ class ReportMessageGenerator:
         )
 
     def _generate_freedom_margin_message(self, builder: MessageBuilder) -> None:
+        """Return generate freedom margin message."""
         freedom_margin_metrics = self._metrics.freedom_margin_metrics
         freedom_margin_pct = cast(float | None, freedom_margin_metrics.pct)
         if freedom_margin_pct is None:
@@ -2286,6 +2350,7 @@ class ReportMessageGenerator:
         )
 
     def _generate_ratios_messages(self, builder: MessageBuilder) -> None:
+        """Return generate ratios messages."""
         income_total = self._metrics.income_total
         savings_rate = self._metrics.savings_rate
         expense_income_ratio = self._metrics.expense_income_ratio

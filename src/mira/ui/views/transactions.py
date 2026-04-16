@@ -64,6 +64,7 @@ class TransactionsView(QWidget):
         parent: QWidget | None = None,
         service: TransactionsViewService | None = None,
     ) -> None:
+        """Initialize the TransactionsView instance."""
         super().__init__(parent)
         self._db = db
         self._service = service or TransactionsViewService(db)
@@ -74,6 +75,7 @@ class TransactionsView(QWidget):
         self._build_ui()
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(8)
@@ -226,6 +228,7 @@ class TransactionsView(QWidget):
         self._table.customContextMenuRequested.connect(self._open_context_menu)
 
     def _apply_filter_options(self, options: TransactionsFilterOptions) -> None:
+        """Return apply filter options."""
         self._filter_options = options
         self._acc_filter.blockSignals(True)
         self._cat_filter.blockSignals(True)
@@ -267,6 +270,7 @@ class TransactionsView(QWidget):
         self._tag_filter.blockSignals(False)
 
     def _on_clear_filter(self) -> None:
+        """Return on clear filter."""
         first = date.today().replace(day=1)
         self._from_date.setDate(_date_to_qdate(first))
         today = date.today()
@@ -278,6 +282,7 @@ class TransactionsView(QWidget):
         self.refresh()
 
     def _get_selected_tx(self) -> dict | None:
+        """Return get selected tx."""
         rows = self._table.selectedItems()
         if not rows:
             return None
@@ -287,6 +292,7 @@ class TransactionsView(QWidget):
         return self._tx_data[row]
 
     def _adjustment_action_blocked_message(self) -> str:
+        """Return adjustment action blocked message."""
         return _tr_db(
             self._db,
             "transactions.balance_adjustment.blocked",
@@ -294,9 +300,11 @@ class TransactionsView(QWidget):
         )
 
     def _is_balance_adjustment_selected(self, tx: dict | None) -> bool:
+        """Return whether balance adjustment selected."""
         return tx is not None and is_balance_adjustment_transaction(tx)
 
     def _on_add(self) -> None:
+        """Return on add."""
         from mira.ui.dialogs import TransactionDialog
 
         dlg = TransactionDialog(self._db, parent=self)
@@ -313,6 +321,7 @@ class TransactionsView(QWidget):
                 )
 
     def _on_edit(self) -> None:
+        """Return on edit."""
         tx = self._get_selected_tx()
         if tx is None:
             return
@@ -334,6 +343,7 @@ class TransactionsView(QWidget):
             self.refresh()
 
     def _on_delete(self) -> None:
+        """Return on delete."""
         tx = self._get_selected_tx()
         if tx is None:
             return
@@ -353,6 +363,7 @@ class TransactionsView(QWidget):
             self.refresh()
 
     def _on_duplicate(self) -> None:
+        """Return on duplicate."""
         from mira.ui.dialogs import TransactionDialog
 
         tx = self._get_selected_tx()
@@ -380,6 +391,7 @@ class TransactionsView(QWidget):
                 )
 
     def _on_transfer(self) -> None:
+        """Return on transfer."""
         from mira.ui.dialogs import TransferDialog
 
         dlg = TransferDialog(self._db, parent=self)
@@ -389,6 +401,7 @@ class TransactionsView(QWidget):
             self.refresh()
 
     def _on_credit_payment(self) -> None:
+        """Return on credit payment."""
         from mira.ui.dialogs import TransferDialog
 
         dlg = TransferDialog(self._db, parent=self, credit_payment=True)
@@ -406,6 +419,7 @@ class TransactionsView(QWidget):
         self._on_credit_payment()
 
     def _on_change_account_quick(self) -> None:
+        """Return on change account quick."""
         tx = self._get_selected_tx()
         if tx is None:
             _notify_info(
@@ -467,6 +481,7 @@ class TransactionsView(QWidget):
         self.refresh()
 
     def _on_change_category_quick(self) -> None:
+        """Return on change category quick."""
         tx = self._get_selected_tx()
         if tx is None:
             _notify_info(
@@ -536,6 +551,7 @@ class TransactionsView(QWidget):
         self.refresh()
 
     def _on_change_date_quick(self) -> None:
+        """Return on change date quick."""
         tx = self._get_selected_tx()
         if tx is None:
             _notify_info(
@@ -600,6 +616,7 @@ class TransactionsView(QWidget):
         self.refresh()
 
     def _open_context_menu(self, pos: QPoint) -> None:
+        """Return open context menu."""
         if not _select_row_at_pos(self._table, pos):
             return
         menu = QMenu(self)
@@ -630,6 +647,7 @@ class TransactionsView(QWidget):
         self._on_add()
 
     def refresh(self) -> None:
+        """Return refresh."""
         since = self._from_date.date().toString("yyyy-MM-dd")
         until = self._to_date.date().toString("yyyy-MM-dd")
         acc_id = self._acc_filter.currentData()
@@ -651,6 +669,7 @@ class TransactionsView(QWidget):
         self._apply_state(state)
 
     def _apply_state(self, state: TransactionsViewState) -> None:
+        """Return apply state."""
         self._tx_data = list(state.transactions)
         self._tags_by_transaction = dict(state.tags_by_transaction)
         self._savings_categories = set(state.savings_categories)

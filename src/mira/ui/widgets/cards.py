@@ -12,6 +12,7 @@ class CardWidget(QFrame):
     """A summary card showing a title and a large numeric value."""
 
     def __init__(self, title: str, value: str = "0.00", color: str = "#CCC") -> None:
+        """Initialize the CardWidget instance."""
         super().__init__()
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet("QFrame{background:#3C4C61;border:1px solid #6E8198;border-radius:10px;}")
@@ -47,9 +48,11 @@ class CardWidget(QFrame):
         layout.addWidget(self._secondary_context_lbl)
 
     def set_value(self, value: str) -> None:
+        """Return set value."""
         self._value_lbl.setText(value)
 
     def set_color(self, color: str) -> None:
+        """Return set color."""
         self._value_lbl.setStyleSheet(
             f"font-size:26px;font-weight:700;color:{color};background:transparent;border:none;"
         )
@@ -62,6 +65,7 @@ class CardWidget(QFrame):
         secondary: str = "",
         secondary_color: str = "#9FB3C8",
     ) -> None:
+        """Return set context."""
         self._primary_context_lbl.setText(primary)
         self._primary_context_lbl.setStyleSheet(
             f"font-size:10px;color:{primary_color};background:transparent;border:none;"

@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 import calendar
 from collections import defaultdict
@@ -17,21 +20,54 @@ from mira.transaction_kinds import analytics_included_expr, is_analytics_exclude
 
 
 class BudgetRepository:
+    """Represent the BudgetRepository class."""
+
     if TYPE_CHECKING:
 
-        def get_categories(
-            self, cat_type: str | None = None, *, include_savings: bool = True
-        ) -> list[dict[str, Any]]: ...
-        def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict[str, Any]]: ...
-        def _serialize_transaction_row(self, row: Transaction) -> dict[str, Any]: ...
-        def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def _cents_to_decimal(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None: ...
-        def _round_money(self, value: object) -> Any: ...
-        def _atomic(self) -> Any: ...
-        def get_setting(self, key: str) -> str | None: ...
-        def set_setting(self, key: str, value: str) -> None: ...
-        def get_default_currency(self) -> str: ...
+        def get_categories(self, cat_type: str | None = None, *, include_savings: bool = True) -> list[dict[str, Any]]:
+            """Return get categories."""
+
+        def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
+            """Return get accounts."""
+            ...
+
+        def _serialize_transaction_row(self, row: Transaction) -> dict[str, Any]:
+            """Return serialize transaction row."""
+            ...
+
+        def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return money to decimal."""
+            ...
+
+        def _cents_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return cents to decimal."""
+            ...
+
+        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
+            """Return money to cents."""
+            ...
+
+        def _round_money(self, value: object) -> Any:
+            """Return round money."""
+            ...
+
+        def _atomic(self) -> Any:
+            """Return atomic."""
+            ...
+
+        def get_setting(self, key: str) -> str | None:
+            """Return get setting."""
+            ...
+
+        def set_setting(self, key: str, value: str) -> None:
+            """Return set setting."""
+            ...
+
+        def get_default_currency(self) -> str:
+            """Return get default currency."""
+            ...
+
+            ...
 
     def _budget_master_totals_query(
         self,
@@ -39,6 +75,7 @@ class BudgetRepository:
         year: int | None = None,
         budget_id: int | None = None,
     ):
+        """Return budget master totals query."""
         category = Category.alias()
         income_sum = fn.COALESCE(
             fn.SUM(Case(None, (((category.type == "income"), BudgetDetail.amount),), 0)),
@@ -77,6 +114,7 @@ class BudgetRepository:
         )
 
     def _serialize_budget_master_row(self, row: dict[str, Any]) -> dict[str, Any]:
+        """Return serialize budget master row."""
         created_at = row["created_at"]
         created_value = (
             created_at.strftime("%Y-%m-%d %H:%M:%S") if isinstance(created_at, datetime) else str(created_at)
@@ -100,6 +138,7 @@ class BudgetRepository:
         source_category_id: int,
         target_category_id: int,
     ) -> None:
+        """Return merge budget details for categories."""
         source_details = BudgetDetail.select().where(BudgetDetail.category == source_category_id)
         for detail in source_details:
             target_detail = BudgetDetail.get_or_none(
@@ -119,12 +158,14 @@ class BudgetRepository:
                 (BudgetDetail.update(category=target_category_id).where(BudgetDetail.id == detail.id).execute())
 
     def _normalise_budget_code(self, code: str) -> str:
+        """Return normalise budget code."""
         normalized = code.strip()
         if not normalized:
             raise ValueError("Budget code cannot be empty")
         return normalized
 
     def _sync_budget_detail_rows(self, budget_id: int, year: int) -> None:
+        """Return sync budget detail rows."""
         categories = self.get_categories(include_savings=False)
         if not categories:
             return
@@ -140,6 +181,7 @@ class BudgetRepository:
                 ).on_conflict_ignore().execute()
 
     def _budget_periods(self, granularity: str) -> list[dict[str, Any]]:
+        """Return budget periods."""
         if granularity == "annual":
             return [{"key": "annual", "label": "Anual", "months": list(range(1, 13))}]
         if granularity == "semiannual":
@@ -158,6 +200,7 @@ class BudgetRepository:
         ]
 
     def _budget_savings_category_lookup(self) -> tuple[set[int], set[str]]:
+        """Return budget savings category lookup."""
         savings_category_ids: set[int] = set()
         savings_category_names: set[str] = set()
         for row in self.get_categories(cat_type="expense", include_savings=True):
@@ -172,6 +215,7 @@ class BudgetRepository:
         return savings_category_ids, savings_category_names
 
     def _get_budget_transactions_for_period(self, start_date: date, end_date: date) -> list[dict[str, Any]]:
+        """Return get budget transactions for period."""
         account_currency_by_id = {int(row["id"]): str(row.get("currency") or "").upper() for row in self.get_accounts()}
         savings_category_ids, savings_category_names = self._budget_savings_category_lookup()
         query = (
@@ -199,6 +243,7 @@ class BudgetRepository:
         return rows
 
     def _get_budget_transactions(self, year: int) -> list[dict[str, Any]]:
+        """Return get budget transactions."""
         return self._get_budget_transactions_for_period(date(year, 1, 1), date(year, 12, 31))
 
     def _get_budget_execution_totals(
@@ -210,6 +255,7 @@ class BudgetRepository:
         tx_types: tuple[str, ...],
         month: int | None = None,
     ) -> tuple[dict[tuple[int, int], Any], int]:
+        """Return get budget execution totals."""
         if not category_ids:
             return {}, 0
 
@@ -266,6 +312,7 @@ class BudgetRepository:
         return dict(totals), excluded_transactions
 
     def _find_budget_source_year(self, budget_year: int) -> int | None:
+        """Return find budget source year."""
         if budget_year <= 1900:
             return None
         savings_category_ids, savings_category_names = self._budget_savings_category_lookup()
@@ -310,12 +357,14 @@ class BudgetRepository:
         tx: dict[str, Any],
         budget_currency: str,
     ):
+        """Return transaction amount for budget currency."""
         account_currency = str(tx.get("account_currency") or "").strip().upper()
         if account_currency == budget_currency:
             return self._money_to_decimal(tx.get("amount")) or MONEY_ZERO
         return None
 
     def get_active_budget(self) -> dict | None:
+        """Return get active budget."""
         active_code = (self.get_setting("active_budget_code") or "").strip()
         if active_code:
             budget = self.get_budget_by_code(active_code)
@@ -325,6 +374,7 @@ class BudgetRepository:
         return self.get_default_budget_for_year(current_year)
 
     def list_budgets(self, year: int | None = None) -> list[dict]:
+        """Return list budgets."""
         query = self._budget_master_totals_query(year=year).order_by(
             BudgetMaster.year.desc(),
             BudgetMaster.is_default_year.desc(),
@@ -333,6 +383,7 @@ class BudgetRepository:
         return [self._serialize_budget_master_row(row) for row in query.dicts()]
 
     def get_budget_by_id(self, budget_id: int) -> dict | None:
+        """Return get budget by id."""
         row = next(iter(self._budget_master_totals_query(budget_id=budget_id).limit(1).dicts()), None)
         if row is None:
             return None
@@ -341,6 +392,7 @@ class BudgetRepository:
         return budget
 
     def get_budget_by_code(self, code: str) -> dict | None:
+        """Return get budget by code."""
         normalized = self._normalise_budget_code(code)
         row = BudgetMaster.get_or_none(BudgetMaster.code == normalized)
         if row is None:
@@ -348,6 +400,7 @@ class BudgetRepository:
         return self.get_budget_by_id(int(row.id))
 
     def get_default_budget_for_year(self, year: int) -> dict | None:
+        """Return get default budget for year."""
         row = (
             BudgetMaster.select(BudgetMaster.id)
             .where((BudgetMaster.year == int(year)) & (BudgetMaster.is_default_year == True))  # noqa: E712
@@ -359,6 +412,7 @@ class BudgetRepository:
         return self.get_budget_by_id(int(row.id))
 
     def _has_explicit_default_budget_for_year(self, year: int) -> bool:
+        """Return whether  explicit default budget for year."""
         return (
             BudgetMaster.select(BudgetMaster.id)
             .where((BudgetMaster.year == int(year)) & (BudgetMaster.is_default_year == True))  # noqa: E712
@@ -368,6 +422,7 @@ class BudgetRepository:
         )
 
     def set_default_budget_for_year(self, budget_id: int) -> None:
+        """Return set default budget for year."""
         budget = self.get_budget_by_id(budget_id)
         if budget is None:
             raise ValueError(f"Budget {budget_id} not found")
@@ -377,6 +432,7 @@ class BudgetRepository:
             BudgetMaster.update(is_default_year=True).where(BudgetMaster.id == int(budget_id)).execute()
 
     def create_budget(self, code: str, year: int, currency: str | None = None) -> dict:
+        """Return create budget."""
         normalized_code = self._normalise_budget_code(code)
         normalized_currency = (currency or self.get_default_currency()).strip().upper()
         if year < 1900 or year > 9999:
@@ -402,6 +458,7 @@ class BudgetRepository:
         return budget
 
     def delete_budget(self, budget_id: int) -> None:
+        """Return delete budget."""
         budget = self.get_budget_by_id(budget_id)
         year = int(budget["year"]) if budget is not None else None
         was_default = bool(int(budget.get("is_default_year") or 0)) if budget is not None else False
@@ -422,6 +479,7 @@ class BudgetRepository:
         month: int,
         amount: MoneyLike,
     ) -> None:
+        """Return upsert budget amount."""
         if month < 1 or month > 12:
             raise ValueError("Budget month must be between 1 and 12")
         BudgetDetail.insert(
@@ -436,6 +494,7 @@ class BudgetRepository:
         ).execute()
 
     def get_budget_matrix(self, budget_id: int) -> dict[str, object]:
+        """Return get budget matrix."""
         budget = self.get_budget_by_id(budget_id)
         if budget is None:
             raise ValueError(f"Budget {budget_id} not found")
@@ -502,6 +561,7 @@ class BudgetRepository:
         }
 
     def budget_has_values(self, budget_id: int) -> bool:
+        """Return budget has values."""
         return (
             BudgetDetail.select(BudgetDetail.id)
             .where((BudgetDetail.budget == budget_id) & (fn.ABS(BudgetDetail.amount) > 0))
@@ -511,6 +571,7 @@ class BudgetRepository:
         )
 
     def propose_budget(self, budget_id: int) -> dict[str, object]:
+        """Return propose budget."""
         budget = self.get_budget_by_id(budget_id)
         if budget is None:
             raise ValueError(f"Budget {budget_id} not found")
@@ -580,6 +641,7 @@ class BudgetRepository:
         }
 
     def get_budget_comparison(self, budget_id: int, granularity: str = "quarterly") -> dict[str, object]:
+        """Return get budget comparison."""
         budget = self.get_budget_by_id(budget_id)
         if budget is None:
             raise ValueError(f"Budget {budget_id} not found")
@@ -724,6 +786,7 @@ class BudgetRepository:
         }
 
     def get_monthly_budget_tracking(self, budget_id: int, year: int, month: int) -> dict[str, Any]:
+        """Return get monthly budget tracking."""
         budget = self.get_budget_by_id(budget_id)
         if budget is None:
             raise ValueError(f"Budget {budget_id} not found")
@@ -817,6 +880,7 @@ class BudgetRepository:
         target_category_id: int,
         amount: MoneyLike,
     ) -> dict[str, Any]:
+        """Return reassign monthly budget."""
         if source_category_id == target_category_id:
             raise ValueError("Source and target categories must be different.")
         normalized_amount = self._money_to_decimal(amount) or MONEY_ZERO

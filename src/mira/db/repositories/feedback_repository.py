@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 import json
 import logging
@@ -48,6 +51,7 @@ class MessageCandidate:
     counter_updates: list[tuple[str, int]] | None = None  # Achievement counters to increment
 
     def to_dict(self) -> dict[str, Any]:
+        """Return to dict."""
         return asdict(self)
 
 
@@ -55,29 +59,60 @@ logger = logging.getLogger(__name__)
 
 
 class FeedbackRepository:
+    """Represent the FeedbackRepository class."""
+
     if TYPE_CHECKING:
 
-        def get_setting(self, key: str) -> str | None: ...
-        def set_setting(self, key: str, value: str) -> None: ...
-        def _database_language(self) -> str: ...
-        def get_default_budget_for_year(self, year: int) -> dict[str, Any] | None: ...
-        def get_savings_goals(self) -> list[dict[str, Any]]: ...
-        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None: ...
-        def _month_window(self, year: int, month: int) -> tuple[str, str]: ...
-        def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any: ...
+        def get_setting(self, key: str) -> str | None:
+            """Return get setting."""
+
+        def set_setting(self, key: str, value: str) -> None:
+            """Return set setting."""
+            ...
+
+        def _database_language(self) -> str:
+            """Return database language."""
+            ...
+
+        def get_default_budget_for_year(self, year: int) -> dict[str, Any] | None:
+            """Return get default budget for year."""
+            ...
+
+        def get_savings_goals(self) -> list[dict[str, Any]]:
+            """Return get savings goals."""
+            ...
+
+        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
+            """Return money to cents."""
+            ...
+
+        def _month_window(self, year: int, month: int) -> tuple[str, str]:
+            """Return month window."""
+            ...
+
+        def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return cents to money."""
+            ...
+
+            ...
 
         def get_categories(
             self,
             cat_type: str | None = None,
             *,
             include_savings: bool = True,
-        ) -> list[dict[str, Any]]: ...
+        ) -> list[dict[str, Any]]:
+            """Return get categories."""
+            ...
 
-        def build_monthly_context(self, tx: dict[str, Any]) -> dict[str, Any]: ...
+        def build_monthly_context(self, tx: dict[str, Any]) -> dict[str, Any]:
+            """Return build monthly context."""
+            ...
 
     _MAX_COUNTER_STEP = 1_000_000
 
     def pop_daily_contextual_message(self, *, on_date: date | None = None) -> dict[str, Any] | None:
+        """Return pop daily contextual message."""
         today = on_date or date.today()
         today_key = today.isoformat()
         if (self.get_setting("_last_daily_message") or "").strip() == today_key:
@@ -142,9 +177,11 @@ class FeedbackRepository:
         return {**selected, "date": today_key}
 
     def _crossed_up(self, prev_value: float, new_value: float, threshold: float) -> bool:
+        """Return crossed up."""
         return prev_value < threshold <= new_value
 
     def _get_setting_int(self, key: str, default: int = 0) -> int:
+        """Return get setting int."""
         raw_value = self.get_setting(key)
         try:
             return int(str(raw_value).strip()) if raw_value is not None else default
@@ -152,6 +189,7 @@ class FeedbackRepository:
             return default
 
     def get_achievement_counter(self, counter_key: str) -> int:
+        """Return get achievement counter."""
         row = AchievementCounter.get_or_none(
             (AchievementCounter.user_id == 1) & (AchievementCounter.counter_key == counter_key)
         )
@@ -160,6 +198,7 @@ class FeedbackRepository:
         return int(row.counter_value or 0)
 
     def increment_achievement_counter(self, counter_key: str, *, step: int = 1) -> tuple[int, int]:
+        """Return increment achievement counter."""
         delta = int(step)
         if delta <= 0:
             raise ValueError("step must be a positive integer")
@@ -190,6 +229,7 @@ class FeedbackRepository:
         period_key: str | None = None,
         reference_date: str | None = None,
     ) -> bool:
+        """Return message in cooldown."""
         if not (cooldown_scope := str(candidate.cooldown_scope or "").strip().lower()):
             return False
 
@@ -218,6 +258,7 @@ class FeedbackRepository:
         source: str | None = None,
         reference_date: str | None = None,
     ) -> dict[str, Any]:
+        """Return build message context fields."""
         raw_source = str(source).strip() if source is not None else ""
         raw_reference_date = str(reference_date).strip() if reference_date is not None else ""
         return {
@@ -234,6 +275,7 @@ class FeedbackRepository:
         period_key: str | None = None,
         reference_date: str | None = None,
     ) -> MessageCandidate | None:
+        """Return resolve candidate."""
         if len(candidates) > 20:
             logger.warning("message resolver received %s candidates; expected a smaller set", len(candidates))
         valid_candidates: list[MessageCandidate] = []
@@ -264,6 +306,7 @@ class FeedbackRepository:
         reference_date: str | None = None,
         source: str | None = None,
     ) -> bool:
+        """Return persist message event."""
         inserted = (
             MessageEvent.insert(
                 user_id=1,
@@ -305,6 +348,7 @@ class FeedbackRepository:
         source: str | None = None,
         persist: bool = True,
     ) -> dict[str, Any] | None:
+        """Return resolve single message."""
         selected = self.resolve_candidate(
             candidates,
             period_key=period_key,
@@ -324,6 +368,7 @@ class FeedbackRepository:
         return selected.to_dict()
 
     def evaluate_income_kpis(self, tx: dict[str, Any], context: dict[str, Any]) -> list[MessageCandidate]:
+        """Return evaluate income kpis."""
         amount = float(tx.get("amount") or 0.0)
         goal = float(context["income_goal"])
         prev_income = float(context["income_actual_prev"])
@@ -386,6 +431,7 @@ class FeedbackRepository:
         return candidates
 
     def evaluate_expense_kpis(self, tx: dict[str, Any], context: dict[str, Any]) -> list[MessageCandidate]:
+        """Return evaluate expense kpis."""
         amount = float(tx.get("amount") or 0.0)
         language = self._database_language()
         category_name = context.get("category_name") or (tx.get("category") or "esta categoría")
@@ -462,6 +508,7 @@ class FeedbackRepository:
         return candidates
 
     def _achievement_already_emitted(self, achievement_code: str, *, period_key: str | None = None) -> bool:
+        """Return achievement already emitted."""
         query = AchievementEvent.select(AchievementEvent.id).where(
             AchievementEvent.achievement_code == achievement_code
         )
@@ -470,6 +517,7 @@ class FeedbackRepository:
         return query.exists()
 
     def get_month_savings_amount(self, year: int, month: int) -> float:
+        """Return get month savings amount."""
         month_start, month_end = self._month_window(year, month)
         query = (
             Transaction.select(fn.COALESCE(fn.SUM(Transaction.amount), 0.0).alias("savings_total"))
@@ -491,6 +539,7 @@ class FeedbackRepository:
         *,
         source: str | None = None,
     ) -> list[MessageCandidate]:
+        """Return evaluate operation achievements."""
         if is_analytics_excluded_transaction(tx):
             return []
         language = self._database_language()
@@ -653,6 +702,7 @@ class FeedbackRepository:
         *,
         source: str | None = None,
     ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        """Return select best operation message."""
         if is_analytics_excluded_transaction(tx):
             return None, None
         is_nl_transaction = source == "nl_assistant"

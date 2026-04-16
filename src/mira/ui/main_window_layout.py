@@ -42,12 +42,16 @@ _SIDEBAR_WIDTH = 170
 
 
 class MainWindowLayoutMixin:
+    """Represent the MainWindowLayoutMixin class."""
+
     def _build_ui(self) -> None:
+        """Return build ui."""
         root_widget = self._build_central_widget()
         self.setCentralWidget(root_widget)
         self._build_status_bar()
 
     def _build_central_widget(self) -> QWidget:
+        """Return build central widget."""
         root_widget = QWidget()
         root_layout = QVBoxLayout(root_widget)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -64,6 +68,7 @@ class MainWindowLayoutMixin:
         return root_widget
 
     def _build_content_row(self) -> QHBoxLayout:
+        """Return build content row."""
         content_row = QHBoxLayout()
         content_row.setContentsMargins(0, 0, 0, 0)
         content_row.setSpacing(0)
@@ -79,6 +84,7 @@ class MainWindowLayoutMixin:
         return content_row
 
     def _build_status_bar(self) -> None:
+        """Return build status bar."""
         status = QStatusBar()
         status.setStyleSheet("font-size:10px;")
         self.setStatusBar(status)
@@ -112,6 +118,7 @@ class MainWindowLayoutMixin:
         return "QListWidget{border:none;background:transparent;outline:0;}"
 
     def _make_sidebar(self) -> QFrame:
+        """Return make sidebar."""
         panel = QFrame()
         panel.setFixedWidth(_SIDEBAR_WIDTH)
         panel.setStyleSheet("")
@@ -148,6 +155,7 @@ class MainWindowLayoutMixin:
         return panel
 
     def _make_stack(self) -> QStackedWidget:
+        """Return make stack."""
         stack = QStackedWidget()
         stack.setStyleSheet("")
         services = build_view_services(self._db)
@@ -190,6 +198,7 @@ class MainWindowLayoutMixin:
         return stack
 
     def _make_footer(self) -> QFrame:
+        """Return make footer."""
         footer = QFrame()
         footer.setStyleSheet("")
         footer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -207,6 +216,7 @@ class MainWindowLayoutMixin:
         return footer
 
     def _make_logo_panel(self) -> QFrame:
+        """Return make logo panel."""
         panel = QFrame()
         panel.setFixedWidth(_SIDEBAR_WIDTH)
         panel.setStyleSheet("")
@@ -230,6 +240,7 @@ class MainWindowLayoutMixin:
         return panel
 
     def _make_prompt_panel(self) -> QFrame:
+        """Return make prompt panel."""
         panel = QFrame()
         panel.setStyleSheet("")
         layout = QVBoxLayout(panel)

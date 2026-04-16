@@ -73,6 +73,7 @@ def model_filename_from_url(url: str) -> str:
 
 
 def _is_writable_dir(path: Path) -> bool:
+    """Return whether writable dir."""
     try:
         path.mkdir(parents=True, exist_ok=True)
         probe = path / ".mira-write-check"
@@ -200,9 +201,11 @@ class ModelRegistry:
     """Object-oriented wrapper around GGUF model registry helpers."""
 
     def discover_models(self, models_dir: str | Path | None = None) -> list[Path]:
+        """Return discover models."""
         return discover_gguf_models(models_dir)
 
     def find_by_name(self, name: str) -> Path | None:
+        """Return find by name."""
         return find_model_path_by_name(name)
 
     def download(
@@ -214,6 +217,7 @@ class ModelRegistry:
         on_response_opened: Callable[[object | None], None] | None = None,
         timeout: float = 60.0,
     ) -> Path:
+        """Return download."""
         return download_model_to(
             url=url,
             destination_dir=destination_dir,
@@ -224,10 +228,13 @@ class ModelRegistry:
         )
 
     def default_download_url(self) -> str:
+        """Return default download url."""
         return get_default_model_download_url()
 
     def writable_models_dir(self) -> Path:
+        """Return writable models dir."""
         return get_writable_models_dir()
 
     def model_filename(self, url: str) -> str:
+        """Return model filename."""
         return model_filename_from_url(url)

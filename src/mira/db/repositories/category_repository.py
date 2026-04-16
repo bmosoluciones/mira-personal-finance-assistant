@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 from typing import TYPE_CHECKING, Any, cast
 
@@ -18,18 +21,34 @@ from mira.db.model import Bucket, Category, IncomeExpenseRelation, RecurringTran
 
 
 class CategoryRepository:
+    """Represent the CategoryRepository class."""
+
     if TYPE_CHECKING:
 
-        def _savings_goals_parent_name_candidates(self) -> list[str]: ...
-        def _database_language(self) -> str: ...
-        def _atomic(self) -> Any: ...
-        def _merge_budget_details_for_categories(self, source_category_id: int, target_category_id: int) -> None: ...
+        def _savings_goals_parent_name_candidates(self) -> list[str]:
+            """Return savings goals parent name candidates."""
+
+        def _database_language(self) -> str:
+            """Return database language."""
+            ...
+
+        def _atomic(self) -> Any:
+            """Return atomic."""
+            ...
+
+        def _merge_budget_details_for_categories(self, source_category_id: int, target_category_id: int) -> None:
+            """Return merge budget details for categories."""
+            ...
+
+            ...
 
     @staticmethod
     def _normalized_name_expression(field: Any) -> Any:
+        """Return normalized name expression."""
         return fn.LOWER(fn.TRIM(field))
 
     def get_categories(self, cat_type: str | None = None, *, include_savings: bool = True) -> list[dict]:
+        """Return get categories."""
         query = Category.select()
         if cat_type:
             query = query.where(Category.type == cat_type)
@@ -50,6 +69,7 @@ class CategoryRepository:
 
     @staticmethod
     def _serialize_category_row(row: Category) -> dict[str, Any]:
+        """Return serialize category row."""
         return {
             "id": row.id,
             "name": row.name,
@@ -67,6 +87,7 @@ class CategoryRepository:
         name: str | None = None,
         cat_type: str | None = None,
     ) -> dict | None:
+        """Return get category."""
         if cat_id is not None:
             row = Category.get_or_none(Category.id == int(cat_id))
             return None if row is None else self._serialize_category_row(row)
@@ -82,9 +103,11 @@ class CategoryRepository:
         return None if row is None else self._serialize_category_row(row)
 
     def get_category_by_id(self, cat_id: int) -> dict | None:
+        """Return get category by id."""
         return self.get_category(cat_id=cat_id)
 
     def get_category_by_name(self, name: str, cat_type: str | None = None) -> dict | None:
+        """Return get category by name."""
         return self.get_category(name=name, cat_type=cat_type)
 
     def add_category(
@@ -96,6 +119,7 @@ class CategoryRepository:
         is_savings: bool = False,
         icon: str = "",
     ) -> dict:
+        """Return add category."""
         normalized_name = name.strip()
         if not normalized_name:
             raise ValueError("Category name cannot be empty")
@@ -125,6 +149,7 @@ class CategoryRepository:
         is_savings: bool = False,
         icon: str = "",
     ) -> dict:
+        """Return get or create category."""
         existing = self.get_category_by_name(name, cat_type)
         if existing is not None:
             if is_savings and int(existing.get("is_savings") or 0) == 0:
@@ -151,6 +176,7 @@ class CategoryRepository:
         parent_id: int | None | object = _UNSET,
         icon: str | None = None,
     ) -> dict:
+        """Return update category metadata direct."""
         updates: dict[str, object | None] = {}
         if color is not None:
             updates["color"] = color
@@ -168,6 +194,7 @@ class CategoryRepository:
         return refreshed
 
     def _find_savings_goals_parent_category(self) -> dict | None:
+        """Return find savings goals parent category."""
         for name in self._savings_goals_parent_name_candidates():
             existing = self.get_category_by_name(name)
             if existing is None:
@@ -178,10 +205,12 @@ class CategoryRepository:
         return None
 
     def _is_savings_goals_parent_category(self, cat_id: int) -> bool:
+        """Return whether savings goals parent category."""
         parent = self._find_savings_goals_parent_category()
         return parent is not None and int(parent["id"]) == cat_id
 
     def _ensure_savings_goals_parent_category(self) -> dict:
+        """Return ensure savings goals parent category."""
         parent = self._find_savings_goals_parent_category()
         if parent is None:
             return self.add_category(
@@ -204,6 +233,7 @@ class CategoryRepository:
         return parent
 
     def _linked_savings_goal_for_category(self, cat_id: int) -> dict | None:
+        """Return linked savings goal for category."""
         row = (
             SavingsGoal.select(SavingsGoal.id, SavingsGoal.name, SavingsGoal.category_id)
             .where(SavingsGoal.category_id == cat_id)
@@ -215,16 +245,19 @@ class CategoryRepository:
         return cast(dict[str, Any] | None, row)
 
     def _category_is_linked_to_other_goal(self, cat_id: int, *, excluding_goal_id: int | None = None) -> bool:
+        """Return category is linked to other goal."""
         query = SavingsGoal.select(SavingsGoal.id).where(SavingsGoal.category_id == cat_id)
         if excluding_goal_id is not None:
             query = query.where(SavingsGoal.id != excluding_goal_id)
         return query.limit(1).exists()
 
     def _reserved_savings_goals_parent_name_match(self, name: str) -> bool:
+        """Return reserved savings goals parent name match."""
         normalized = name.strip().casefold()
         return normalized in {candidate.casefold() for candidate in SAVINGS_GOALS_DEFAULTS.all_names()}
 
     def _group_savings_goal_category(self, category: dict) -> dict:
+        """Return group savings goal category."""
         parent = self._ensure_savings_goals_parent_category()
         if int(category["id"]) == int(parent["id"]):
             raise ValueError("Goal name cannot match the reserved savings goals group category")
@@ -242,6 +275,7 @@ class CategoryRepository:
         return category
 
     def _ensure_goal_linked_savings_category(self, category_name: str, *, color: str = "#3FB950") -> dict:
+        """Return ensure goal linked savings category."""
         normalized_name = category_name.strip()
         if self._reserved_savings_goals_parent_name_match(normalized_name):
             raise ValueError("Goal name cannot match the reserved savings goals group category")
@@ -249,6 +283,7 @@ class CategoryRepository:
         return self._group_savings_goal_category(category)
 
     def _category_has_transaction_history(self, cat_id: int) -> bool:
+        """Return category has transaction history."""
         category = self.get_category_by_id(cat_id)
         if category is None:
             return False
@@ -273,6 +308,7 @@ class CategoryRepository:
         new_is_savings: bool | None,
         new_parent_id: int | None | object,
     ) -> None:
+        """Return assert category change allowed."""
         cat_id = int(current["id"])
         goal = self._linked_savings_goal_for_category(cat_id)
         is_parent = self._is_savings_goals_parent_category(cat_id)
@@ -310,6 +346,7 @@ class CategoryRepository:
                 raise ValueError(f"Category '{current_name}' is reserved for grouping savings goal categories.")
 
     def _assert_category_can_be_deleted(self, category: dict) -> None:
+        """Return assert category can be deleted."""
         cat_id = int(category["id"])
         goal = self._linked_savings_goal_for_category(cat_id)
         if goal is not None:
@@ -321,6 +358,7 @@ class CategoryRepository:
             raise ValueError(f"Category '{category['name']}' is reserved for grouping savings goal categories.")
 
     def _assert_category_can_be_merged(self, category: dict) -> None:
+        """Return assert category can be merged."""
         cat_id = int(category["id"])
         goal = self._linked_savings_goal_for_category(cat_id)
         if goal is not None:
@@ -336,6 +374,7 @@ class CategoryRepository:
         parent_id: int,
         cat_type: str,
     ) -> None:
+        """Return validate category parent."""
         if cat_id is not None and parent_id == cat_id:
             raise ValueError("A category cannot be its own parent")
         parent = self.get_category_by_id(parent_id)
@@ -371,6 +410,7 @@ class CategoryRepository:
         parent_id: int | None | object = _UNSET,
         icon: str | None = None,
     ) -> None:
+        """Return update category."""
         normalized_name = name.strip()
         if not normalized_name:
             raise ValueError("Category name cannot be empty")
@@ -415,9 +455,11 @@ class CategoryRepository:
             raise DuplicateCategoryNameError(f"Category '{normalized_name}' already exists") from exc
 
     def _set_category_is_savings(self, cat_id: int, is_savings: bool) -> None:
+        """Return set category is savings."""
         Category.update(is_savings=is_savings).where(Category.id == cat_id).execute()
 
     def _ensure_savings_category(self, category_name: str, *, color: str = "#3FB950") -> dict:
+        """Return ensure savings category."""
         normalized_name = category_name.strip()
         if not normalized_name:
             raise ValueError("Savings category name cannot be empty")
@@ -439,10 +481,12 @@ class CategoryRepository:
         return existing
 
     def get_subcategories(self, parent_id: int) -> list[dict]:
+        """Return get subcategories."""
         query = Category.select().where(Category.parent_id == parent_id).order_by(Category.name)
         return [self._serialize_category_row(row) for row in query]
 
     def delete_category(self, cat_id: int) -> None:
+        """Return delete category."""
         category = self.get_category_by_id(cat_id)
         if category is None:
             raise ValueError(f"Category {cat_id} not found")
@@ -450,6 +494,7 @@ class CategoryRepository:
         Category.delete().where(Category.id == cat_id).execute()
 
     def merge_categories(self, source_cat_id: int, target_cat_id: int) -> dict:
+        """Return merge categories."""
         if source_cat_id == target_cat_id:
             raise ValueError("Source and destination categories must be different")
 
@@ -515,6 +560,7 @@ class CategoryRepository:
         return merged
 
     def get_categories_tree(self, cat_type: str | None = None, *, include_savings: bool = True) -> list[dict]:
+        """Return get categories tree."""
         all_cats = self.get_categories(cat_type, include_savings=include_savings)
         by_id: dict[int, dict] = {}
         for cat in all_cats:
@@ -530,6 +576,7 @@ class CategoryRepository:
         return roots
 
     def get_category_with_descendants(self, cat_id: int, _depth: int = 0) -> list[int]:
+        """Return get category with descendants."""
         if _depth > 10:
             return [cat_id]
         result = [cat_id]
@@ -539,6 +586,7 @@ class CategoryRepository:
         return result
 
     def get_descendant_category_names(self, cat_id: int) -> list[str]:
+        """Return get descendant category names."""
         descendant_ids = self.get_category_with_descendants(cat_id)
         if not descendant_ids:
             return []

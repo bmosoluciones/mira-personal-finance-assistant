@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,6 +15,7 @@ class DatabaseIOService:
     """Thin application service for CSV/Excel database transport."""
 
     def __init__(self, db: Any) -> None:
+        """Initialize the DatabaseIOService instance."""
         self._db = db
 
     def export_transactions_csv(
@@ -26,6 +29,7 @@ class DatabaseIOService:
         category: str | None = None,
         search: str | None = None,
     ) -> int:
+        """Return export transactions csv."""
         return db_io.export_transactions_csv(
             self._db,
             filepath,
@@ -44,7 +48,9 @@ class DatabaseIOService:
         *,
         granularity: str = "quarterly",
     ) -> int:
+        """Return export budget comparison excel."""
         return db_io.export_budget_comparison_excel(self._db, filepath, budget_id, granularity=granularity)
 
     def import_transactions_csv(self, filepath: str) -> tuple[int, int]:
+        """Return import transactions csv."""
         return db_io.import_transactions_csv(self._db, filepath)

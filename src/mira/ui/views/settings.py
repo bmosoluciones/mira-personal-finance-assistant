@@ -40,9 +40,11 @@ class _SettingsRuntimeAdapter:
     """Small seam around runtime/model discovery for SettingsView."""
 
     def is_llama_cpp_available(self) -> bool:
+        """Return whether llama cpp available."""
         return is_llama_cpp_available()
 
     def discover_models(self):
+        """Return discover models."""
         return discover_gguf_models()
 
 
@@ -61,6 +63,7 @@ class SettingsView(QWidget):
         runtime_adapter: _SettingsRuntimeAdapter | None = None,
         service: SettingsViewService | None = None,
     ) -> None:
+        """Initialize the SettingsView instance."""
         super().__init__(parent)
         self._db = db
         self._service = service or SettingsViewService(db)
@@ -71,6 +74,7 @@ class SettingsView(QWidget):
         self.refresh()
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(16)
@@ -268,6 +272,7 @@ class SettingsView(QWidget):
         layout.addStretch()
 
     def _save(self) -> None:
+        """Return save."""
         username = self._username_input.text().strip() or tr(
             "settings.saved_default_user", self._language, default="Usuario"
         )
@@ -309,11 +314,13 @@ class SettingsView(QWidget):
         self.theme_changed.emit(state.theme)
 
     def refresh(self) -> None:
+        """Return refresh."""
         state = self._service.load_state()
         self._refresh_runtime_availability(selected_model=state.preferred_model)
         self._apply_saved_settings(state)
 
     def _refresh_runtime_availability(self, *, selected_model: str) -> None:
+        """Return refresh runtime availability."""
         self._llama_cpp_available = self._runtime.is_llama_cpp_available()
         self._chat_support_note.setVisible(not self._llama_cpp_available)
         self._mode_label.setVisible(self._llama_cpp_available)
@@ -321,6 +328,7 @@ class SettingsView(QWidget):
         self._refresh_model_options(selected_model=selected_model)
 
     def _apply_saved_settings(self, state: SettingsViewState) -> None:
+        """Return apply saved settings."""
         username = state.username or tr("settings.saved_default_user", self._language, default="Usuario")
         self._username_input.setText(username)
         self._language = normalize_language(state.language)
@@ -347,11 +355,13 @@ class SettingsView(QWidget):
             self._mode_combo.setCurrentIndex(midx)
 
     def set_engine_info(self, info: str) -> None:
+        """Return set engine info."""
         self._engine_label.setText(
             tr("settings.engine.info", self._language, default="Engine: {info}", params={"info": info})
         )
 
     def _refresh_model_options(self, *, selected_model: str) -> None:
+        """Return refresh model options."""
         self._models_frame.setVisible(self._llama_cpp_available)
         self._download_default_btn.setVisible(False)
         while self._models_layout.count():
@@ -395,6 +405,7 @@ class SettingsView(QWidget):
             self._download_default_btn.setVisible(False)
 
     def _on_model_checked(self, current: QCheckBox) -> None:
+        """Return on model checked."""
         if not current.isChecked():
             return
         for chk in self._model_checks:
@@ -405,6 +416,7 @@ class SettingsView(QWidget):
             chk.blockSignals(False)
 
     def _populate_currency_options(self) -> None:
+        """Return populate currency options."""
         for currency in self._db.setting.list_currencies(region=None):
             code = str(currency.get("code") or "").strip().upper()
             name = str(currency.get("name") or "").strip()

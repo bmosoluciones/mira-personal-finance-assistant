@@ -45,6 +45,7 @@ class TagsView(QWidget):
         parent: QWidget | None = None,
         service: TagsViewService | None = None,
     ) -> None:
+        """Initialize the TagsView instance."""
         super().__init__(parent)
         self._db = db
         self._service = service or TagsViewService(db)
@@ -54,9 +55,11 @@ class TagsView(QWidget):
         self.refresh()
 
     def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        """Return t."""
         return tr(key, self._language, default=default, params=params)
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(10)
@@ -104,15 +107,18 @@ class TagsView(QWidget):
         self._table.customContextMenuRequested.connect(self._open_context_menu)
 
     def open_add_dialog(self) -> None:
+        """Return open add dialog."""
         self._on_add()
 
     def _selected_tag(self) -> dict | None:
+        """Return selected tag."""
         row = self._table.currentRow()
         if row < 0 or row >= len(self._tags):
             return None
         return self._tags[row]
 
     def _make_color_swatch(self, color_value: str) -> QWidget:
+        """Return make color swatch."""
         container = QWidget(self._table)
         container.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         layout = QHBoxLayout(container)
@@ -131,10 +137,12 @@ class TagsView(QWidget):
         return container
 
     def refresh(self) -> None:
+        """Return refresh."""
         self._language = normalize_language(self._db.setting.get("language"))
         self._apply_state(self._service.load_state())
 
     def _apply_state(self, state: TagsViewState) -> None:
+        """Return apply state."""
         self._tags = list(state.tags)
         self._title_label.setText(self._t("tags.title", "Tags"))
         self._subtitle_label.setText(self._t("tags.subtitle", "Transaction Tags"))
@@ -168,6 +176,7 @@ class TagsView(QWidget):
             self._table.setCellWidget(row, 2, self._make_color_swatch(color_value))
 
     def _on_add(self) -> None:
+        """Return on add."""
         from mira.ui.dialogs import TagDialog
 
         dlg = TagDialog(self._db, parent=self)
@@ -188,6 +197,7 @@ class TagsView(QWidget):
             self.refresh()
 
     def _on_edit(self) -> None:
+        """Return on edit."""
         from mira.ui.dialogs import TagDialog
 
         tag = self._selected_tag()
@@ -216,6 +226,7 @@ class TagsView(QWidget):
             self.refresh()
 
     def _on_delete(self) -> None:
+        """Return on delete."""
         tag = self._selected_tag()
         if tag is None:
             return
@@ -234,6 +245,7 @@ class TagsView(QWidget):
             self.refresh()
 
     def _open_context_menu(self, pos: QPoint) -> None:
+        """Return open context menu."""
         if not _select_row_at_pos(self._table, pos):
             return
         menu = QMenu(self)

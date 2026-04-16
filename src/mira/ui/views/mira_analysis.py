@@ -72,6 +72,7 @@ class _WaterfallChartWidget(QWidget):
     }
 
     def __init__(self, db: Database, parent: QWidget | None = None) -> None:
+        """Initialize the _WaterfallChartWidget instance."""
         super().__init__(parent)
         self._db = db
         self._steps: list[dict[str, Any]] = []
@@ -83,20 +84,24 @@ class _WaterfallChartWidget(QWidget):
         self.setMinimumHeight(420)
 
     def set_steps(self, steps: list[dict[str, Any]]) -> None:
+        """Return set steps."""
         self._steps = steps
         self.setMinimumHeight(420 if len(steps) <= 8 else 480 if len(steps) <= 10 else 540)
         self.update()
 
     def set_empty_state_text(self, text: str) -> None:
+        """Return set empty state text."""
         self._empty_state_text = text
         self.update()
 
     def _bar_color(self, step: dict[str, Any]) -> QColor:
+        """Return bar color."""
         if (kind := try_parse_waterfall_step_kind(step.get("kind"))) is None:
             return QColor(self._COLORS["default"])
         return QColor(ANALYTICS_PALETTE.waterfall_hex(kind))
 
     def _wrap_label(self, label: str) -> str:
+        """Return wrap label."""
         words = label.split()
         if len(words) <= 1:
             return label
@@ -104,6 +109,7 @@ class _WaterfallChartWidget(QWidget):
         return " ".join(words[:midpoint]) + "\n" + " ".join(words[midpoint:])
 
     def paintEvent(self, _event: QPaintEvent) -> None:
+        """Return paintEvent."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
@@ -143,6 +149,7 @@ class _WaterfallChartWidget(QWidget):
         y_max = max(maximum + padding, padding * 0.35)
 
         def map_y(value: float) -> float:
+            """Return map y."""
             usable = max(1.0, y_max - y_min)
             ratio = (y_max - value) / usable
             return plot_rect.top() + ratio * plot_rect.height()
@@ -253,7 +260,10 @@ class _WaterfallChartWidget(QWidget):
 
 
 class _MiraAnalysisWorker(QThread):
+    """Represent the _MiraAnalysisWorker class."""
+
     loaded = Signal(object, bool, int, int)
+
     failed = Signal(str)
 
     def __init__(
@@ -264,6 +274,7 @@ class _MiraAnalysisWorker(QThread):
         month: int,
         emit_to_assistant: bool,
     ) -> None:
+        """Initialize the _MiraAnalysisWorker instance."""
         super().__init__()
         self._service = service
         self._year = year
@@ -271,6 +282,7 @@ class _MiraAnalysisWorker(QThread):
         self._emit_to_assistant = emit_to_assistant
 
     def run(self) -> None:
+        """Return run."""
         try:
             payload = self._service.load_payload(year=self._year, month=self._month)
         except Exception as exc:  # noqa: BLE001
@@ -307,6 +319,7 @@ class MiraAnalysisView(QWidget):
         message_builder: MiraAnalysisMessageBuilder | None = None,
         view_state_builder: MiraAnalysisViewStateBuilder | None = None,
     ) -> None:
+        """Initialize the MiraAnalysisView instance."""
         super().__init__(parent)
         self._db = db
         self._service = service or MiraAnalysisService(db)
@@ -323,16 +336,20 @@ class MiraAnalysisView(QWidget):
         self._build_ui()
 
     def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        """Return t."""
         return tr(key, self._language, default=default, params=params)
 
     def _set_analysis_status(self, text: str, *, color: str = "#9FB3C8") -> None:
+        """Return set analysis status."""
         self._report_status_lbl.setText(text)
         self._report_status_lbl.setStyleSheet(f"font-size:11px;color:{color};padding:0 2px 4px 2px;")
 
     def _selected_period(self) -> tuple[int, int]:
+        """Return selected period."""
         return int(self._year_spin.value()), int(self._month_combo.currentData() or 1)
 
     def _mark_report_pending(self) -> None:
+        """Return mark report pending."""
         if self._worker is not None and self._worker.isRunning():
             self._set_analysis_status(
                 self._t("mira.analysis.status.loading", "Analizando tus datos…"),
@@ -367,6 +384,7 @@ class MiraAnalysisView(QWidget):
         )
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(20, 16, 20, 16)
         outer_layout.setSpacing(10)
@@ -566,6 +584,7 @@ class MiraAnalysisView(QWidget):
         self._mark_report_pending()
 
     def _configure_summary_table(self, table: QTableWidget) -> None:
+        """Return configure summary table."""
         table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         table.verticalHeader().setVisible(False)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -575,6 +594,7 @@ class MiraAnalysisView(QWidget):
         table.setStyleSheet(_TABLE_STYLE)
 
     def _set_table_rows(self, table: QTableWidget, rows: list[Any] | tuple[Any, ...]) -> None:
+        """Return set table rows."""
         table.clearContents()
         table.setRowCount(len(rows))
         for idx, row in enumerate(rows):
@@ -583,6 +603,7 @@ class MiraAnalysisView(QWidget):
             table.setItem(idx, 1, QTableWidgetItem(str(getattr(row, "amount_text", ""))))
 
     def _clear_category_drilldown(self) -> None:
+        """Return clear category drilldown."""
         title = (
             self._view_state.categories.empty_title
             if self._view_state is not None
@@ -593,6 +614,7 @@ class MiraAnalysisView(QWidget):
         self._category_detail_table.setRowCount(0)
 
     def _clear_tag_drilldown(self) -> None:
+        """Return clear tag drilldown."""
         title = (
             self._view_state.tags.empty_title
             if self._view_state is not None
@@ -603,6 +625,7 @@ class MiraAnalysisView(QWidget):
         self._tag_detail_table.setRowCount(0)
 
     def _on_top_category_selected(self, row: int, _column: int) -> None:
+        """Return on top category selected."""
         if row < 0 or row >= len(self._category_rows):
             self._clear_category_drilldown()
             return
@@ -611,6 +634,7 @@ class MiraAnalysisView(QWidget):
         self._set_table_rows(self._category_detail_table, selected.detail_rows)
 
     def _on_top_tag_selected(self, row: int, _column: int) -> None:
+        """Return on top tag selected."""
         if row < 0 or row >= len(self._tag_rows):
             self._clear_tag_drilldown()
             return
@@ -619,9 +643,11 @@ class MiraAnalysisView(QWidget):
         self._set_table_rows(self._tag_detail_table, selected.detail_rows)
 
     def _build_context_message(self) -> str:
+        """Return build context message."""
         return self._message_builder.build_context_message(self._payload or {}, language=self._language)
 
     def _render_ytd_chart(self) -> None:
+        """Return render ytd chart."""
         if self._view_state is None:
             return
         chart = QChart()
@@ -651,6 +677,7 @@ class MiraAnalysisView(QWidget):
         self._ytd_chart.setChart(chart)
 
     def _render_waterfall_chart(self) -> None:
+        """Return render waterfall chart."""
         if self._view_state is None:
             return
         self._waterfall_chart.set_steps([step.as_dict() for step in self._view_state.waterfall.steps])
@@ -658,6 +685,7 @@ class MiraAnalysisView(QWidget):
         self._waterfall_summary.setText(self._view_state.waterfall.summary_text)
 
     def _render_trend_chart(self) -> None:
+        """Return render trend chart."""
         if self._view_state is None:
             return
         chart = QChart()
@@ -689,18 +717,22 @@ class MiraAnalysisView(QWidget):
         self._trend_chart.setChart(chart)
 
     def _emit_context_to_assistant(self) -> None:
+        """Return emit context to assistant."""
         for message, title in self._message_builder.build_assistant_messages(
             self._payload or {}, language=self._language
         ):
             self.assistant_message_requested.emit(message, title)
 
     def _emit_advisor_to_assistant(self) -> None:
+        """Return emit advisor to assistant."""
         return
 
     def _emit_report_to_assistant(self) -> None:
+        """Return emit report to assistant."""
         self._emit_context_to_assistant()
 
     def _bind_card(self, card: CardWidget, state: Any) -> None:
+        """Return bind card."""
         card.set_value(state.value)
         card.set_color(state.color)
         card.set_context(
@@ -711,6 +743,7 @@ class MiraAnalysisView(QWidget):
         )
 
     def _render_payload(self) -> None:
+        """Return render payload."""
         if self._payload is None:
             self._view_state = None
             return
@@ -742,6 +775,7 @@ class MiraAnalysisView(QWidget):
         self._render_income_vs_expense_section()
 
     def _render_income_vs_expense_section(self) -> None:
+        """Return render income vs expense section."""
         if self._view_state is None:
             self._income_vs_expense_title.hide()
             self._income_vs_expense_table.hide()
@@ -764,15 +798,19 @@ class MiraAnalysisView(QWidget):
             self._income_vs_expense_table.setItem(idx, 3, QTableWidgetItem(row.expense_amount_text))
 
     def _on_apply_report(self) -> None:
+        """Return on apply report."""
         self._load_report(emit_to_assistant=True)
 
     def run_report(self, *, emit_to_assistant: bool = False) -> None:
+        """Return run report."""
         self._load_report(emit_to_assistant=emit_to_assistant)
 
     def has_loaded_report(self) -> bool:
+        """Return whether  loaded report."""
         return self._payload is not None
 
     def set_requested_period(self, period: dict[str, Any] | None) -> None:
+        """Return set requested period."""
         if not isinstance(period, dict):
             return
 
@@ -793,6 +831,7 @@ class MiraAnalysisView(QWidget):
         self._year_spin.setValue(target_date.year)
 
     def _load_report(self, *, emit_to_assistant: bool) -> None:
+        """Return load report."""
         if self._worker is not None and self._worker.isRunning():
             self._set_analysis_status(
                 self._t("mira.analysis.status.loading", "Analizando tus datos…"),
@@ -834,10 +873,12 @@ class MiraAnalysisView(QWidget):
             self._worker = None
 
     def closeEvent(self, event: QCloseEvent) -> None:  # type: ignore[override]
+        """Return closeEvent."""
         self._stop_worker()
         super().closeEvent(event)
 
     def _on_report_loaded(self, payload: object, emit_to_assistant: bool, year: int, month: int) -> None:
+        """Return on report loaded."""
         self._payload = cast(dict[str, Any], payload)
         self._last_loaded_period = (year, month)
         self._report_dirty = False
@@ -852,12 +893,14 @@ class MiraAnalysisView(QWidget):
             self._emit_report_to_assistant()
 
     def _on_report_finished(self) -> None:
+        """Return on report finished."""
         self._btn_apply.setEnabled(True)
         self._worker = None
         if self._payload is not None:
             self._mark_report_pending()
 
     def _on_report_error(self, message: str) -> None:
+        """Return on report error."""
         del message
         localized_message = self._t(
             "mira.analysis.load_error",
@@ -867,6 +910,7 @@ class MiraAnalysisView(QWidget):
         self._set_analysis_status(localized_message, color="#F48771")
 
     def refresh(self) -> None:
+        """Return refresh."""
         self._language = normalize_language(self._db.setting.get("language"))
         if self._payload is not None:
             self._render_payload()

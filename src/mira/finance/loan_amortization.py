@@ -13,7 +13,10 @@ from mira.finance.enums import AmortizationMethod, PaymentFrequency
 
 @dataclass(slots=True)
 class LoanAmortizationInput:
+    """Represent the LoanAmortizationInput class."""
+
     loan_amount: float
+
     annual_rate_percent: float
     payment_frequency: PaymentFrequency
     years: float
@@ -22,7 +25,10 @@ class LoanAmortizationInput:
 
 @dataclass(slots=True)
 class LoanAmortizationRow:
+    """Represent the LoanAmortizationRow class."""
+
     period: int
+
     label: str
     initial_balance: float
     payment: float
@@ -35,7 +41,10 @@ class LoanAmortizationRow:
 
 @dataclass(slots=True)
 class LoanAmortizationProjection:
+    """Represent the LoanAmortizationProjection class."""
+
     loan_amount: float
+
     annual_rate_percent: float
     payment_frequency: PaymentFrequency
     years: float
@@ -87,6 +96,7 @@ def _build_french_projection(
     payment: Decimal,
     periods_per_year: int,
 ) -> LoanAmortizationProjection:
+    """Return build french projection."""
     rows: list[LoanAmortizationRow] = []
     balance = loan_amount
     cumulative_interest = Decimal("0")
@@ -147,6 +157,7 @@ def _build_german_projection(
     total_periods: int,
     periods_per_year: int,
 ) -> LoanAmortizationProjection:
+    """Return build german projection."""
     rows: list[LoanAmortizationRow] = []
     balance = loan_amount
     principal_constant = loan_amount / Decimal(total_periods)
@@ -197,6 +208,7 @@ def _build_german_projection(
 
 
 def _french_payment(principal: Decimal, rate_per_period: Decimal, total_periods: int) -> Decimal:
+    """Return french payment."""
     if rate_per_period == 0:
         return principal / Decimal(total_periods)
     factor = (Decimal("1") + rate_per_period) ** Decimal(-total_periods)
@@ -204,10 +216,12 @@ def _french_payment(principal: Decimal, rate_per_period: Decimal, total_periods:
 
 
 def _period_label(period: int, periods_per_year: int) -> str:
+    """Return period label."""
     year = ((period - 1) // periods_per_year) + 1
     position = ((period - 1) % periods_per_year) + 1
     return f"Año {year} / Período {position}"
 
 
 def _dec(value: float) -> Decimal:
+    """Return dec."""
     return Decimal(str(value))

@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -12,6 +14,7 @@ from mira.transaction_kinds import is_analytics_excluded_transaction
 
 
 def transactions_for_month(db: Any, year: int, month: int) -> list[dict[str, Any]]:
+    """Return transactions for month."""
     start, end = month_bounds(year, month)
     txs = db.get_transactions(limit=50_000, since_date=start.isoformat(), until_date=end.isoformat())
     return [tx for tx in txs if not is_analytics_excluded_transaction(tx)]
@@ -22,6 +25,7 @@ def budget_period_snapshot(
     year: int,
     month: int,
 ) -> tuple[dict | None, dict[str, dict[str, float]] | None, list[dict[str, Any]] | None]:
+    """Return budget period snapshot."""
     budget = db.get_default_budget_for_year(year)
     if budget is None:
         return None, None, None
@@ -67,6 +71,7 @@ def get_mira_master_report(
     month: int,
     relevance_threshold: float = 0.10,
 ) -> dict[str, Any]:
+    """Return get mira master report."""
     if year < 1900 or year > 9999:
         raise ValueError("year out of range")
     if month < 1 or month > 12:

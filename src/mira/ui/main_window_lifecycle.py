@@ -31,7 +31,10 @@ _INITIAL_SETUP_PREVIEW_THEME = "light_blue.xml"
 
 
 class MainWindowLifecycleMixin:
+    """Represent the MainWindowLifecycleMixin class."""
+
     def _run_initial_setup_if_needed(self) -> None:
+        """Return run initial setup if needed."""
         main_window_module = sys.modules.get("mira.ui.main_window")
         dialog_cls = getattr(main_window_module, "InitialSetupDialog", InitialSetupDialog)
         show_message = getattr(main_window_module, "show_user_message", show_user_message)
@@ -94,17 +97,20 @@ class MainWindowLifecycleMixin:
             self._startup_cancelled = True
 
     def _on_download_default_model(self) -> None:
+        """Return on download default model."""
         session = self._model_download_flow.start_default_download()
         self._download_session = session
         self._download_worker = session.handle.worker
 
     def _application_version(self) -> str:
+        """Return application version."""
         app = QApplication.instance()
         if app is None:
             return _APP_VERSION_FALLBACK
         return app.applicationVersion() or _APP_VERSION_FALLBACK
 
     def _resolve_ui_icon_path(self, *candidates: str) -> Path | None:
+        """Return resolve ui icon path."""
         icons_dir = Path(__file__).resolve().parent / "icons"
         for name in candidates:
             if (candidate := icons_dir / name).is_file():
@@ -112,6 +118,7 @@ class MainWindowLifecycleMixin:
         return None
 
     def _build_about_logo_label(self, image_path: Path | None, *, max_height: int) -> QLabel:
+        """Return build about logo label."""
         label = QLabel()
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setMinimumHeight(max_height)
@@ -125,6 +132,7 @@ class MainWindowLifecycleMixin:
         return label
 
     def _on_about(self) -> None:
+        """Return on about."""
         dialog = QDialog(self)
         dialog.setWindowTitle(tr("dialog.about.title", self._language, default="MIRA Information"))
         dialog.setModal(True)
@@ -192,18 +200,21 @@ class MainWindowLifecycleMixin:
         dialog.exec()
 
     def _menu_open_compound_interest(self) -> None:
+        """Return menu open compound interest."""
         main_window_module = sys.modules.get("mira.ui.main_window")
         dialog_cls = getattr(main_window_module, "_CompoundInterestDialog", _CompoundInterestDialog)
         currency = self._db.setting.get("default_currency") or "USD"
         dialog_cls(self._language, currency, self).exec()
 
     def _menu_open_loan_amortization(self) -> None:
+        """Return menu open loan amortization."""
         main_window_module = sys.modules.get("mira.ui.main_window")
         dialog_cls = getattr(main_window_module, "_LoanAmortizationDialog", _LoanAmortizationDialog)
         currency = self._db.setting.get("default_currency") or "USD"
         dialog_cls(self._language, currency, self).exec()
 
     def _menu_open_goal_simulator(self) -> None:
+        """Return menu open goal simulator."""
         main_window_module = sys.modules.get("mira.ui.main_window")
         dialog_cls = getattr(main_window_module, "_GoalScenarioDialog", _GoalScenarioDialog)
         db = getattr(self, "_db", None)
@@ -214,9 +225,11 @@ class MainWindowLifecycleMixin:
             self._view_goals.open_add_dialog(prefill=dialog.goal_prefill)
 
     def _on_open_documentation(self) -> None:
+        """Return on open documentation."""
         webbrowser.open(_DOCS_URL)
 
     def _set_mode_switch_value(self, mode: str) -> None:
+        """Return set mode switch value."""
         if not hasattr(self, "_mode_switch"):
             return
         idx = self._mode_switch.findData(mode)
@@ -227,18 +240,21 @@ class MainWindowLifecycleMixin:
         self._mode_switch.blockSignals(False)
 
     def _current_mode_label(self) -> str:
+        """Return current mode label."""
         mode = self._db.setting.get("llm_interaction_mode") or "assistant"
         if mode == "assistant":
             return tr("settings.mode.assistant", self._language, default="Assistant mode")
         return tr("settings.mode.chat", self._language, default="Chat mode")
 
     def _set_interaction_enabled(self, enabled: bool) -> None:
+        """Return set interaction enabled."""
         self._input.setEnabled(enabled)
         self._send_btn.setEnabled(enabled)
         if hasattr(self, "_mode_switch"):
             self._mode_switch.setEnabled(enabled)
 
     def _show_reload_progress(self, mode_label: str) -> None:
+        """Return show reload progress."""
         if self._reload_progress is not None:
             self._reload_progress.close()
         progress = QProgressDialog(
@@ -264,12 +280,14 @@ class MainWindowLifecycleMixin:
         QApplication.processEvents()
 
     def _hide_reload_progress(self) -> None:
+        """Return hide reload progress."""
         if self._reload_progress is None:
             return
         self._reload_progress.close()
         self._reload_progress = None
 
     def _on_settings_saved(self, username: str) -> None:
+        """Return on settings saved."""
         mode_label = self._current_mode_label()
         self._set_status(
             tr(
@@ -301,6 +319,7 @@ class MainWindowLifecycleMixin:
             self._set_status(tr("status.ready", self._language, default="●  Ready"))
 
     def _on_mode_changed(self) -> None:
+        """Return on mode changed."""
         mode = self._mode_switch.currentData() or "assistant"
         self._db.setting.set("llm_interaction_mode", mode)
         self._apply_model_lifecycle_state(
@@ -309,12 +328,14 @@ class MainWindowLifecycleMixin:
         )
 
     def _sync_engine_info(self) -> None:
+        """Return sync engine info."""
         self._apply_model_lifecycle_state(
             self._model_lifecycle.sync_engine_info(self._active_model_path),
             show_mode_warning=False,
         )
 
     def _apply_model_lifecycle_state(self, state, *, show_mode_warning: bool) -> None:
+        """Return apply model lifecycle state."""
         self._active_model_path = state.active_model_path
         self._view_settings.set_engine_info(state.engine_info)
         if hasattr(self, "_mode_switch"):
@@ -327,9 +348,11 @@ class MainWindowLifecycleMixin:
             self._status_bar.showMessage(state.mode_warning, 4500)
 
     def _apply_download_model_lifecycle_state(self, state) -> None:
+        """Return apply download model lifecycle state."""
         self._apply_model_lifecycle_state(state, show_mode_warning=True)
 
     def _on_language_changed(self, language: str) -> None:
+        """Return on language changed."""
         current_language = normalize_language(getattr(self, "_language", language))
         next_language = normalize_language(language)
         language_changed = current_language != next_language
@@ -350,6 +373,7 @@ class MainWindowLifecycleMixin:
         )
 
     def _on_theme_changed(self, theme: str) -> None:
+        """Return on theme changed."""
         main_window_module = sys.modules.get("mira.ui.main_window")
         main_window_cls = getattr(main_window_module, "MainWindow", MainWindowShellMixin)
         self._theme = main_window_cls._normalize_theme(theme)
@@ -357,5 +381,6 @@ class MainWindowLifecycleMixin:
         self._refresh_sidebar_style()
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
+        """Return closeEvent."""
         self._pipeline.shutdown()
         super().closeEvent(event)

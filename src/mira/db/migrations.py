@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -19,15 +21,18 @@ _CENT = Decimal("0.01")
 
 
 def _table_columns(conn: sqlite3.Connection, table: str) -> frozenset[str]:
+    """Return table columns."""
     return frozenset(str(row[1]) for row in conn.execute(f"PRAGMA table_info({table})").fetchall())
 
 
 def _add_column_if_missing(conn: sqlite3.Connection, table: str, column_name: str, column_sql: str) -> None:
+    """Return add column if missing."""
     if column_name not in _table_columns(conn, table):
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {column_sql}")
 
 
 def _money_to_cents(value: object | None) -> int | None:
+    """Return money to cents."""
     if value is None:
         return None
     amount = Decimal(str(value)).quantize(_CENT, rounding=ROUND_HALF_UP)
@@ -42,6 +47,7 @@ def _populate_money_column(
     cents_column: str,
     nullable: bool = False,
 ) -> None:
+    """Return populate money column."""
     rows = conn.execute(f"SELECT id, {legacy_column} FROM {table}").fetchall()
     for row in rows:
         cents_value = _money_to_cents(row[1])
@@ -54,6 +60,7 @@ def _populate_money_column(
 
 
 def _ensure_schema_version_table(conn: sqlite3.Connection) -> None:
+    """Return ensure schema version table."""
     conn.execute("""
         CREATE TABLE IF NOT EXISTS schema_version (
             version INTEGER PRIMARY KEY,
@@ -64,6 +71,7 @@ def _ensure_schema_version_table(conn: sqlite3.Connection) -> None:
 
 
 def _record_schema_version(conn: sqlite3.Connection, version: int, *, status: str = "applied") -> None:
+    """Return record schema version."""
     _ensure_schema_version_table(conn)
     conn.execute(
         "INSERT OR REPLACE INTO schema_version(version, applied_at, status) VALUES (?, ?, ?)",
@@ -226,6 +234,7 @@ MIGRATIONS: dict[int, MigrationFn] = {
 
 
 def get_current_schema_version() -> int:
+    """Return get current schema version."""
     return db_model.SCHEMA_VERSION
 
 

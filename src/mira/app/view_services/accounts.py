@@ -15,12 +15,17 @@ from mira.db.database import Database
 
 @dataclass(frozen=True)
 class AccountsViewState:
+    """Represent the AccountsViewState class."""
+
     accounts: list[dict[str, Any]]
 
 
 @dataclass(frozen=True)
 class BalanceAdjustmentPreview:
+    """Represent the BalanceAdjustmentPreview class."""
+
     account_id: int | None
+
     currency: str
     balance_as_of: float
     signed_adjustment: float
@@ -32,16 +37,20 @@ class AccountsViewService:
     """Move account CRUD orchestration out of the QWidget."""
 
     def __init__(self, db: Database) -> None:
+        """Initialize the AccountsViewService instance."""
         self._db = db
 
     def load_state(self) -> AccountsViewState:
+        """Return load state."""
         return AccountsViewState(accounts=self._db.account.list())
 
     def list_balance_adjustment_accounts(self) -> list[dict[str, Any]]:
+        """Return list balance adjustment accounts."""
         return [acc for acc in self._db.account.list() if str(acc.get("account_type") or "") in {"bank", "credit"}]
 
     @staticmethod
     def _coerce_created_day(value: object) -> date | None:
+        """Return coerce created day."""
         if value is None:
             return None
         if isinstance(value, datetime):
@@ -64,6 +73,7 @@ class AccountsViewService:
         *,
         exclude_transaction_id: int | None = None,
     ) -> BalanceAdjustmentPreview:
+        """Return preview balance adjustment."""
         if account_id is None:
             return BalanceAdjustmentPreview(
                 account_id=None,
@@ -102,24 +112,29 @@ class AccountsViewService:
         currency: str | None,
         set_as_default: bool = False,
     ) -> OperationFeedback:
+        """Return create."""
         created = self._db.account.create(name, account_type, opening_balance, currency)
         if set_as_default:
             self._db.account.set_default(int(created["id"]))
         return OperationFeedback(selected_id=int(created["id"]))
 
     def update(self, account_id: int, *, name: str, account_type: str, currency: str | None) -> OperationFeedback:
+        """Return update."""
         self._db.account.update(account_id, name, account_type, currency)
         return OperationFeedback(selected_id=int(account_id))
 
     def delete(self, account_id: int) -> OperationFeedback:
+        """Return delete."""
         self._db.account.delete(account_id)
         return OperationFeedback()
 
     def set_default(self, account_id: int) -> OperationFeedback:
+        """Return set default."""
         self._db.account.set_default(account_id)
         return OperationFeedback(selected_id=int(account_id))
 
     def record_balance_adjustment(self, data: dict[str, Any]) -> OperationFeedback:
+        """Return record balance adjustment."""
         tx = self._db.transaction.record_balance_adjustment(
             account_id=int(data["account_id"]),
             signed_amount=float(data["signed_amount"]),
@@ -132,6 +147,7 @@ class AccountsViewService:
         )
 
     def update_balance_adjustment(self, transaction_id: int, data: dict[str, Any]) -> OperationFeedback:
+        """Return update balance adjustment."""
         tx = self._db.transaction.update_balance_adjustment(
             transaction_id,
             account_id=int(data["account_id"]),

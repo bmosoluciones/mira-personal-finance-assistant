@@ -11,9 +11,15 @@ from typing import Any, Protocol
 
 
 class DemoSeedDatabase(Protocol):
-    def add_transaction(self, **kwargs: Any) -> dict[str, Any]: ...
+    """Represent the DemoSeedDatabase class."""
 
-    def add_transaction_tag(self, transaction_id: int, tag_id: int) -> None: ...
+    def add_transaction(self, **kwargs: Any) -> dict[str, Any]:
+        """Return add transaction."""
+        ...
+
+    def add_transaction_tag(self, transaction_id: int, tag_id: int) -> None:
+        """Return add transaction tag."""
+        ...
 
     def transfer_between_accounts(
         self,
@@ -24,7 +30,9 @@ class DemoSeedDatabase(Protocol):
         note: str | None,
         tx_date: str,
         description: str | None,
-    ) -> None: ...
+    ) -> None:
+        """Return transfer between accounts."""
+        ...
 
     def upsert_budget_amount(
         self,
@@ -33,27 +41,49 @@ class DemoSeedDatabase(Protocol):
         year: int,
         month: int,
         amount: float,
-    ) -> None: ...
+    ) -> None:
+        """Return upsert budget amount."""
+        ...
 
-    def get_setting(self, key: str, default: str | None = None) -> str | None: ...
+    def get_setting(self, key: str, default: str | None = None) -> str | None:
+        """Return get setting."""
+        ...
 
-    def get_category_by_name(self, name: str, cat_type: str) -> dict[str, Any] | None: ...
+    def get_category_by_name(self, name: str, cat_type: str) -> dict[str, Any] | None:
+        """Return get category by name."""
+        ...
 
-    def get_tag_by_name(self, name: str) -> dict[str, Any] | None: ...
+    def get_tag_by_name(self, name: str) -> dict[str, Any] | None:
+        """Return get tag by name."""
+        ...
 
-    def get_default_account(self) -> dict[str, Any] | None: ...
+    def get_default_account(self) -> dict[str, Any] | None:
+        """Return get default account."""
+        ...
 
-    def get_account_by_name(self, name: str) -> dict[str, Any] | None: ...
+    def get_account_by_name(self, name: str) -> dict[str, Any] | None:
+        """Return get account by name."""
+        ...
 
-    def get_or_create_account(self, name: str) -> dict[str, Any]: ...
+    def get_or_create_account(self, name: str) -> dict[str, Any]:
+        """Return get or create account."""
+        ...
 
-    def set_default_account(self, account_id: int) -> None: ...
+    def set_default_account(self, account_id: int) -> None:
+        """Return set default account."""
+        ...
 
-    def add_account(self, name: str, account_type: str, opening_balance: float, currency: str) -> dict[str, Any]: ...
+    def add_account(self, name: str, account_type: str, opening_balance: float, currency: str) -> dict[str, Any]:
+        """Return add account."""
+        ...
 
-    def get_default_currency(self) -> str: ...
+    def get_default_currency(self) -> str:
+        """Return get default currency."""
+        ...
 
-    def get_savings_goal_by_name(self, name: str) -> dict[str, Any] | None: ...
+    def get_savings_goal_by_name(self, name: str) -> dict[str, Any] | None:
+        """Return get savings goal by name."""
+        ...
 
     def add_savings_goal(
         self,
@@ -63,20 +93,33 @@ class DemoSeedDatabase(Protocol):
         target_date: str,
         currency: str,
         category_name: str,
-    ) -> None: ...
+    ) -> None:
+        """Return add savings goal."""
+        ...
 
-    def get_budget_by_code(self, code: str) -> dict[str, Any] | None: ...
+    def get_budget_by_code(self, code: str) -> dict[str, Any] | None:
+        """Return get budget by code."""
+        ...
 
-    def delete_budget(self, budget_id: int) -> None: ...
+    def delete_budget(self, budget_id: int) -> None:
+        """Return delete budget."""
+        ...
 
-    def create_budget(self, code: str, year: int, currency: str) -> dict[str, Any]: ...
+    def create_budget(self, code: str, year: int, currency: str) -> dict[str, Any]:
+        """Return create budget."""
+        ...
 
-    def delete_transaction(self, tx_id: int) -> None: ...
+    def delete_transaction(self, tx_id: int) -> None:
+        """Return delete transaction."""
+        ...
 
 
 @dataclass(frozen=True)
 class DemoSeedCatalog:
+    """Represent the DemoSeedCatalog class."""
+
     main_account: str
+
     reserve_account: str
     categories: dict[str, tuple[str, str]]
     tags: dict[str, str]
@@ -85,7 +128,10 @@ class DemoSeedCatalog:
 
 @dataclass(frozen=True)
 class DemoSeedRuntime:
+    """Represent the DemoSeedRuntime class."""
+
     year: int
+
     budget_id: int
     default_account_id: int
     reserve_account_id: int
@@ -106,6 +152,7 @@ def build_demo_seed_runtime(
     tag_rows: dict[str, dict[str, Any]],
     descriptions: dict[str, str],
 ) -> DemoSeedRuntime:
+    """Return build demo seed runtime."""
     return DemoSeedRuntime(
         year=year,
         budget_id=budget_id,
@@ -127,6 +174,7 @@ def build_demo_seed_result(
     tag_links_created: int,
     language: str,
 ) -> dict[str, Any]:
+    """Return build demo seed result."""
     return {
         "year": year,
         "budget_code": budget_code,
@@ -138,6 +186,7 @@ def build_demo_seed_result(
 
 
 def normalize_demo_seed_language(language: str | None) -> str:
+    """Return normalize demo seed language."""
     normalized = (language or "en").strip().lower()
     return normalized if normalized in {"es", "en"} else "en"
 
@@ -148,6 +197,7 @@ def build_demo_seed_catalog(
     catalog_data: dict[str, dict[str, Any]],
     translate: Any,
 ) -> DemoSeedCatalog:
+    """Return build demo seed catalog."""
     localized = catalog_data.get(language, catalog_data["en"])
     return DemoSeedCatalog(
         main_account=str(localized["main_account"]),
@@ -192,6 +242,7 @@ def build_demo_seed_catalog(
 
 
 def resolve_seed_categories(db: DemoSeedDatabase, catalog: DemoSeedCatalog) -> dict[str, dict[str, Any]]:
+    """Return resolve seed categories."""
     category_rows: dict[str, dict[str, Any]] = {}
     missing_categories: list[str] = []
     for key, (name, cat_type) in catalog.categories.items():
@@ -208,6 +259,7 @@ def resolve_seed_categories(db: DemoSeedDatabase, catalog: DemoSeedCatalog) -> d
 
 
 def resolve_seed_tags(db: DemoSeedDatabase, catalog: DemoSeedCatalog) -> dict[str, dict[str, Any]]:
+    """Return resolve seed tags."""
     tag_rows: dict[str, dict[str, Any]] = {}
     for key, name in catalog.tags.items():
         if (tag := db.get_tag_by_name(name)) is not None:
@@ -216,6 +268,7 @@ def resolve_seed_tags(db: DemoSeedDatabase, catalog: DemoSeedCatalog) -> dict[st
 
 
 def ensure_seed_accounts(db: DemoSeedDatabase, catalog: DemoSeedCatalog) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return ensure seed accounts."""
     default_account = db.get_default_account()
     if default_account is None:
         default_account = db.get_account_by_name(catalog.main_account) or db.get_or_create_account(catalog.main_account)
@@ -237,6 +290,7 @@ def ensure_seed_goals(
     year: int,
     category_rows: dict[str, dict[str, Any]],
 ) -> None:
+    """Return ensure seed goals."""
     savings_goal_specs = [
         (str(category_rows["emergency_fund"]["name"]), 2500.0, f"{year + 1}-12-31", "emergency_fund"),
         (str(category_rows["retirement"]["name"]), 6000.0, f"{year + 3}-12-31", "retirement"),
@@ -258,6 +312,7 @@ def reset_seed_artifacts(
     year: int,
     transaction_model: Any,
 ) -> tuple[str, str]:
+    """Return reset seed artifacts."""
     seed_note = f"mira_cli_seed:{year}"
     budget_code = f"mira_cli_seed_{year}"
     seeded_ids = [
@@ -274,6 +329,7 @@ def reset_seed_artifacts(
 
 
 def build_budget_plan() -> dict[str, list[float]]:
+    """Return build budget plan."""
     return {
         "salary": [1850.0] * 12,
         "freelance": [180.0, 240.0, 190.0, 260.0, 210.0, 280.0, 200.0, 270.0, 220.0, 290.0, 210.0, 320.0],
@@ -313,6 +369,7 @@ def seed_budget_plan(
     category_rows: dict[str, dict[str, Any]],
     budget_plan: dict[str, list[float]],
 ) -> None:
+    """Return seed budget plan."""
     for month in range(1, 13):
         for key, monthly_amounts in budget_plan.items():
             db.upsert_budget_amount(
@@ -329,10 +386,12 @@ def seed_monthly_transactions(
     runtime: DemoSeedRuntime,
     budget_plan: dict[str, list[float]],
 ) -> tuple[int, int]:
+    """Return seed monthly transactions."""
     tx_count = 0
     tag_links = 0
 
     def _attach_tags(transaction_id: int, *tag_keys: str) -> None:
+        """Return attach tags."""
         nonlocal tag_links
         for tag_key in tag_keys:
             if (tag := runtime.tag_rows.get(tag_key)) is None:
@@ -350,6 +409,7 @@ def seed_monthly_transactions(
         description_key: str,
         tag_keys: tuple[str, ...],
     ) -> None:
+        """Return add seed transaction."""
         nonlocal tx_count
         valid_day = min(day, calendar.monthrange(runtime.year, month)[1])
         tx = db.add_transaction(

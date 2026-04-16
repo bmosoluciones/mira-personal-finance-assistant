@@ -30,7 +30,10 @@ from mira.ui.i18n import tr
 
 @dataclass(frozen=True)
 class MainWindowServices:
+    """Represent the MainWindowServices class."""
+
     accounts: AccountsViewService
+
     transactions: TransactionsViewService
     categories: CategoriesViewService
     tags: TagsViewService
@@ -44,6 +47,7 @@ class MainWindowServices:
 
 
 def build_view_services(db) -> MainWindowServices:
+    """Return build view services."""
     return MainWindowServices(
         accounts=AccountsViewService(db),
         transactions=TransactionsViewService(db),
@@ -60,10 +64,14 @@ def build_view_services(db) -> MainWindowServices:
 
 
 class MainWindowChatPresenter:
+    """Represent the MainWindowChatPresenter class."""
+
     def __init__(self, window) -> None:
+        """Initialize the MainWindowChatPresenter instance."""
         self._window = window
 
     def append_assistant(self, text: str) -> None:
+        """Return append assistant."""
         block = text.strip()
         if not block:
             return
@@ -75,6 +83,7 @@ class MainWindowChatPresenter:
         self.show_current_message()
 
     def show_current_message(self) -> None:
+        """Return show current message."""
         current_message = self._window._chat_state.current_message()
         if current_message is None:
             if hasattr(self._window._response_browser, "setHtml"):
@@ -96,10 +105,14 @@ class MainWindowChatPresenter:
 
 
 class MainWindowNotificationProxy:
+    """Represent the MainWindowNotificationProxy class."""
+
     def __init__(self, window) -> None:
+        """Initialize the MainWindowNotificationProxy instance."""
         self._window = window
 
     def notify(self, *args: object, level: str = "info") -> None:
+        """Return notify."""
         from PySide6.QtWidgets import QWidget
 
         widget: QWidget | None
@@ -123,16 +136,21 @@ class MainWindowNotificationProxy:
                 service.info(str(title), str(message), widget=widget)
 
     def notify_exception(self, title: str, exc: Exception, *, prefix: str | None = None) -> None:
+        """Return notify exception."""
         descriptor = describe_error(exc, language=getattr(self._window, "_language", "en"))
         message = descriptor.message if prefix is None else f"{prefix}\n{descriptor.message}"
         self.notify(self._window, title, message, level=descriptor.level)
 
 
 class MainWindowFileActions:
+    """Represent the MainWindowFileActions class."""
+
     def __init__(self, window) -> None:
+        """Initialize the MainWindowFileActions instance."""
         self._window = window
 
     def import_csv(self, path: str) -> None:
+        """Return import csv."""
         try:
             imported, errors = self._window._db.io.import_transactions_csv(path)
             self._window._refresh_all()
@@ -154,6 +172,7 @@ class MainWindowFileActions:
             )
 
     def export_csv(self, path: str) -> None:
+        """Return export csv."""
         try:
             count = self._window._db.io.export_transactions_csv(path)
             self._window.notify_user_info(
@@ -174,6 +193,7 @@ class MainWindowFileActions:
             )
 
     def backup(self, path: str) -> None:
+        """Return backup."""
         try:
             backup_path = self._window._db.backup.create(path)
             self._window.notify_user_info(
@@ -194,6 +214,7 @@ class MainWindowFileActions:
             )
 
     def restore(self, path: str) -> None:
+        """Return restore."""
         try:
             restored = self._window._db.backup.restore(path)
             self._window._refresh_all()
@@ -222,6 +243,7 @@ class MainWindowFileActions:
 
 
 def restore_confirmation(window) -> bool:
+    """Return restore confirmation."""
     from PySide6.QtWidgets import QMessageBox
 
     reply = QMessageBox.question(
@@ -238,4 +260,5 @@ def restore_confirmation(window) -> bool:
 
 
 def default_backup_name() -> str:
+    """Return default backup name."""
     return f"mira-backup-{date.today().isoformat()}.db"

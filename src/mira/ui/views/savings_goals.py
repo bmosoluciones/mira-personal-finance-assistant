@@ -40,19 +40,23 @@ class _GoalCard(QFrame):
     context_requested = Signal(int, QPoint)  # emits goal id and local/global click point
 
     def __init__(self, goal_id: int, parent: QWidget | None = None) -> None:
+        """Initialize the _GoalCard instance."""
         super().__init__(parent)
         self._goal_id = goal_id
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # type: ignore[override]
+        """Return mousePressEvent."""
         self.clicked.emit(self._goal_id)
         super().mousePressEvent(event)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:  # type: ignore[override]
+        """Return mouseDoubleClickEvent."""
         self.activated.emit(self._goal_id)
         super().mouseDoubleClickEvent(event)
 
     def contextMenuEvent(self, event) -> None:  # type: ignore[override]
+        """Return contextMenuEvent."""
         self.context_requested.emit(self._goal_id, event.globalPos())
         event.accept()
 
@@ -66,6 +70,7 @@ class SavingsGoalsView(QWidget):
         parent: QWidget | None = None,
         service: SavingsGoalsViewService | None = None,
     ) -> None:
+        """Initialize the SavingsGoalsView instance."""
         super().__init__(parent)
         self._db = db
         self._service = service or SavingsGoalsViewService(db)
@@ -74,6 +79,7 @@ class SavingsGoalsView(QWidget):
         self._build_ui()
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(10)
@@ -124,6 +130,7 @@ class SavingsGoalsView(QWidget):
         self._btn_delete.clicked.connect(self._on_delete)
 
     def _on_add(self, prefill: dict | None = None) -> None:
+        """Return on add."""
         from mira.ui.dialogs import SavingsGoalDialog
 
         dlg = SavingsGoalDialog(self._db, prefill=prefill, parent=self)
@@ -142,6 +149,7 @@ class SavingsGoalsView(QWidget):
             self.refresh()
 
     def _on_contribute(self) -> None:
+        """Return on contribute."""
         from mira.ui.dialogs import ContributeGoalDialog
 
         if not self._goals:
@@ -176,6 +184,7 @@ class SavingsGoalsView(QWidget):
             self.refresh()
 
     def _on_edit(self) -> None:
+        """Return on edit."""
         from mira.ui.dialogs import SavingsGoalDialog
 
         goal = next((g for g in self._goals if g["id"] == self._selected_id), None)
@@ -204,6 +213,7 @@ class SavingsGoalsView(QWidget):
         self.refresh()
 
     def _on_delete(self) -> None:
+        """Return on delete."""
         goal = next((g for g in self._goals if g["id"] == self._selected_id), None)
         if goal is None:
             _notify_info(
@@ -233,10 +243,12 @@ class SavingsGoalsView(QWidget):
             self.refresh()
 
     def _select_goal(self, goal_id: int) -> None:
+        """Return select goal."""
         self._selected_id = goal_id
         self.refresh()
 
     def _on_goal_context_menu(self, goal_id: int, global_pos: QPoint) -> None:
+        """Return on goal context menu."""
         self._selected_id = goal_id
         self.refresh()
 
@@ -253,6 +265,7 @@ class SavingsGoalsView(QWidget):
             self._on_delete()
 
     def _on_goal_activated(self, goal_id: int) -> None:
+        """Return on goal activated."""
         self._selected_id = goal_id
         self._on_contribute()
 
@@ -265,9 +278,11 @@ class SavingsGoalsView(QWidget):
         self._on_contribute()
 
     def refresh(self) -> None:
+        """Return refresh."""
         self._apply_state(self._service.load_state())
 
     def _apply_state(self, state: SavingsGoalsViewState) -> None:
+        """Return apply state."""
         self._goals = list(state.goals)
 
         # Clear existing cards

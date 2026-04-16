@@ -55,6 +55,7 @@ _INITIAL_SETUP_THEME = "light_blue.xml"
 
 
 def _resolve_ui_icon_path(filename: str) -> Path:
+    """Return resolve ui icon path."""
     here = Path(__file__).resolve()
     candidates = (here.parent.parent / "icons" / filename, here.parent / "icons" / filename)
     for candidate in candidates:
@@ -64,10 +65,12 @@ def _resolve_ui_icon_path(filename: str) -> Path:
 
 
 def _hero_amount_spin_style(color: str) -> str:
+    """Return hero amount spin style."""
     return "QDoubleSpinBox{border-radius:10px;" f"padding:12px 16px;font-size:38px;font-weight:700;color:{color};}}"
 
 
 def _make_amount_spin(db: Database) -> QDoubleSpinBox:
+    """Return make amount spin."""
     spin = NumberMaskedSpinBox(db.setting)
     spin.setRange(0.01, 9_999_999.99)
     spin.setDecimals(2)
@@ -85,6 +88,7 @@ def _make_formula_amount_spin(db: Database) -> FormulaAmountEdit:
 
 
 def _notify(widget: QWidget, *args: object, level: str = "warning") -> None:
+    """Return notify."""
     if len(args) == 3 and isinstance(args[0], QWidget):
         _, title, message = args
     elif len(args) == 2:
@@ -95,10 +99,12 @@ def _notify(widget: QWidget, *args: object, level: str = "warning") -> None:
 
 
 def _notify_warning(widget: QWidget, *args: object) -> None:
+    """Return notify warning."""
     _notify(widget, *args, level="warning")
 
 
 def _make_balance_spin(db: Database) -> QDoubleSpinBox:
+    """Return make balance spin."""
     spin = NumberMaskedSpinBox(db.setting)
     spin.setRange(-9_999_999.99, 9_999_999.99)
     spin.setDecimals(2)
@@ -107,12 +113,14 @@ def _make_balance_spin(db: Database) -> QDoubleSpinBox:
 
 
 def _format_amount_label(db: Database, amount: float, currency: str | None = None) -> str:
+    """Return format amount label."""
     formatted = format_number(float(amount), get_number_format_config(db.setting), decimals=2, grouping=True)
     normalized_currency = str(currency or "").strip().upper()
     return f"{normalized_currency} {formatted}" if normalized_currency else formatted
 
 
 def _make_date_edit(default: date | None = None) -> QDateEdit:
+    """Return make date edit."""
     from PySide6.QtCore import QDate
 
     de = QDateEdit()
@@ -127,6 +135,7 @@ class _TagListWidget(QListWidget):
     """Single-click checkable list used by the tag dropdown popup."""
 
     def mousePressEvent(self, event) -> None:  # type: ignore[override]
+        """Return mousePressEvent."""
         item = self.itemAt(event.position().toPoint())
         if item is not None and item.flags() & Qt.ItemFlag.ItemIsUserCheckable:
             item.setCheckState(
@@ -143,6 +152,7 @@ class _TagMultiSelectButton(QToolButton):
     selection_changed = Signal()
 
     def __init__(self, parent: QWidget | None = None, *, lang: str = "en") -> None:
+        """Initialize the _TagMultiSelectButton instance."""
         super().__init__(parent)
         self._language = normalize_language(lang)
         self._tags: list[dict] = []
@@ -166,6 +176,7 @@ class _TagMultiSelectButton(QToolButton):
         self._update_text()
 
     def set_tags(self, tags: list[dict], selected_ids: list[int] | set[int] | None = None) -> None:
+        """Return set tags."""
         self._tags = list(tags)
         valid_ids = {int(tag["id"]) for tag in self._tags}
         if selected_ids is not None:
@@ -176,21 +187,26 @@ class _TagMultiSelectButton(QToolButton):
         self._update_text()
 
     def set_selected_ids(self, selected_ids: list[int] | set[int]) -> None:
+        """Return set selected ids."""
         valid_ids = {int(tag["id"]) for tag in self._tags}
         self._selected_ids = [int(tag_id) for tag_id in selected_ids if int(tag_id) in valid_ids]
         self._rebuild_popup()
         self._update_text()
 
     def selected_ids(self) -> list[int]:
+        """Return selected ids."""
         return list(self._selected_ids)
 
     def option_ids(self) -> list[int]:
+        """Return option ids."""
         return [int(tag["id"]) for tag in self._tags]
 
     def popup_list(self) -> QListWidget:
+        """Return popup list."""
         return self._list
 
     def _toggle_popup(self) -> None:
+        """Return toggle popup."""
         if self._popup.isVisible():
             self._popup.hide()
             return
@@ -207,6 +223,7 @@ class _TagMultiSelectButton(QToolButton):
         self._popup.raise_()
 
     def _rebuild_popup(self) -> None:
+        """Return rebuild popup."""
         self._syncing_list = True
         self._list.clear()
         if not self._tags:
@@ -228,6 +245,7 @@ class _TagMultiSelectButton(QToolButton):
         self._syncing_list = False
 
     def _sync_selection_from_list(self, _item: QListWidgetItem) -> None:
+        """Return sync selection from list."""
         if self._syncing_list:
             return
         selected: list[int] = []
@@ -243,6 +261,7 @@ class _TagMultiSelectButton(QToolButton):
         self.selection_changed.emit()
 
     def _update_text(self) -> None:
+        """Return update text."""
         if not self._tags:
             self.setText(tr("dialog.tags.no_options", self._language, default="Tags (no options)"))
             self.setEnabled(False)
@@ -262,6 +281,7 @@ class _TagMultiSelectButton(QToolButton):
 
 
 def _build_icon_combo(parent: QWidget | None = None, *, lang: str = "en") -> QComboBox:
+    """Return build icon combo."""
     language = normalize_language(lang)
     combo = QComboBox(parent)
     combo.setEditable(False)
@@ -274,6 +294,7 @@ def _build_icon_combo(parent: QWidget | None = None, *, lang: str = "en") -> QCo
 
 
 def _set_icon_combo_value(combo: QComboBox, icon_value: str) -> None:
+    """Return set icon combo value."""
     normalized_value = icon_value.strip()
     index = combo.findData(normalized_value)
     if index >= 0:

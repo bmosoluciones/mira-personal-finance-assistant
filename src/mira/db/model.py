@@ -33,7 +33,10 @@ SCHEMA_VERSION = 4
 
 @dataclass(frozen=True)
 class SchemaInspection:
+    """Represent the SchemaInspection class."""
+
     status: str
+
     user_version: int | None
     tables: frozenset[str]
     error: str | None = None
@@ -41,7 +44,10 @@ class SchemaInspection:
 
 @dataclass(frozen=True)
 class SchemaIndexSpec:
+    """Represent the SchemaIndexSpec class."""
+
     name: str
+
     table: str
     columns: tuple[str, ...]
     unique: bool = False
@@ -49,12 +55,19 @@ class SchemaIndexSpec:
 
 
 class BaseModel(Model):
+    """Represent the BaseModel class."""
+
     class Meta:
+        """Represent the Meta class."""
+
         database = DB_PROXY
 
 
 class Account(BaseModel):
+    """Represent the Account class."""
+
     id = AutoField()
+
     name = CharField(unique=True)
     # Monetary values are stored as exact integer cents in SQLite to avoid
     # floating-point drift in balances, reports, and budget aggregates.
@@ -65,11 +78,16 @@ class Account(BaseModel):
     created_at = DateTimeField(default=datetime.now)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "accounts"
 
 
 class Transaction(BaseModel):
+    """Represent the Transaction class."""
+
     id = AutoField()
+
     account = ForeignKeyField(
         Account, backref="transactions", null=True, column_name="account_id", on_delete="SET NULL"
     )
@@ -98,11 +116,16 @@ class Transaction(BaseModel):
     created_at = DateTimeField(default=datetime.now)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "transactions"
 
 
 class Bucket(BaseModel):
+    """Represent the Bucket class."""
+
     id = AutoField()
+
     name = CharField(unique=True)
     budget_amount = IntegerField(column_name="budget_amount_cents")
     spent_amount = IntegerField(column_name="spent_amount_cents", default=0)
@@ -112,28 +135,43 @@ class Bucket(BaseModel):
     alert_threshold = FloatField(default=0.75)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "buckets"
 
 
 class Setting(BaseModel):
+    """Represent the Setting class."""
+
     key = CharField(primary_key=True)
+
     value = TextField(null=True)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "settings"
 
 
 class Currency(BaseModel):
+    """Represent the Currency class."""
+
     code = CharField(primary_key=True)
+
     name = CharField()
     region = CharField(default="americas")
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "currencies"
 
 
 class Category(BaseModel):
+    """Represent the Category class."""
+
     id = AutoField()
+
     name = CharField(unique=True)
     type = CharField()
     color = CharField(default="#888888")
@@ -142,33 +180,48 @@ class Category(BaseModel):
     parent_id = IntegerField(null=True)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "categories"
 
 
 class Tag(BaseModel):
+    """Represent the Tag class."""
+
     id = AutoField()
+
     name = CharField(unique=True)
     icon = CharField(default="")
     color = CharField(default="#888888")
     created_at = DateTimeField(default=datetime.now)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "tags"
 
 
 class TransactionTag(BaseModel):
+    """Represent the TransactionTag class."""
+
     transaction_id = IntegerField(
         constraints=[SQL("REFERENCES transactions(id) ON DELETE CASCADE")],
     )
     tag = ForeignKeyField(Tag, backref="transaction_links", column_name="tag_id", on_delete="CASCADE")
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "transaction_tags"
+
         primary_key = CompositeKey("transaction_id", "tag")
 
 
 class RecurringTransaction(BaseModel):
+    """Represent the RecurringTransaction class."""
+
     id = AutoField()
+
     account = ForeignKeyField(
         Account,
         backref="recurring_transactions",
@@ -188,22 +241,32 @@ class RecurringTransaction(BaseModel):
     day_of_month = IntegerField(default=1)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "recurring_transactions"
 
 
 class RecurringTransactionTag(BaseModel):
+    """Represent the RecurringTransactionTag class."""
+
     recurring_id = IntegerField(
         constraints=[SQL("REFERENCES recurring_transactions(id) ON DELETE CASCADE")],
     )
     tag = ForeignKeyField(Tag, backref="recurring_links", column_name="tag_id", on_delete="CASCADE")
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "recurring_transaction_tags"
+
         primary_key = CompositeKey("recurring_id", "tag")
 
 
 class BudgetMaster(BaseModel):
+    """Represent the BudgetMaster class."""
+
     id = AutoField()
+
     code = CharField(unique=True)
     year = IntegerField()
     is_default_year = BooleanField(default=False)
@@ -211,11 +274,16 @@ class BudgetMaster(BaseModel):
     created_at = DateTimeField(default=datetime.now)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "budget_master"
 
 
 class BudgetDetail(BaseModel):
+    """Represent the BudgetDetail class."""
+
     id = AutoField()
+
     budget = ForeignKeyField(BudgetMaster, backref="details", column_name="budget_id", on_delete="CASCADE")
     category = ForeignKeyField(Category, backref="budget_details", column_name="category_id", on_delete="CASCADE")
     year = IntegerField()
@@ -223,12 +291,18 @@ class BudgetDetail(BaseModel):
     amount = IntegerField(column_name="amount_cents", default=0)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "budget_detail"
+
         indexes = ((("budget", "category", "year", "month"), True),)
 
 
 class SavingsGoal(BaseModel):
+    """Represent the SavingsGoal class."""
+
     id = AutoField()
+
     name = CharField(unique=True)
     target_amount = IntegerField(column_name="target_amount_cents")
     current_amount = IntegerField(column_name="current_amount_cents", default=0)
@@ -241,11 +315,16 @@ class SavingsGoal(BaseModel):
     created_at = DateTimeField(default=datetime.now)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "savings_goals"
 
 
 class InsightEvent(BaseModel):
+    """Represent the InsightEvent class."""
+
     id = AutoField()
+
     user_id = IntegerField(default=1)
     transaction_id = IntegerField()
     insight_code = CharField()
@@ -256,11 +335,16 @@ class InsightEvent(BaseModel):
     extra_context = TextField(null=True)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "insight_events"
 
 
 class AchievementEvent(BaseModel):
+    """Represent the AchievementEvent class."""
+
     id = AutoField()
+
     user_id = IntegerField(default=1)
     transaction_id = IntegerField()
     achievement_code = CharField()
@@ -271,23 +355,34 @@ class AchievementEvent(BaseModel):
     extra_context = TextField(null=True)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "achievement_events"
 
 
 class AchievementCounter(BaseModel):
+    """Represent the AchievementCounter class."""
+
     id = AutoField()
+
     user_id = IntegerField(default=1)
     counter_key = CharField()
     counter_value = IntegerField(default=0)
     updated_at = DateTimeField(default=datetime.now)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "achievement_counters"
+
         indexes = ((("user_id", "counter_key"), True),)
 
 
 class MessageEvent(BaseModel):
+    """Represent the MessageEvent class."""
+
     id = AutoField()
+
     user_id = IntegerField(default=1)
     message_code = CharField()
     message_type = CharField()
@@ -303,11 +398,16 @@ class MessageEvent(BaseModel):
     message_text = TextField()
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "message_events"
 
 
 class ReconciliationGroup(BaseModel):
+    """Represent the ReconciliationGroup class."""
+
     id = CharField(primary_key=True)
+
     account = ForeignKeyField(
         Account,
         backref="reconciliation_groups",
@@ -319,11 +419,16 @@ class ReconciliationGroup(BaseModel):
     created_at = DateTimeField(default=datetime.now)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "reconciliation_groups"
 
 
 class ReconciliationMatch(BaseModel):
+    """Represent the ReconciliationMatch class."""
+
     id = CharField(primary_key=True)
+
     reconciliation_group = ForeignKeyField(
         ReconciliationGroup,
         backref="matches",
@@ -343,20 +448,30 @@ class ReconciliationMatch(BaseModel):
     external_item_key = CharField()
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "reconciliation_matches"
 
 
 class SchemaVersion(BaseModel):
+    """Represent the SchemaVersion class."""
+
     version = IntegerField(primary_key=True)
+
     applied_at = DateTimeField(default=datetime.now)
     status = CharField(default="applied")
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "schema_version"
 
 
 class IncomeExpenseRelation(BaseModel):
+    """Represent the IncomeExpenseRelation class."""
+
     id = AutoField()
+
     income_category = ForeignKeyField(
         Category,
         backref="expense_relations",
@@ -372,7 +487,10 @@ class IncomeExpenseRelation(BaseModel):
     created_at = DateTimeField(default=datetime.now)
 
     class Meta:
+        """Represent the Meta class."""
+
         table_name = "income_expense_relations"
+
         indexes = ((("expense_category",), True),)
 
 
@@ -502,6 +620,7 @@ SCHEMA_INDEX_SPECS: tuple[SchemaIndexSpec, ...] = (
 
 
 def _build_create_index_sql(index_spec: SchemaIndexSpec) -> str:
+    """Return build create index sql."""
     unique_sql = "UNIQUE " if index_spec.unique else ""
     columns_sql = ", ".join(index_spec.columns)
     where_sql = f" WHERE {index_spec.where}" if index_spec.where else ""
@@ -511,6 +630,7 @@ def _build_create_index_sql(index_spec: SchemaIndexSpec) -> str:
 
 
 def create_peewee_database(path: str) -> SqliteDatabase:
+    """Return create peewee database."""
     return SqliteDatabase(
         path,
         pragmas={"journal_mode": "wal", "foreign_keys": 1},
@@ -519,6 +639,7 @@ def create_peewee_database(path: str) -> SqliteDatabase:
 
 
 def bind_database(database: SqliteDatabase) -> None:
+    """Return bind database."""
     DB_PROXY.initialize(database)
 
 
@@ -546,10 +667,12 @@ _LEGACY_V1_REQUIRED_TABLES = frozenset(
 
 
 def _table_columns(conn: sqlite3.Connection, table: str) -> frozenset[str]:
+    """Return table columns."""
     return frozenset(str(row[1]) for row in conn.execute(f"PRAGMA table_info({table})").fetchall())
 
 
 def _is_legacy_v1_float_schema(conn: sqlite3.Connection, tables: frozenset[str]) -> bool:
+    """Return whether legacy v1 float schema."""
     if not _LEGACY_V1_REQUIRED_TABLES.issubset(tables):
         return False
     accounts_columns = _table_columns(conn, "accounts")
@@ -662,6 +785,7 @@ def inspect_database_schema(
 
 
 def initialize_schema(database: SqliteDatabase) -> None:
+    """Return initialize schema."""
     database.create_tables(ALL_MODELS, safe=True)
     # Schema v2 intentionally uses *_cents columns for all persisted money.
     # Keep explicit index names and partial predicates from one declarative source.

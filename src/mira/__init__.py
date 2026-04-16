@@ -13,6 +13,7 @@ _PACKAGE_NAME = "mira-personal-finance-assistant"
 
 
 def _detect_local_version() -> str | None:
+    """Return detect local version."""
     pyproject_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
     if not pyproject_path.is_file():
         return None
@@ -25,6 +26,7 @@ def _detect_local_version() -> str | None:
 
 
 def _detect_version() -> str:
+    """Return detect version."""
     local_version = _detect_local_version()
     if local_version is not None:
         return local_version

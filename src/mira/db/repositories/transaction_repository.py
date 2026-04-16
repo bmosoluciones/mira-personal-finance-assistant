@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 import calendar
 from decimal import Decimal
@@ -23,13 +26,30 @@ from mira.transaction_kinds import (
 
 
 class TransactionRepository:
+    """Represent the TransactionRepository class."""
+
     if TYPE_CHECKING:
 
-        def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def _cents_to_decimal(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None: ...
-        def _round_money(self, value: object) -> Any: ...
-        def _atomic(self) -> Any: ...
+        def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return money to decimal."""
+
+        def _cents_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return cents to decimal."""
+            ...
+
+        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
+            """Return money to cents."""
+            ...
+
+        def _round_money(self, value: object) -> Any:
+            """Return round money."""
+            ...
+
+        def _atomic(self) -> Any:
+            """Return atomic."""
+            ...
+
+            ...
 
         def get_category(
             self,
@@ -37,26 +57,57 @@ class TransactionRepository:
             cat_id: int | None = None,
             name: str | None = None,
             cat_type: str | None = None,
-        ) -> dict[str, Any] | None: ...
+        ) -> dict[str, Any] | None:
+            """Return get category."""
+            ...
 
-        def get_category_by_name(self, name: str, cat_type: str | None = None) -> dict[str, Any] | None: ...
-        def get_descendant_category_names(self, cat_id: int) -> list[str]: ...
-        def get_default_budget_for_year(self, year: int) -> dict[str, Any] | None: ...
-        def update_account_balance(self, account_id: int, delta: MoneyLike) -> None: ...
-        def _apply_savings_goal_delta_for_transaction(self, tx: dict[str, Any] | None, sign: int) -> None: ...
+        def get_category_by_name(self, name: str, cat_type: str | None = None) -> dict[str, Any] | None:
+            """Return get category by name."""
+
+        def get_descendant_category_names(self, cat_id: int) -> list[str]:
+            """Return get descendant category names."""
+            ...
+
+        def get_default_budget_for_year(self, year: int) -> dict[str, Any] | None:
+            """Return get default budget for year."""
+            ...
+
+        def update_account_balance(self, account_id: int, delta: MoneyLike) -> None:
+            """Return update account balance."""
+            ...
+
+        def _apply_savings_goal_delta_for_transaction(self, tx: dict[str, Any] | None, sign: int) -> None:
+            """Return apply savings goal delta for transaction."""
+            ...
+            ...
 
         def select_best_operation_message(
             self, tx: dict[str, Any], *, source: str | None = None
-        ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]: ...
+        ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+            """Return select best operation message."""
+            ...
 
-        def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict[str, Any]]: ...
-        def get_account_by_id(self, account_id: int) -> dict[str, Any] | None: ...
-        def get_setting(self, key: str) -> str | None: ...
-        def clear_reconciliation_for_transactions(self, transaction_ids: list[int]) -> int: ...
+        def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
+            """Return get accounts."""
+
+        def get_account_by_id(self, account_id: int) -> dict[str, Any] | None:
+            """Return get account by id."""
+            ...
+
+        def get_setting(self, key: str) -> str | None:
+            """Return get setting."""
+            ...
+
+        def clear_reconciliation_for_transactions(self, transaction_ids: list[int]) -> int:
+            """Return clear reconciliation for transactions."""
+            ...
+
+            ...
 
     _MAX_TRANSACTION_AMOUNT = 10_000_000_000
 
     def _validate_tx_date(self, tx_date: Any) -> str:
+        """Return validate tx date."""
         value = str(tx_date or date.today().isoformat()).strip()
         if "T" in value or " " in value:
             try:
@@ -71,6 +122,7 @@ class TransactionRepository:
         return parsed.date().isoformat()
 
     def _validate_tx_amount(self, amount: Any) -> Decimal:
+        """Return validate tx amount."""
         value = self._money_to_decimal(amount) or MONEY_ZERO
         limit = self._money_to_decimal(self._MAX_TRANSACTION_AMOUNT) or MONEY_ZERO
         if abs(value) > limit:
@@ -78,16 +130,19 @@ class TransactionRepository:
         return value
 
     def _resolve_transaction_category_id(self, tx_type: str, category: str | None) -> int | None:
+        """Return resolve transaction category id."""
         category_row = self.get_category(name=category, cat_type=tx_type)
         if category_row is None or category_row.get("id") is None:
             return None
         return int(category_row["id"])
 
     def _month_window(self, year: int, month: int) -> tuple[str, str]:
+        """Return month window."""
         last_day = calendar.monthrange(year, month)[1]
         return f"{year:04d}-{month:02d}-01", f"{year:04d}-{month:02d}-{last_day:02d}"
 
     def _validate_balance_adjustment_account(self, account_id: int) -> dict[str, Any]:
+        """Return validate balance adjustment account."""
         account = self.get_account_by_id(account_id)
         if account is None:
             raise ValueError(f"Account {account_id} not found.")
@@ -101,6 +156,7 @@ class TransactionRepository:
         signed_amount: MoneyLike,
         tx_date: str | None,
     ) -> tuple[str, Decimal, str, str]:
+        """Return normalize balance adjustment payload."""
         self._validate_balance_adjustment_account(account_id)
         normalized_signed_amount = self._money_to_decimal(signed_amount) or MONEY_ZERO
         if normalized_signed_amount == MONEY_ZERO:
@@ -114,6 +170,7 @@ class TransactionRepository:
     def _serialize_transaction_row(self, row: Transaction) -> dict[str, Any]:
         # Rehydrate exact cents from SQLite into the decimal contract expected
         # by the rest of the app and export/reporting layers.
+        """Return serialize transaction row."""
         date_value = row.date.isoformat() if hasattr(row.date, "isoformat") else row.date
         created_raw = row.created_at
         if isinstance(created_raw, datetime):
@@ -147,6 +204,7 @@ class TransactionRepository:
         }
 
     def build_monthly_context(self, tx: dict[str, Any]) -> dict[str, Any]:
+        """Return build monthly context."""
         tx_date = self._validate_tx_date(tx.get("date"))
         year = int(tx_date[:4])
         month = int(tx_date[5:7])
@@ -332,6 +390,7 @@ class TransactionRepository:
         category_id: int | None = None,
         source: str | None = None,
     ) -> dict:
+        """Return add transaction."""
         if tx_date is None:
             tx_date = date.today().isoformat()
         normalized_amount = self._validate_tx_amount(amount)
@@ -370,12 +429,14 @@ class TransactionRepository:
         return tx_data
 
     def get_transaction_by_id(self, tx_id: int) -> dict | None:
+        """Return get transaction by id."""
         row = Transaction.get_or_none(Transaction.id == tx_id)
         return self._serialize_transaction_row(row) if row is not None else None
 
     def delete_transaction(self, tx_id: int) -> None:
         # Policy: message_events are immutable historical records and must not
         # be deleted when transactions are edited or removed.
+        """Return delete transaction."""
         tx = self.get_transaction_by_id(tx_id)
         if tx is None:
             return
@@ -391,6 +452,7 @@ class TransactionRepository:
     def update_transaction(self, tx_id: int, **kwargs: object) -> dict:
         # Policy: message_events are immutable historical records and must not
         # be deleted when transactions are edited or removed.
+        """Return update transaction."""
         old = self.get_transaction_by_id(tx_id)
         if old is None:
             raise ValueError(f"Transaction {tx_id} not found")
@@ -458,11 +520,13 @@ class TransactionRepository:
         return result
 
     def update_transaction_account(self, tx_id: int, account_id: int) -> dict:
+        """Return update transaction account."""
         if self.get_account_by_id(account_id) is None:
             raise ValueError(f"Account {account_id} not found")
         return self.update_transaction(tx_id, account_id=account_id)
 
     def update_transaction_category(self, tx_id: int, category: str | None) -> dict:
+        """Return update transaction category."""
         normalized = (category or "").strip() or None
         return self.update_transaction(tx_id, category=normalized)
 
@@ -482,6 +546,7 @@ class TransactionRepository:
         tag_id: int | None = None,
         include_children: bool = False,
     ) -> list[dict]:
+        """Return get transactions."""
         query = Transaction.select()
         if tx_type:
             query = query.where(Transaction.type == tx_type)
@@ -538,6 +603,7 @@ class TransactionRepository:
         converted_amount: MoneyLike | None = None,
         description: str | None = None,
     ) -> tuple[dict, dict]:
+        """Return transfer between accounts."""
         if from_account_id == to_account_id:
             raise ValueError("Source and destination accounts must be different.")
         normalized_amount = self._money_to_decimal(amount) or MONEY_ZERO
@@ -632,6 +698,7 @@ class TransactionRepository:
         converted_amount: MoneyLike | None = None,
         description: str | None = None,
     ) -> tuple[dict, dict]:
+        """Return record credit card payment."""
         if from_account_id == credit_account_id:
             raise ValueError("Source and destination accounts must be different.")
         normalized_amount = self._money_to_decimal(amount) or MONEY_ZERO
@@ -692,6 +759,7 @@ class TransactionRepository:
         tx_date: str | None = None,
         note: str | None = None,
     ) -> dict[str, Any]:
+        """Return record balance adjustment."""
         tx_type, absolute_amount, normalized_date, description = self._normalize_balance_adjustment_payload(
             account_id,
             signed_amount,
@@ -725,6 +793,7 @@ class TransactionRepository:
         tx_date: str | None = None,
         note: str | None = None,
     ) -> dict[str, Any]:
+        """Return update balance adjustment."""
         existing = self.get_transaction_by_id(tx_id)
         if existing is None:
             raise ValueError(f"Transaction {tx_id} not found")

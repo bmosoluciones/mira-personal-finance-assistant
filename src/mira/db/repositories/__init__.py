@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from .account_repository import AccountRepository
 from .backup_repository import BackupRepository
 from .bucket_repository import BucketRepository

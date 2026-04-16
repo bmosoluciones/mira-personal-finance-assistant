@@ -300,11 +300,19 @@ _DEMO_CATALOG_DATA: dict[str, dict[str, Any]] = {
 
 
 class _BootstrapDatabaseProtocol(Protocol):
-    def get_default_currency(self) -> str: ...
+    """Represent the _BootstrapDatabaseProtocol class."""
 
-    def get_account_by_id(self, account_id: int) -> dict[str, Any] | None: ...
+    def get_default_currency(self) -> str:
+        """Return get default currency."""
+        ...
 
-    def get_account_by_name(self, name: str) -> dict[str, Any] | None: ...
+    def get_account_by_id(self, account_id: int) -> dict[str, Any] | None:
+        """Return get account by id."""
+        ...
+
+    def get_account_by_name(self, name: str) -> dict[str, Any] | None:
+        """Return get account by name."""
+        ...
 
     def add_account(
         self,
@@ -312,15 +320,25 @@ class _BootstrapDatabaseProtocol(Protocol):
         account_type: str = "bank",
         opening_balance: MoneyLike = 0,
         currency: str | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Return add account."""
+        ...
 
-    def get_default_account(self) -> dict[str, Any] | None: ...
+    def get_default_account(self) -> dict[str, Any] | None:
+        """Return get default account."""
+        ...
 
-    def get_or_create_account(self, name: str) -> dict[str, Any]: ...
+    def get_or_create_account(self, name: str) -> dict[str, Any]:
+        """Return get or create account."""
+        ...
 
-    def set_default_account(self, account_id: int) -> None: ...
+    def set_default_account(self, account_id: int) -> None:
+        """Return set default account."""
+        ...
 
-    def get_category_by_name(self, name: str, cat_type: str | None = None) -> dict[str, Any] | None: ...
+    def get_category_by_name(self, name: str, cat_type: str | None = None) -> dict[str, Any] | None:
+        """Return get category by name."""
+        ...
 
     def add_category(
         self,
@@ -330,7 +348,9 @@ class _BootstrapDatabaseProtocol(Protocol):
         parent_id: int | None = None,
         is_savings: bool = False,
         icon: str = "",
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Return add category."""
+        ...
 
     def update_category(
         self,
@@ -341,21 +361,37 @@ class _BootstrapDatabaseProtocol(Protocol):
         is_savings: bool = False,
         parent_id: int | None = None,
         icon: str = "",
-    ) -> None: ...
+    ) -> None:
+        """Return update category."""
+        ...
 
-    def _linked_savings_goal_for_category(self, category_id: int) -> dict[str, Any] | None: ...
+    def _linked_savings_goal_for_category(self, category_id: int) -> dict[str, Any] | None:
+        """Return linked savings goal for category."""
+        ...
 
-    def _is_savings_goals_parent_category(self, category_id: int) -> bool: ...
+    def _is_savings_goals_parent_category(self, category_id: int) -> bool:
+        """Return whether savings goals parent category."""
+        ...
 
-    def set_setting(self, key: str, value: str) -> None: ...
+    def set_setting(self, key: str, value: str) -> None:
+        """Return set setting."""
+        ...
 
-    def get_setting(self, key: str) -> str | None: ...
+    def get_setting(self, key: str) -> str | None:
+        """Return get setting."""
+        ...
 
-    def get_tag_by_name(self, name: str) -> dict[str, Any] | None: ...
+    def get_tag_by_name(self, name: str) -> dict[str, Any] | None:
+        """Return get tag by name."""
+        ...
 
-    def add_tag(self, name: str, color: str = "#888888", icon: str = "") -> dict[str, Any]: ...
+    def add_tag(self, name: str, color: str = "#888888", icon: str = "") -> dict[str, Any]:
+        """Return add tag."""
+        ...
 
-    def get_savings_goal_by_name(self, name: str) -> dict[str, Any] | None: ...
+    def get_savings_goal_by_name(self, name: str) -> dict[str, Any] | None:
+        """Return get savings goal by name."""
+        ...
 
     def add_savings_goal(
         self,
@@ -365,23 +401,37 @@ class _BootstrapDatabaseProtocol(Protocol):
         *,
         currency: str | None = None,
         category_name: str | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Return add savings goal."""
+        ...
 
-    def _ensure_goal_linked_savings_category(self, name: str) -> dict[str, Any]: ...
+    def _ensure_goal_linked_savings_category(self, name: str) -> dict[str, Any]:
+        """Return ensure goal linked savings category."""
+        ...
 
-    def delete_transaction(self, tx_id: int) -> None: ...
+    def delete_transaction(self, tx_id: int) -> None:
+        """Return delete transaction."""
+        ...
 
-    def get_budget_by_code(self, code: str) -> dict[str, Any] | None: ...
+    def get_budget_by_code(self, code: str) -> dict[str, Any] | None:
+        """Return get budget by code."""
+        ...
 
-    def delete_budget(self, budget_id: int) -> None: ...
+    def delete_budget(self, budget_id: int) -> None:
+        """Return delete budget."""
+        ...
 
-    def create_budget(self, code: str, year: int, currency: str | None = None) -> dict[str, Any]: ...
+    def create_budget(self, code: str, year: int, currency: str | None = None) -> dict[str, Any]:
+        """Return create budget."""
+        ...
 
-    def upsert_budget_amount(
-        self, budget_id: int, category_id: int, year: int, month: int, amount: MoneyLike
-    ) -> None: ...
+    def upsert_budget_amount(self, budget_id: int, category_id: int, year: int, month: int, amount: MoneyLike) -> None:
+        """Return upsert budget amount."""
+        ...
 
-    def add_transaction_tag(self, transaction_id: int, tag_id: int) -> None: ...
+    def add_transaction_tag(self, transaction_id: int, tag_id: int) -> None:
+        """Return add transaction tag."""
+        ...
 
     def add_transaction(
         self,
@@ -402,7 +452,9 @@ class _BootstrapDatabaseProtocol(Protocol):
         converted_amount: MoneyLike | None = None,
         category_id: int | None = None,
         source: str | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Return add transaction."""
+        ...
 
     def transfer_between_accounts(
         self,
@@ -415,15 +467,19 @@ class _BootstrapDatabaseProtocol(Protocol):
         exchange_rate: float | None = None,
         converted_amount: MoneyLike | None = None,
         description: str | None = None,
-    ) -> tuple[dict[str, Any], dict[str, Any]]: ...
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Return transfer between accounts."""
+        ...
 
 
 def seed_currencies() -> None:
+    """Return seed currencies."""
     for entry in CURRENCY_SEED:
         Currency.insert(code=entry.code, name=entry.name, region=entry.region.value).on_conflict_ignore().execute()
 
 
 def seed_default_settings() -> None:
+    """Return seed default settings."""
     defaults = {
         "username": "Usuario",
         "language": "en",
@@ -441,6 +497,7 @@ def seed_default_settings() -> None:
 
 
 def seed_default_account() -> None:
+    """Return seed default account."""
     Account.insert(
         name="General",
         balance=0,
@@ -459,7 +516,6 @@ def _reuse_pristine_bootstrap_account(
     currency: str,
 ) -> dict[str, Any] | None:
     """Reuse the initial bootstrap account during onboarding when it is still untouched."""
-
     if Account.select().count() != 1:
         return None
 
@@ -491,6 +547,7 @@ def _reuse_pristine_bootstrap_account(
 
 
 def default_category_seed_rows(lang: str) -> list[tuple[str, str, str, bool, str, str | None]]:
+    """Return default category seed rows."""
     return [
         # ── Income parent groups ──────────────────────────────────────────
         (_cn(lang, "salary_compensation"), "income", "#4EC9B0", False, "💼", None),
@@ -591,6 +648,7 @@ def default_category_seed_rows(lang: str) -> list[tuple[str, str, str, bool, str
 
 
 def ensure_default_categories(db: _BootstrapDatabaseProtocol, lang: str, *, update_existing_metadata: bool) -> None:
+    """Return ensure default categories."""
     category_ids: dict[tuple[str, str], int] = {}
     for name, cat_type, color, is_savings, icon, parent_ref in default_category_seed_rows(lang):
         parent_id = None if parent_ref is None else category_ids[(parent_ref, cat_type)]

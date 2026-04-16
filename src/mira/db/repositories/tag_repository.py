@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 from typing import TYPE_CHECKING
 
@@ -13,12 +16,21 @@ from mira.db.model import RecurringTransactionTag, Tag, TransactionTag
 
 
 class TagRepository:
+    """Represent the TagRepository class."""
+
     if TYPE_CHECKING:
 
-        def get_setting(self, key: str) -> str | None: ...
-        def _atomic(self): ...
+        def get_setting(self, key: str) -> str | None:
+            """Return get setting."""
+
+        def _atomic(self):
+            """Return atomic."""
+            ...
+
+            ...
 
     def add_tag(self, name: str, color: str = "#888888", icon: str = "") -> dict:
+        """Return add tag."""
         normalized = name.strip()
         if not normalized:
             raise ValueError("Tag name cannot be empty")
@@ -37,6 +49,7 @@ class TagRepository:
         }
 
     def get_tags(self) -> list[dict]:
+        """Return get tags."""
         return [
             {
                 "id": row.id,
@@ -49,6 +62,7 @@ class TagRepository:
         ]
 
     def get_tag_by_id(self, tag_id: int) -> dict | None:
+        """Return get tag by id."""
         row = Tag.get_or_none(Tag.id == tag_id)
         if row is None:
             return None
@@ -61,6 +75,7 @@ class TagRepository:
         }
 
     def get_tag_by_name(self, name: str) -> dict | None:
+        """Return get tag by name."""
         normalized = name.strip()
         if not normalized:
             return None
@@ -76,6 +91,7 @@ class TagRepository:
         }
 
     def update_tag(self, tag_id: int, name: str, color: str, icon: str = "") -> None:
+        """Return update tag."""
         normalized = name.strip()
         if not normalized:
             raise ValueError("Tag name cannot be empty")
@@ -87,9 +103,11 @@ class TagRepository:
             raise DuplicateTagNameError(f"Tag '{normalized}' already exists") from exc
 
     def delete_tag(self, tag_id: int) -> None:
+        """Return delete tag."""
         Tag.delete().where(Tag.id == tag_id).execute()
 
     def get_transaction_tags(self, transaction_id: int) -> list[dict]:
+        """Return get transaction tags."""
         query = (
             Tag.select(Tag.id, Tag.name, Tag.icon, Tag.color, Tag.created_at)
             .join(TransactionTag, on=(TransactionTag.tag == Tag.id))
@@ -108,6 +126,7 @@ class TagRepository:
         ]
 
     def _normalize_tag_ids(self, tag_ids: list[int] | None) -> list[int]:
+        """Return normalize tag ids."""
         max_tags = int(self.get_setting("max_tags_per_transaction") or 10)
         unique_ids = list(dict.fromkeys(int(tag_id) for tag_id in (tag_ids or [])))
         if len(unique_ids) > max_tags:
@@ -115,6 +134,7 @@ class TagRepository:
         return unique_ids
 
     def set_transaction_tags(self, transaction_id: int, tag_ids: list[int]) -> None:
+        """Return set transaction tags."""
         unique_ids = self._normalize_tag_ids(tag_ids)
         with self._atomic():
             TransactionTag.delete().where(TransactionTag.transaction_id == transaction_id).execute()
@@ -122,6 +142,7 @@ class TagRepository:
                 TransactionTag.insert(transaction_id=transaction_id, tag=tid).on_conflict_ignore().execute()
 
     def add_transaction_tag(self, transaction_id: int, tag_id: int) -> None:
+        """Return add transaction tag."""
         current = self.get_transaction_tags(transaction_id)
         if any(t["id"] == tag_id for t in current):
             return
@@ -131,11 +152,13 @@ class TagRepository:
         TransactionTag.insert(transaction_id=transaction_id, tag=tag_id).on_conflict_ignore().execute()
 
     def remove_transaction_tag(self, transaction_id: int, tag_id: int) -> None:
+        """Return remove transaction tag."""
         TransactionTag.delete().where(
             (TransactionTag.transaction_id == transaction_id) & (TransactionTag.tag == tag_id)
         ).execute()
 
     def get_transactions_tags_bulk(self, transaction_ids: list[int]) -> dict[int, list[dict]]:
+        """Return get transactions tags bulk."""
         if not transaction_ids:
             return {}
         result: dict[int, list[dict]] = {tid: [] for tid in transaction_ids}
@@ -159,6 +182,7 @@ class TagRepository:
         return result
 
     def get_recurring_tags(self, recurring_id: int) -> list[dict]:
+        """Return get recurring tags."""
         query = (
             Tag.select(Tag.id, Tag.name, Tag.icon, Tag.color, Tag.created_at)
             .join(RecurringTransactionTag, on=(RecurringTransactionTag.tag == Tag.id))
@@ -177,6 +201,7 @@ class TagRepository:
         ]
 
     def _replace_recurring_tags(self, recurring_id: int, tag_ids: list[int]) -> None:
+        """Return replace recurring tags."""
         unique_ids = self._normalize_tag_ids(tag_ids)
         with self._atomic():
             RecurringTransactionTag.delete().where(RecurringTransactionTag.recurring_id == recurring_id).execute()
@@ -184,9 +209,11 @@ class TagRepository:
                 RecurringTransactionTag.insert(recurring_id=recurring_id, tag=tag_id).on_conflict_ignore().execute()
 
     def set_recurring_tags(self, recurring_id: int, tag_ids: list[int]) -> None:
+        """Return set recurring tags."""
         self._replace_recurring_tags(recurring_id, tag_ids)
 
     def get_recurring_tags_bulk(self, recurring_ids: list[int]) -> dict[int, list[dict]]:
+        """Return get recurring tags bulk."""
         if not recurring_ids:
             return {}
         result: dict[int, list[dict]] = {recurring_id: [] for recurring_id in recurring_ids}
@@ -210,6 +237,7 @@ class TagRepository:
         return result
 
     def _enrich_recurring_rows(self, rows: list[dict]) -> list[dict]:
+        """Return enrich recurring rows."""
         recurring_ids = [int(row["id"]) for row in rows if row.get("id") is not None]
         tags_by_recurring = self.get_recurring_tags_bulk(recurring_ids)
         enriched_rows: list[dict] = []

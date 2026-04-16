@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 import calendar
 from datetime import date
@@ -13,26 +16,66 @@ from mira.db.model import RecurringTransaction
 
 
 class RecurringRepository:
+    """Represent the RecurringRepository class."""
+
     if TYPE_CHECKING:
 
-        def get_account_by_id(self, account_id: int) -> dict[str, Any] | None: ...
-        def get_category_by_id(self, cat_id: int) -> dict[str, Any] | None: ...
-        def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def _enrich_recurring_rows(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]: ...
-        def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict[str, Any]]: ...
+        def get_account_by_id(self, account_id: int) -> dict[str, Any] | None:
+            """Return get account by id."""
 
-        def get_categories(
-            self, cat_type: str | None = None, *, include_savings: bool = True
-        ) -> list[dict[str, Any]]: ...
+        def get_category_by_id(self, cat_id: int) -> dict[str, Any] | None:
+            """Return get category by id."""
+            ...
 
-        def _resolve_transaction_category_id(self, tx_type: str, category: str | None) -> int | None: ...
-        def _normalize_tag_ids(self, tag_ids: list[int] | None) -> list[int]: ...
-        def _atomic(self) -> Any: ...
-        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None: ...
-        def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def _replace_recurring_tags(self, recurring_id: int, tag_ids: list[int]) -> None: ...
-        def get_recurring_tags(self, recurring_id: int) -> list[dict[str, Any]]: ...
-        def get_setting(self, key: str) -> str | None: ...
+        def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return cents to money."""
+            ...
+
+        def _enrich_recurring_rows(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            """Return enrich recurring rows."""
+            ...
+
+        def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
+            """Return get accounts."""
+            ...
+
+            ...
+
+        def get_categories(self, cat_type: str | None = None, *, include_savings: bool = True) -> list[dict[str, Any]]:
+            """Return get categories."""
+            ...
+
+        def _resolve_transaction_category_id(self, tx_type: str, category: str | None) -> int | None:
+            """Return resolve transaction category id."""
+
+        def _normalize_tag_ids(self, tag_ids: list[int] | None) -> list[int]:
+            """Return normalize tag ids."""
+            ...
+
+        def _atomic(self) -> Any:
+            """Return atomic."""
+            ...
+
+        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
+            """Return money to cents."""
+            ...
+
+        def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return money to decimal."""
+            ...
+
+        def _replace_recurring_tags(self, recurring_id: int, tag_ids: list[int]) -> None:
+            """Return replace recurring tags."""
+            ...
+
+        def get_recurring_tags(self, recurring_id: int) -> list[dict[str, Any]]:
+            """Return get recurring tags."""
+            ...
+
+        def get_setting(self, key: str) -> str | None:
+            """Return get setting."""
+            ...
+            ...
 
         def add_transaction(
             self,
@@ -53,12 +96,21 @@ class RecurringRepository:
             converted_amount: MoneyLike | None = None,
             category_id: int | None = None,
             source: str | None = None,
-        ) -> dict[str, Any]: ...
+        ) -> dict[str, Any]:
+            """Return add transaction."""
+            ...
 
-        def set_transaction_tags(self, transaction_id: int, tag_ids: list[int]) -> None: ...
-        def set_setting(self, key: str, value: str) -> None: ...
+        def set_transaction_tags(self, transaction_id: int, tag_ids: list[int]) -> None:
+            """Return set transaction tags."""
+
+        def set_setting(self, key: str, value: str) -> None:
+            """Return set setting."""
+            ...
+
+            ...
 
     def _get_recurring_by_id(self, rec_id: int) -> dict | None:
+        """Return get recurring by id."""
         row = RecurringTransaction.get_or_none(RecurringTransaction.id == rec_id)
         if row is None:
             return None
@@ -80,6 +132,7 @@ class RecurringRepository:
         return self._enrich_recurring_rows([payload])[0]
 
     def get_recurring(self) -> list[dict]:
+        """Return get recurring."""
         accounts = {int(item["id"]): item for item in self.get_accounts()}
         categories = {int(item["id"]): item for item in self.get_categories()}
         rows = []
@@ -109,6 +162,7 @@ class RecurringRepository:
         category: str | None,
         category_id: int | None,
     ) -> tuple[int | None, str | None]:
+        """Return resolve recurring category."""
         if category_id is not None:
             category_row = self.get_category_by_id(int(category_id))
             if category_row is None:
@@ -141,6 +195,7 @@ class RecurringRepository:
         category_id: int | None = None,
         tag_ids: list[int] | None = None,
     ) -> dict:
+        """Return add recurring."""
         resolved_category_id, resolved_category = self._resolve_recurring_category(tx_type, category, category_id)
         normalized_tag_ids = self._normalize_tag_ids(tag_ids)
         with self._atomic():
@@ -162,9 +217,11 @@ class RecurringRepository:
         return result
 
     def delete_recurring(self, rec_id: int) -> None:
+        """Return delete recurring."""
         RecurringTransaction.delete().where(RecurringTransaction.id == rec_id).execute()
 
     def update_recurring(self, rec_id: int, **kwargs: object) -> dict:
+        """Return update recurring."""
         existing = RecurringTransaction.get_or_none(RecurringTransaction.id == rec_id)
         if existing is None:
             raise ValueError(f"Recurring transaction {rec_id} not found")
@@ -239,6 +296,7 @@ class RecurringRepository:
         return updated
 
     def apply_recurring_for_month(self, year: int, month: int) -> list[dict]:
+        """Return apply recurring for month."""
         if month < 1 or month > 12:
             raise ValueError("month must be between 1 and 12")
         if year < 1900 or year > 9999:

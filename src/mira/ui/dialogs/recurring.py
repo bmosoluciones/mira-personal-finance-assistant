@@ -25,6 +25,7 @@ class RecurringDialog(QDialog):
     """Create a recurring transaction rule."""
 
     def __init__(self, db: Database, recurring: dict | None = None, parent=None) -> None:
+        """Initialize the RecurringDialog instance."""
         super().__init__(parent)
         self._db = db
         self._recurring = recurring
@@ -42,6 +43,7 @@ class RecurringDialog(QDialog):
             self._prefill(recurring)
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         form = QFormLayout()
         form.setSpacing(10)
@@ -100,6 +102,7 @@ class RecurringDialog(QDialog):
         self._refresh_tag_selector()
 
     def _prefill(self, rec: dict) -> None:
+        """Return prefill."""
         acc_id = rec.get("account_id")
         for i in range(self._account_combo.count()):
             if self._account_combo.itemData(i) == acc_id:
@@ -121,6 +124,7 @@ class RecurringDialog(QDialog):
         self._day_spin.setValue(int(rec.get("day_of_month", 1)))
 
     def _populate_categories(self) -> None:
+        """Return populate categories."""
         current_category_id = self._category_combo.currentData()
         current_type = str(self._type_combo.currentData() or "expense")
         self._category_combo.clear()
@@ -131,9 +135,11 @@ class RecurringDialog(QDialog):
             self._category_combo.setCurrentIndex(idx)
 
     def _refresh_tag_selector(self, selected_ids: list[int] | set[int] | None = None) -> None:
+        """Return refresh tag selector."""
         self._tag_selector.set_tags(self._db.tag.list(), selected_ids=selected_ids)
 
     def _on_accept(self) -> None:
+        """Return on accept."""
         if self._amount_spin.value() <= 0:
             _notify_warning(
                 self,
@@ -148,6 +154,7 @@ class RecurringDialog(QDialog):
         self.accept()
 
     def get_data(self) -> dict:
+        """Return get data."""
         return {
             "account_id": self._account_combo.currentData(),
             "tx_type": str(self._type_combo.currentData() or "expense"),

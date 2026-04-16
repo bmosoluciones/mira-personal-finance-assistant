@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 import csv
 import logging
@@ -19,6 +22,8 @@ _CSV_IMPORT_ROW_ERRORS = (KeyError, TypeError, ValueError, OverflowError)
 
 
 class _DatabaseIOProtocol(Protocol):
+    """Represent the _DatabaseIOProtocol class."""
+
     def get_transactions(
         self,
         *,
@@ -34,15 +39,25 @@ class _DatabaseIOProtocol(Protocol):
         search: str | None = None,
         tag_id: int | None = None,
         include_children: bool = False,
-    ) -> list[dict]: ...
+    ) -> list[dict]:
+        """Return get transactions."""
+        ...
 
-    def get_transactions_tags_bulk(self, transaction_ids: list[int]) -> dict[int, list[dict]]: ...
+    def get_transactions_tags_bulk(self, transaction_ids: list[int]) -> dict[int, list[dict]]:
+        """Return get transactions tags bulk."""
+        ...
 
-    def get_budget_comparison(self, budget_id: int, granularity: str = "quarterly") -> dict[str, object]: ...
+    def get_budget_comparison(self, budget_id: int, granularity: str = "quarterly") -> dict[str, object]:
+        """Return get budget comparison."""
+        ...
 
-    def get_or_create_account(self, name: str) -> dict: ...
+    def get_or_create_account(self, name: str) -> dict:
+        """Return get or create account."""
+        ...
 
-    def get_setting(self, key: str) -> str | None: ...
+    def get_setting(self, key: str) -> str | None:
+        """Return get setting."""
+        ...
 
     def add_transaction(
         self,
@@ -63,17 +78,29 @@ class _DatabaseIOProtocol(Protocol):
         converted_amount: MoneyLike | None = None,
         category_id: int | None = None,
         source: str | None = None,
-    ) -> dict: ...
+    ) -> dict:
+        """Return add transaction."""
+        ...
 
-    def get_or_create_tag(self, name: str) -> dict: ...
+    def get_or_create_tag(self, name: str) -> dict:
+        """Return get or create tag."""
+        ...
 
-    def get_tag_by_name(self, name: str) -> dict | None: ...
+    def get_tag_by_name(self, name: str) -> dict | None:
+        """Return get tag by name."""
+        ...
 
-    def add_tag(self, name: str, color: str = "#888888", icon: str = "") -> dict: ...
+    def add_tag(self, name: str, color: str = "#888888", icon: str = "") -> dict:
+        """Return add tag."""
+        ...
 
-    def add_transaction_tag(self, transaction_id: int, tag_id: int) -> None: ...
+    def add_transaction_tag(self, transaction_id: int, tag_id: int) -> None:
+        """Return add transaction tag."""
+        ...
 
-    def set_transaction_tags(self, transaction_id: int, tag_ids: list[int]) -> None: ...
+    def set_transaction_tags(self, transaction_id: int, tag_ids: list[int]) -> None:
+        """Return set transaction tags."""
+        ...
 
 
 def export_transactions_csv(
@@ -124,6 +151,7 @@ def export_transactions_csv(
 
 
 def _variance_signal(section: str, variance: float) -> str:
+    """Return variance signal."""
     if abs(variance) < 0.005:
         return "neutral"
     if section == "income":

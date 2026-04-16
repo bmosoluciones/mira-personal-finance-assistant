@@ -25,6 +25,7 @@ class ModelDownloadService:
     """Persist the downloaded model and reload the active engine."""
 
     def __init__(self, db: Database, model_lifecycle: ModelLifecycle) -> None:
+        """Initialize the ModelDownloadService instance."""
         self._db = db
         self._model_lifecycle = model_lifecycle
 
@@ -35,6 +36,7 @@ class ModelDownloadService:
         active_runtime_path: str | None,
         interaction_mode: str,
     ) -> ModelDownloadResult:
+        """Return complete default download."""
         preferred_model_name = str(filename or "").strip()
         self._db.setting.set("preferred_model", preferred_model_name)
         lifecycle_state = self._model_lifecycle.reload_selected_model(active_runtime_path, interaction_mode)

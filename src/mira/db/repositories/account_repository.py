@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 from datetime import date
 import re
@@ -19,17 +22,38 @@ from mira.db.model import Account, Transaction
 
 
 class AccountRepository:
+    """Represent the AccountRepository class."""
+
     if TYPE_CHECKING:
 
-        def get_default_currency(self) -> str: ...
-        def _atomic(self) -> Any: ...
-        def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None: ...
-        def _round_money(self, value: object) -> Any: ...
+        def get_default_currency(self) -> str:
+            """Return get default currency."""
+
+        def _atomic(self) -> Any:
+            """Return atomic."""
+            ...
+
+        def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return cents to money."""
+            ...
+
+        def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return money to decimal."""
+            ...
+
+        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
+            """Return money to cents."""
+            ...
+
+        def _round_money(self, value: object) -> Any:
+            """Return round money."""
+            ...
+
+            ...
 
     @staticmethod
     def _normalize_account_name(name: str) -> str:
+        """Return normalize account name."""
         normalized = str(name).strip()
         if not normalized:
             raise ValueError("Account name cannot be empty")
@@ -37,6 +61,7 @@ class AccountRepository:
 
     @staticmethod
     def _normalize_account_row(row: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Return normalize account row."""
         if row is None:
             return None
         normalized = dict(row)
@@ -44,6 +69,7 @@ class AccountRepository:
         return normalized
 
     def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict]:
+        """Return get accounts."""
         query = Account.select().order_by(Account.name)
         if account_types:
             normalized_types = tuple(_canonical_account_type(item) for item in account_types)
@@ -63,6 +89,7 @@ class AccountRepository:
         return [cast(dict, self._normalize_account_row(row)) for row in rows]
 
     def get_account_by_name(self, name: str) -> dict | None:
+        """Return get account by name."""
         normalized_name = str(name).strip()
         if not normalized_name:
             return None
@@ -88,6 +115,7 @@ class AccountRepository:
         )
 
     def get_account_by_id(self, account_id: int) -> dict | None:
+        """Return get account by id."""
         row = Account.get_or_none(Account.id == account_id)
         if row is None:
             return None
@@ -104,6 +132,7 @@ class AccountRepository:
         )
 
     def get_or_create_account(self, name: str) -> dict:
+        """Return get or create account."""
         normalized_name = self._normalize_account_name(name)
         account = self.get_account_by_name(normalized_name)
         if account is None:
@@ -120,6 +149,7 @@ class AccountRepository:
         opening_balance: MoneyLike = 0.0,
         currency: str | None = None,
     ) -> dict:
+        """Return add account."""
         normalized_name = self._normalize_account_name(name)
         normalized_type = _canonical_account_type(account_type)
         selected_currency = str(currency or self.get_default_currency()).strip().upper()
@@ -141,6 +171,7 @@ class AccountRepository:
         account_type: str,
         currency: str | None = None,
     ) -> None:
+        """Return update account."""
         normalized_name = self._normalize_account_name(name)
         normalized_type = _canonical_account_type(account_type)
         selected_currency = str(currency or self.get_default_currency()).strip().upper()
@@ -151,9 +182,11 @@ class AccountRepository:
         )
 
     def delete_account(self, account_id: int) -> None:
+        """Return delete account."""
         Account.delete().where(Account.id == account_id).execute()
 
     def set_default_account(self, account_id: int) -> None:
+        """Return set default account."""
         if self.get_account_by_id(account_id) is None:
             raise ValueError(f"Account {account_id} not found")
         with self._atomic():
@@ -161,6 +194,7 @@ class AccountRepository:
             Account.update(is_default=True).where(Account.id == account_id).execute()
 
     def get_default_account(self) -> dict | None:
+        """Return get default account."""
         row = Account.select().where(Account.is_default == True).limit(1).first()  # noqa: E712
         if row is None:
             return None
@@ -177,14 +211,17 @@ class AccountRepository:
         )
 
     def get_credit_accounts(self) -> list[dict]:
+        """Return get credit accounts."""
         return self.get_accounts(("credit",))
 
     def is_credit_account(self, account_id: int) -> bool:
+        """Return whether credit account."""
         account = self.get_account_by_id(account_id)
         return account is not None and str(account.get("account_type") or "") == "credit"
 
     @staticmethod
     def _account_aliases(account_name: str) -> set[str]:
+        """Return account aliases."""
         folded_name = _fold_text(account_name)
         if not folded_name:
             return set()
@@ -196,6 +233,7 @@ class AccountRepository:
         return aliases
 
     def find_account_mentions(self, text: str, *, account_types: tuple[str, ...] | None = None) -> list[dict]:
+        """Return find account mentions."""
         folded_text = _fold_text(text)
         if not folded_text:
             return []
@@ -220,6 +258,7 @@ class AccountRepository:
         return [item[2] for item in matches]
 
     def get_account_balance_report(self) -> dict[str, Any]:
+        """Return get account balance report."""
         default_currency = self.get_default_currency()
         rows: list[dict[str, Any]] = []
         consolidated_total = MONEY_ZERO
@@ -250,6 +289,7 @@ class AccountRepository:
         *,
         exclude_transaction_id: int | None = None,
     ) -> dict[str, Any]:
+        """Return get account balance as of."""
         account = self.get_account_by_id(account_id)
         if account is None:
             raise ValueError(f"Account {account_id} not found")
@@ -299,5 +339,6 @@ class AccountRepository:
         }
 
     def update_account_balance(self, account_id: int, delta: MoneyLike) -> None:
+        """Return update account balance."""
         delta_cents = self._money_to_cents(delta) or 0
         Account.update(balance=Account.balance + delta_cents).where(Account.id == account_id).execute()

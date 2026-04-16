@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -26,6 +28,7 @@ class _ActiveDatabaseGuard:
 
     @classmethod
     def acquire(cls, owner: object) -> None:
+        """Return acquire."""
         owner_id = id(owner)
         if cls._active_owner_id is not None and cls._active_owner_id != owner_id:
             raise RuntimeError("Only one Database instance can be connected at a time in this process.")
@@ -33,11 +36,13 @@ class _ActiveDatabaseGuard:
 
     @classmethod
     def release(cls, owner: object) -> None:
+        """Return release."""
         if cls._active_owner_id == id(owner):
             cls._active_owner_id = None
 
     @classmethod
     def reset_for_tests(cls) -> None:
+        """Return reset for tests."""
         cls._active_owner_id = None
 
 
@@ -50,6 +55,7 @@ class DatabaseRuntime:
     """Owns the shared Peewee/sqlite runtime for repository mixins."""
 
     def __init__(self, path: str | Path | None = None) -> None:
+        """Initialize the DatabaseRuntime instance."""
         self.path = Path(path) if path else get_default_db_path()
         self._database: SqliteDatabase | None = None
         self._connection: sqlite3.Connection | None = None
@@ -97,6 +103,7 @@ class DatabaseRuntime:
             _ActiveDatabaseGuard.release(self)
 
     def _close_handles(self) -> None:
+        """Return close handles."""
         database = self._database
         connection = self._connection
         try:
@@ -113,23 +120,27 @@ class DatabaseRuntime:
 
     @contextmanager
     def _atomic(self) -> Generator[SqliteDatabase, None, None]:
+        """Return atomic."""
         database = self._require_db()
         with database.atomic():
             yield database
 
     def _require_db(self) -> SqliteDatabase:
+        """Return require db."""
         database = self._database
         if database is None:
             raise RuntimeError("Database is not connected. Call connect() first.")
         return database
 
     def _require_connection(self) -> sqlite3.Connection:
+        """Return require connection."""
         connection = self._connection
         if connection is None:
             raise RuntimeError("Database is not connected. Call connect() first.")
         return connection
 
     def _create_pre_migration_backup(self, from_version: int) -> Path:
+        """Return create pre migration backup."""
         connection = self._require_connection()
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         backup_path = self.path.with_name(
@@ -146,30 +157,37 @@ class DatabaseRuntime:
 
     @staticmethod
     def _money_to_cents(value: object, *, allow_none: bool = False) -> int | None:
+        """Return money to cents."""
         return money_to_cents(value, allow_none=allow_none)
 
     @staticmethod
     def _money_to_decimal(value: object, *, allow_none: bool = False):
+        """Return money to decimal."""
         return money_to_decimal(value, allow_none=allow_none)
 
     @staticmethod
     def _round_money(value: object):
+        """Return round money."""
         return round_money(value)
 
     @staticmethod
     def _cents_to_decimal(value: object, *, allow_none: bool = False):
+        """Return cents to decimal."""
         return cents_to_decimal(value, allow_none=allow_none)
 
     @staticmethod
     def _cents_to_money(value: object, *, allow_none: bool = False):
         # Compatibility shim for older repository code; prefer `_cents_to_decimal`.
+        """Return cents to money."""
         return cents_to_decimal(value, allow_none=allow_none)
 
     @staticmethod
     def _money_to_display_float(value: object, *, allow_none: bool = False) -> float | None:
+        """Return money to display float."""
         return cents_to_money(money_to_cents(value, allow_none=allow_none), allow_none=allow_none)
 
     def _init_schema(self) -> None:
+        """Return init schema."""
         database = self._require_db()
         initialize_schema(database)
         db_bootstrap.seed_currencies()

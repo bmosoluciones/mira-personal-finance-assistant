@@ -28,6 +28,7 @@ class ModelDownloadSession:
     cancelled: bool = False
 
     def cancel(self) -> None:
+        """Return cancel."""
         if self.cancelled:
             return
         self.cancelled = True
@@ -54,6 +55,7 @@ class ModelDownloadFlow:
         get_username: Callable[[], str],
         set_status: Callable[[str], None],
     ) -> None:
+        """Initialize the ModelDownloadFlow instance."""
         self._parent = parent
         self._language = language
         self._db = db
@@ -68,15 +70,18 @@ class ModelDownloadFlow:
         self._set_status = set_status
 
     def start_default_download(self) -> ModelDownloadSession:
+        """Return start default download."""
         session_holder: dict[str, ModelDownloadSession] = {}
 
         def _on_progress(received: int, total: int) -> None:
+            """Return on progress."""
             session = session_holder.get("session")
             if session is not None and total > 0:
                 session.progress_dialog.setValue(int(received * 100 / total))
             QApplication.processEvents()
 
         def _on_finished(downloaded_path: str) -> None:
+            """Return on finished."""
             session = session_holder["session"]
             if session.cancelled:
                 return
@@ -119,6 +124,7 @@ class ModelDownloadFlow:
             )
 
         def _on_error(message: str) -> None:
+            """Return on error."""
             del message
             session = session_holder["session"]
             session.progress_dialog.close()
@@ -146,6 +152,7 @@ class ModelDownloadFlow:
         return session
 
     def _build_progress_dialog(self, filename: str) -> QProgressDialog:
+        """Return build progress dialog."""
         progress = QProgressDialog(
             tr(
                 "model.download.progress",
@@ -166,6 +173,7 @@ class ModelDownloadFlow:
         return progress
 
     def _show_reloading_state(self, session: ModelDownloadSession) -> None:
+        """Return show reloading state."""
         mode = self._get_interaction_mode()
         if mode == "chat":
             mode_label = tr("settings.mode.chat", self._language, default="Chat mode")

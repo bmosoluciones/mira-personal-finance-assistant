@@ -41,18 +41,27 @@ _ACCOUNT_ALIAS_STOPWORDS = frozenset(
 
 
 class AccountType(StrEnum):
+    """Represent the AccountType class."""
+
     BANK = "bank"
+
     CASH = "cash"
     CREDIT = "credit"
 
 
 class CurrencyRegion(StrEnum):
+    """Represent the CurrencyRegion class."""
+
     AMERICAS = "americas"
+
     EUROPE = "europe"
 
 
 class MessagePriority(IntEnum):
+    """Represent the MessagePriority class."""
+
     ACHIEVEMENT_CRITICAL = 320
+
     ACHIEVEMENT_HIGH = 300
     ACHIEVEMENT_MEDIUM = 230
     ACHIEVEMENT_LOW = 210
@@ -63,26 +72,37 @@ class MessagePriority(IntEnum):
 
 @dataclass(frozen=True, slots=True)
 class CurrencySeedEntry:
+    """Represent the CurrencySeedEntry class."""
+
     code: str
+
     name: str
     region: CurrencyRegion
 
 
 @dataclass(frozen=True, slots=True)
 class SavingsGoalsDefaults:
+    """Represent the SavingsGoalsDefaults class."""
+
     names: Mapping[str, str]
+
     color: str
 
     def name_for(self, language: str | None) -> str:
+        """Return name for."""
         return self.names[normalize_language(language)]
 
     def all_names(self) -> tuple[str, ...]:
+        """Return all names."""
         return tuple(self.names.values())
 
 
 @dataclass(frozen=True, slots=True)
 class FeedbackMilestones:
+    """Represent the FeedbackMilestones class."""
+
     nl_transactions: tuple[int, ...]
+
     mira_report_views: tuple[int, ...]
     savings_contributions: tuple[int, ...]
 
@@ -173,6 +193,7 @@ def default_db_path_for_display() -> Path:
 
 
 def parse_account_type(account_type: str | None) -> AccountType:
+    """Return parse account type."""
     normalized = str(account_type or AccountType.BANK.value).strip().lower() or AccountType.BANK.value
     resolved = _ACCOUNT_TYPE_ALIASES.get(normalized, normalized)
     if isinstance(resolved, AccountType):
@@ -184,33 +205,40 @@ def parse_account_type(account_type: str | None) -> AccountType:
 
 
 def canonical_account_type(account_type: str | None) -> str:
+    """Return canonical account type."""
     return parse_account_type(account_type).value
 
 
 def normalize_language(language: str | None) -> str:
+    """Return normalize language."""
     normalized = str(language or "").strip().lower()
     return "es" if normalized == "es" else "en"
 
 
 def _translated_db_label(key: str, language: str | None, default: str) -> str:
+    """Return translated db label."""
     from mira.ui.i18n import tr
 
     return tr(key, normalize_language(language), default=default)
 
 
 def localized_default_account_name(language: str | None) -> str:
+    """Return localized default account name."""
     return _translated_db_label("db.default_account_name", language, "Main account")
 
 
 def localized_default_savings_name(language: str | None) -> str:
+    """Return localized default savings name."""
     return _translated_db_label("db.default_savings_name", language, "Savings")
 
 
 def localized_savings_goals_parent_name(language: str | None) -> str:
+    """Return localized savings goals parent name."""
     return _translated_db_label("db.savings_goals_parent_name", language, "Savings Goals")
 
 
 def fold_text(value: str | None) -> str:
+    """Return fold text."""
     normalized = unicodedata.normalize("NFKD", str(value or ""))
     without_accents = "".join(ch for ch in normalized if not unicodedata.combining(ch))
     collapsed = re.sub(r"[^a-z0-9]+", " ", without_accents.casefold())

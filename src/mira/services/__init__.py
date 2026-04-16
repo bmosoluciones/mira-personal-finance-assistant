@@ -15,6 +15,7 @@ __all__ = ["DatabaseIOService", "ModelLifecycle", "ModelLifecycleState"]
 
 
 def __getattr__(name: str) -> Any:
+    """Return getattr  ."""
     if name == "DatabaseIOService":
         from .database_io import DatabaseIOService
 

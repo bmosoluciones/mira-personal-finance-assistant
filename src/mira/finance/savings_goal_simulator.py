@@ -13,7 +13,10 @@ from mira.finance.enums import PaymentFrequency
 
 @dataclass(slots=True)
 class SavingsGoalSimulationInput:
+    """Represent the SavingsGoalSimulationInput class."""
+
     target_amount: float
+
     years: float
     frequency: PaymentFrequency
     initial_amount: float = 0.0
@@ -23,7 +26,10 @@ class SavingsGoalSimulationInput:
 
 @dataclass(slots=True)
 class SavingsGoalSimulationRow:
+    """Represent the SavingsGoalSimulationRow class."""
+
     period: int
+
     label: str
     initial_balance: float
     interest: float
@@ -34,7 +40,10 @@ class SavingsGoalSimulationRow:
 
 @dataclass(slots=True)
 class SavingsGoalSimulation:
+    """Represent the SavingsGoalSimulation class."""
+
     target_amount: float
+
     years: float
     frequency: PaymentFrequency
     initial_amount: float
@@ -123,6 +132,7 @@ def _required_periodic_contribution(
     rate_per_period: Decimal,
     total_periods: int,
 ) -> Decimal:
+    """Return required periodic contribution."""
     if total_periods <= 0:
         return Decimal("0")
 
@@ -146,6 +156,7 @@ def _build_rows(
     periods_per_year: int,
     total_periods: int,
 ) -> list[SavingsGoalSimulationRow]:
+    """Return build rows."""
     rows: list[SavingsGoalSimulationRow] = []
     balance = initial_amount
 
@@ -171,10 +182,12 @@ def _build_rows(
 
 
 def _period_label(period: int, periods_per_year: int) -> str:
+    """Return period label."""
     year = ((period - 1) // periods_per_year) + 1
     position = ((period - 1) % periods_per_year) + 1
     return f"Año {year} / Período {position}"
 
 
 def _dec(value: float) -> Decimal:
+    """Return dec."""
     return Decimal(str(value))

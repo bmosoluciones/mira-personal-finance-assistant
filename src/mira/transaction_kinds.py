@@ -34,19 +34,23 @@ def try_parse_transaction_type(value: object) -> TransactionType | None:
 
 
 def normalize_payment_method(value: object) -> str:
+    """Return normalize payment method."""
     return str(value or "").strip().lower()
 
 
 def is_balance_adjustment_payment_method(value: object) -> bool:
+    """Return whether balance adjustment payment method."""
     return normalize_payment_method(value) == BALANCE_ADJUSTMENT_PAYMENT_METHOD
 
 
 def localized_balance_adjustment_description(language: str | None) -> str:
+    """Return localized balance adjustment description."""
     normalized_language = str(language or "en").strip().lower()
     return "Ajuste de saldo" if normalized_language.startswith("es") else "Balance adjustment"
 
 
 def is_balance_adjustment_transaction(tx: Any) -> bool:
+    """Return whether balance adjustment transaction."""
     if isinstance(tx, dict):
         payment_method = tx.get("payment_method")
     else:
@@ -55,6 +59,7 @@ def is_balance_adjustment_transaction(tx: Any) -> bool:
 
 
 def is_analytics_excluded_transaction(tx: Any) -> bool:
+    """Return whether analytics excluded transaction."""
     if isinstance(tx, dict):
         raw_transfer = tx.get("is_transfer")
     else:
@@ -67,6 +72,7 @@ def is_analytics_excluded_transaction(tx: Any) -> bool:
 
 
 def analytics_included_expr(model: Any):
+    """Return analytics included expr."""
     return (fn.COALESCE(model.is_transfer, 0) == 0) & (
         fn.LOWER(fn.TRIM(fn.COALESCE(model.payment_method, ""))) != BALANCE_ADJUSTMENT_PAYMENT_METHOD
     )

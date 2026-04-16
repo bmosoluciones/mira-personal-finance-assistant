@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QMessageBox, QWidget
 
 
 def _notification_target(widget: QWidget | None) -> Any | None:
+    """Return notification target."""
     current = widget
     while current is not None:
         if hasattr(current, "notify_user_message"):
@@ -27,6 +28,7 @@ def _notification_target(widget: QWidget | None) -> Any | None:
 
 
 def show_user_message(widget: QWidget | None, title: str, message: str, *, level: str = "info") -> None:
+    """Return show user message."""
     text = str(message or "").strip()
     if not text:
         return

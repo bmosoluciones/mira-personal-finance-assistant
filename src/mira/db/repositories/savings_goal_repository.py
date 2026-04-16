@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 from typing import TYPE_CHECKING, Any, cast
 
@@ -13,6 +16,7 @@ from mira.transaction_kinds import is_analytics_excluded_transaction
 
 
 def _base_goal_query():
+    """Return base goal query."""
     return (
         SavingsGoal.select(
             SavingsGoal.id,
@@ -32,19 +36,49 @@ def _base_goal_query():
 
 
 class SavingsGoalRepository:
+    """Represent the SavingsGoalRepository class."""
+
     if TYPE_CHECKING:
 
-        def _cents_to_decimal(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None: ...
-        def _ensure_goal_linked_savings_category(self, name: str) -> dict[str, Any]: ...
-        def get_default_currency(self) -> str: ...
-        def _category_has_transaction_history(self, category_id: int) -> bool: ...
-        def _category_is_linked_to_other_goal(self, category_id: int, *, excluding_goal_id: int) -> bool: ...
-        def get_category_by_id(self, cat_id: int) -> dict[str, Any] | None: ...
-        def delete_category(self, cat_id: int) -> None: ...
+        def _cents_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return cents to decimal."""
+
+        def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return money to decimal."""
+            ...
+
+        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
+            """Return money to cents."""
+            ...
+
+        def _ensure_goal_linked_savings_category(self, name: str) -> dict[str, Any]:
+            """Return ensure goal linked savings category."""
+            ...
+
+        def get_default_currency(self) -> str:
+            """Return get default currency."""
+            ...
+
+        def _category_has_transaction_history(self, category_id: int) -> bool:
+            """Return category has transaction history."""
+            ...
+
+        def _category_is_linked_to_other_goal(self, category_id: int, *, excluding_goal_id: int) -> bool:
+            """Return category is linked to other goal."""
+            ...
+
+        def get_category_by_id(self, cat_id: int) -> dict[str, Any] | None:
+            """Return get category by id."""
+            ...
+
+        def delete_category(self, cat_id: int) -> None:
+            """Return delete category."""
+            ...
+
+            ...
 
     def _serialize_goal(self, row: dict[str, Any]) -> dict[str, Any]:
+        """Return serialize goal."""
         item = {
             "id": row["id"],
             "name": row["name"],
@@ -72,6 +106,7 @@ class SavingsGoalRepository:
         currency: str | None = None,
         category_name: str | None = None,
     ) -> dict:
+        """Return add savings goal."""
         normalized_name = name.strip()
         if not normalized_name:
             raise ValueError("Goal name cannot be empty")
@@ -91,6 +126,7 @@ class SavingsGoalRepository:
         return self.get_savings_goal(int(row.id))  # type: ignore[call-overload]
 
     def get_savings_goal_by_name(self, name: str) -> dict | None:
+        """Return get savings goal by name."""
         normalized_name = name.strip()
         if not normalized_name:
             return None
@@ -103,16 +139,19 @@ class SavingsGoalRepository:
         return self._serialize_goal(row) if row is not None else None
 
     def get_savings_goal(self, goal_id: int) -> dict:
+        """Return get savings goal."""
         row = _base_goal_query().where(SavingsGoal.id == goal_id).first()
         if row is None:
             raise ValueError(f"Savings goal {goal_id} not found")
         return self._serialize_goal(row)
 
     def get_savings_goals(self) -> list[dict]:
+        """Return get savings goals."""
         rows = _base_goal_query().order_by(SavingsGoal.created_at.desc(), SavingsGoal.id.desc())
         return [self._serialize_goal(row) for row in rows]
 
     def list_savings_goals(self) -> list[dict]:
+        """Return list savings goals."""
         return self.get_savings_goals()
 
     def get_or_create_savings_goal(
@@ -124,6 +163,7 @@ class SavingsGoalRepository:
         currency: str | None = None,
         category_name: str | None = None,
     ) -> dict:
+        """Return get or create savings goal."""
         existing = self.get_savings_goal_by_name(name)
         if existing is not None:
             return existing
@@ -136,6 +176,7 @@ class SavingsGoalRepository:
         )
 
     def contribute_to_goal(self, goal_id: int, amount: MoneyLike) -> dict:
+        """Return contribute to goal."""
         normalized_amount = self._money_to_decimal(amount) or MONEY_ZERO
         if normalized_amount <= MONEY_ZERO:
             raise ValueError("Goal contribution must be positive")
@@ -146,6 +187,7 @@ class SavingsGoalRepository:
         return self.get_savings_goal(goal_id)
 
     def _savings_goal_ids_for_category_name(self, category_name: str | None) -> list[int]:
+        """Return savings goal ids for category name."""
         normalized = (category_name or "").strip()
         if not normalized:
             return []
@@ -161,6 +203,7 @@ class SavingsGoalRepository:
         return [int(row.id) for row in rows]
 
     def _apply_savings_goal_delta(self, goal_id: int, amount_delta: MoneyLike) -> None:
+        """Return apply savings goal delta."""
         normalized_delta = self._money_to_decimal(amount_delta) or MONEY_ZERO
         if normalized_delta == MONEY_ZERO:
             return
@@ -174,6 +217,7 @@ class SavingsGoalRepository:
         ).where(SavingsGoal.id == goal_id).execute()
 
     def _apply_savings_goal_delta_for_transaction(self, tx: dict | None, sign: int) -> None:
+        """Return apply savings goal delta for transaction."""
         if not tx:
             return
         if str(tx.get("type")) != "expense":
@@ -191,6 +235,7 @@ class SavingsGoalRepository:
             self._apply_savings_goal_delta(goal_id, delta)
 
     def delete_savings_goal(self, goal_id: int) -> None:
+        """Return delete savings goal."""
         goal = self.get_savings_goal(goal_id)
         category_id = goal.get("category_id")
         linked_category_id = int(category_id) if category_id is not None else None
@@ -215,6 +260,7 @@ class SavingsGoalRepository:
         target_amount: MoneyLike,
         target_date: str | None = None,
     ) -> dict:
+        """Return update savings goal."""
         normalized_name = name.strip()
         if not normalized_name:
             raise ValueError("Goal name cannot be empty")

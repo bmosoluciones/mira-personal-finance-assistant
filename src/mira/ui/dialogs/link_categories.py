@@ -39,6 +39,7 @@ class LinkCategoriesDialog(QDialog):
         language: str,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the LinkCategoriesDialog instance."""
         super().__init__(parent)
         self._db = db
         self._service = service
@@ -49,9 +50,11 @@ class LinkCategoriesDialog(QDialog):
         self._refresh_table()
 
     def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        """Return t."""
         return tr(key, self._language, default=default, params=params)
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
 
         # Relations table
@@ -83,6 +86,7 @@ class LinkCategoriesDialog(QDialog):
         self._btn_delete.clicked.connect(self._on_delete)
 
     def _refresh_table(self) -> None:
+        """Return refresh table."""
         relations = self._service.list_relations()
         self._table.setRowCount(len(relations))
         for row_idx, rel in enumerate(relations):
@@ -93,6 +97,7 @@ class LinkCategoriesDialog(QDialog):
             self._table.setItem(row_idx, 1, expense_item)
 
     def _on_add(self) -> None:
+        """Return on add."""
         income_cats = self._service.parent_income_categories()
         expense_cats = self._service.available_parent_expense_categories()
 
@@ -131,6 +136,7 @@ class LinkCategoriesDialog(QDialog):
             self._refresh_table()
 
     def _on_delete(self) -> None:
+        """Return on delete."""
         row = self._table.currentRow()
         if row < 0:
             QMessageBox.information(
@@ -179,6 +185,7 @@ class _AddRelationDialog(QDialog):
         language: str,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the _AddRelationDialog instance."""
         super().__init__(parent)
         self._language = language
         self.setWindowTitle(self._t("categories.link.add", "Add Relation"))
@@ -213,9 +220,11 @@ class _AddRelationDialog(QDialog):
         self._btn_cancel.clicked.connect(self.reject)
 
     def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        """Return t."""
         return tr(key, self._language, default=default, params=params)
 
     def get_data(self) -> dict[str, int]:
+        """Return get data."""
         return {
             "income_id": int(self._income_combo.currentData()),
             "expense_id": int(self._expense_combo.currentData()),

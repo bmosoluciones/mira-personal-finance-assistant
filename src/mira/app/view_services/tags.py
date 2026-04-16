@@ -15,7 +15,10 @@ from mira.db.database import Database
 
 @dataclass(frozen=True)
 class TagsViewState:
+    """Represent the TagsViewState class."""
+
     tags: list[dict[str, Any]]
+
     monthly_counts: dict[int, int]
 
 
@@ -23,9 +26,11 @@ class TagsViewService:
     """Move tag CRUD and related counts out of the QWidget."""
 
     def __init__(self, db: Database) -> None:
+        """Initialize the TagsViewService instance."""
         self._db = db
 
     def load_state(self) -> TagsViewState:
+        """Return load state."""
         since = date.today().replace(day=1).isoformat()
         return TagsViewState(
             tags=self._db.tag.list(),
@@ -33,13 +38,16 @@ class TagsViewService:
         )
 
     def create(self, *, name: str, color: str, icon: str = "") -> OperationFeedback:
+        """Return create."""
         created = self._db.tag.create(name, color, icon=icon)
         return OperationFeedback(selected_id=int(created["id"]))
 
     def update(self, tag_id: int, *, name: str, color: str, icon: str = "") -> OperationFeedback:
+        """Return update."""
         self._db.tag.update(tag_id, name, color, icon=icon)
         return OperationFeedback(selected_id=int(tag_id))
 
     def delete(self, tag_id: int) -> OperationFeedback:
+        """Return delete."""
         self._db.tag.delete(tag_id)
         return OperationFeedback()

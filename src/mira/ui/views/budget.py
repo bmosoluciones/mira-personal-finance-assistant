@@ -89,6 +89,7 @@ class BudgetView(QWidget):
     ]
 
     def __init__(self, db: Database, parent: QWidget | None = None) -> None:
+        """Initialize the BudgetView instance."""
         super().__init__(parent)
         self._db = db
         self._state = BudgetViewState()
@@ -96,66 +97,83 @@ class BudgetView(QWidget):
 
     @property
     def _current_budget_id(self) -> int | None:
+        """Return current budget id."""
         return self._state.current_budget_id
 
     @_current_budget_id.setter
     def _current_budget_id(self, value: int | None) -> None:
+        """Return current budget id."""
         self._state.current_budget_id = value
 
     @property
     def _loaded_budget_id(self) -> int | None:
+        """Return loaded budget id."""
         return self._state.loaded_budget_id
 
     @_loaded_budget_id.setter
     def _loaded_budget_id(self, value: int | None) -> None:
+        """Return loaded budget id."""
         self._state.loaded_budget_id = value
 
     @property
     def _current_monthly_tracking(self) -> dict[str, Any] | None:
+        """Return current monthly tracking."""
         return self._state.current_monthly_tracking
 
     @_current_monthly_tracking.setter
     def _current_monthly_tracking(self, value: dict[str, Any] | None) -> None:
+        """Return current monthly tracking."""
         self._state.current_monthly_tracking = value
 
     @property
     def _budget_list_cache(self) -> list[dict[str, Any]]:
+        """Return budget list cache."""
         return self._state.budget_list_cache
 
     @_budget_list_cache.setter
     def _budget_list_cache(self, value: list[dict[str, Any]]) -> None:
+        """Return budget list cache."""
         self._state.budget_list_cache = value
 
     @property
     def _budget_list_dirty(self) -> bool:
+        """Return budget list dirty."""
         return self._state.budget_list_dirty
 
     @_budget_list_dirty.setter
     def _budget_list_dirty(self, value: bool) -> None:
+        """Return budget list dirty."""
         self._state.budget_list_dirty = value
 
     @property
     def _loading_budget_table(self) -> bool:
+        """Return loading budget table."""
         return self._state.loading_budget_table
 
     @_loading_budget_table.setter
     def _loading_budget_table(self, value: bool) -> None:
+        """Return loading budget table."""
         self._state.loading_budget_table = value
 
     def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        """Return t."""
         return _tr_db(self._db, key, default, params=params)
 
     def _month_labels(self) -> list[str]:
+        """Return month labels."""
         return [self._t(key, fallback) for key, fallback in self._MONTH_LABELS]
 
     def _set_budget_status(self, text: str, *, color: str = "#9FB3C8") -> None:
+        """Return set budget status."""
         self._budget_status_lbl.setText(text)
         self._budget_status_lbl.setStyleSheet(f"font-size:11px;color:{color};padding:0 2px 2px 2px;")
 
     def _set_budget_placeholder_hint(self, text: str) -> None:
+        """Return set budget placeholder hint."""
         self._budget_placeholder_hint.setText(text)
 
     def _selected_budget_from_cache(self) -> dict[str, Any] | None:
+        """Return selected budget from cache."""
         if self._current_budget_id is None:
             return None
         return next(
@@ -164,6 +182,7 @@ class BudgetView(QWidget):
         )
 
     def _clear_budget_outputs(self) -> None:
+        """Return clear budget outputs."""
         self._income_card.set_value("0.00")
         self._expense_card.set_value("0.00")
         self._balance_card.set_value("0.00")
@@ -189,6 +208,7 @@ class BudgetView(QWidget):
         self._btn_apply_reassign.setEnabled(False)
 
     def _mark_budget_pending(self) -> None:
+        """Return mark budget pending."""
         self._loaded_budget_id = None
         self._current_monthly_tracking = None
         if self._current_budget_id is None:
@@ -231,6 +251,7 @@ class BudgetView(QWidget):
         self._set_budget_enabled(True)
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(12)
@@ -499,6 +520,7 @@ class BudgetView(QWidget):
         self._set_budget_view_mode("editor")
 
     def _build_budget_placeholder(self) -> QWidget:
+        """Return build budget placeholder."""
         placeholder = QWidget()
         layout = QVBoxLayout(placeholder)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -562,6 +584,7 @@ class BudgetView(QWidget):
         return placeholder
 
     def open_create_dialog(self) -> None:
+        """Return open create dialog."""
         from mira.ui.dialogs import BudgetCreateDialog
 
         dlg = BudgetCreateDialog(self._db, parent=self)
@@ -600,9 +623,11 @@ class BudgetView(QWidget):
         self._load_budget()
 
     def _format_budget_amount(self, amount: float, currency: str) -> str:
+        """Return format budget amount."""
         return f"{currency} {_fmt_amount(self._db, amount)}"
 
     def _make_text_item(self, text: str, *, editable: bool = False, user_data: int | None = None) -> QTableWidgetItem:
+        """Return make text item."""
         item = QTableWidgetItem(text)
         flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
         if editable:
@@ -613,6 +638,7 @@ class BudgetView(QWidget):
         return item
 
     def _make_amount_item(self, amount: float, *, editable: bool = False, color: str | None = None) -> QTableWidgetItem:
+        """Return make amount item."""
         item = self._make_text_item(_fmt_amount(self._db, amount), editable=editable)
         item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         item.setData(_BUDGET_AMOUNT_ROLE, float(amount))
@@ -623,6 +649,7 @@ class BudgetView(QWidget):
         return item
 
     def _restore_budget_cell_after_invalid_input(self, row: int, column: int, message: str) -> None:
+        """Return restore budget cell after invalid input."""
         self._load_budget()
         self._set_budget_status(message, color="#F7C16B")
         restored_item = self._budget_table.item(row, column)
@@ -635,6 +662,7 @@ class BudgetView(QWidget):
             self._budget_table.scrollTo(index)
 
     def _style_row(self, row: int, color: str) -> None:
+        """Return style row."""
         for col in range(self._budget_table.columnCount()):
             item = self._budget_table.item(row, col)
             if item is None:
@@ -642,6 +670,7 @@ class BudgetView(QWidget):
             item.setBackground(QColor(color))
 
     def _style_comparison_row(self, row: int, color: str) -> None:
+        """Return style comparison row."""
         for col in range(self._comparison_table.columnCount()):
             item = self._comparison_table.item(row, col)
             if item is None:
@@ -649,6 +678,7 @@ class BudgetView(QWidget):
             item.setBackground(QColor(color))
 
     def _apply_signal_highlight(self, item, signal=None):
+        """Return apply signal highlight."""
         if item is None or signal is None:
             return
         item.setData(_SIGNAL_CELL_ROLE, signal)
@@ -657,6 +687,7 @@ class BudgetView(QWidget):
         item.setFont(font)
 
     def _comparison_signal_color(self, section: str, variance: float) -> str:
+        """Return comparison signal color."""
         if abs(variance) < 0.005:
             return "neutral"
         if section == "income":
@@ -666,6 +697,7 @@ class BudgetView(QWidget):
         return "positive" if variance > 0 else "negative"
 
     def _selected_budget(self) -> dict | None:
+        """Return selected budget."""
         if self._current_budget_id is None:
             return None
         cached = self._selected_budget_from_cache()
@@ -674,6 +706,7 @@ class BudgetView(QWidget):
         return self._db.budget.get(self._current_budget_id)
 
     def _on_budget_changed(self, index: int) -> None:
+        """Return on budget changed."""
         budget_id = self._budget_combo.itemData(index)
         if budget_id is None:
             self._current_budget_id = None
@@ -704,6 +737,7 @@ class BudgetView(QWidget):
         self._mark_budget_pending()
 
     def _set_budget_enabled(self, enabled: bool) -> None:
+        """Return set budget enabled."""
         self._budget_combo.setEnabled(enabled)
         self._budget_table_stack.setCurrentWidget(
             self._budget_table
@@ -725,6 +759,7 @@ class BudgetView(QWidget):
         self._set_budget_view_mode(mode)
 
     def _set_budget_view_mode(self, mode: str) -> None:
+        """Return set budget view mode."""
         is_compare = mode == "comparison"
         is_tracking = mode == "monthly_tracking"
         self._btn_compare.setChecked(is_compare)
@@ -752,6 +787,7 @@ class BudgetView(QWidget):
             self._content_stack.setCurrentWidget(self._editor_panel)
 
     def _sync_tracking_year_with_budget(self, budget: dict[str, Any] | None) -> None:
+        """Return sync tracking year with budget."""
         if budget is None:
             return
         budget_year = int(budget["year"])
@@ -759,6 +795,7 @@ class BudgetView(QWidget):
             self._tracking_year_spin.setValue(budget_year)
 
     def _load_budget(self) -> None:
+        """Return load budget."""
         budget = self._selected_budget()
         if budget is None:
             return
@@ -808,6 +845,7 @@ class BudgetView(QWidget):
         )
 
     def _populate_budget_table(self, matrix: dict[str, Any]) -> None:
+        """Return populate budget table."""
         rows = list(matrix["rows"])
         incomes = [row for row in rows if row["type"] == "income"]
         expenses = [row for row in rows if row["type"] == "expense"]
@@ -914,6 +952,7 @@ class BudgetView(QWidget):
         self._loading_budget_table = False
 
     def _on_budget_cell_changed(self, row: int, column: int) -> None:
+        """Return on budget cell changed."""
         if self._loading_budget_table or self._current_budget_id is None or column < 1 or column > 12:
             return
         category_item = self._budget_table.item(row, 0)
@@ -958,6 +997,7 @@ class BudgetView(QWidget):
         self._load_budget()
 
     def _on_propose_budget(self) -> None:
+        """Return on propose budget."""
         if self._current_budget_id is None:
             return
         if self._db.budget.has_values(self._current_budget_id):
@@ -992,6 +1032,7 @@ class BudgetView(QWidget):
         self._load_budget()
 
     def _on_delete_budget(self) -> None:
+        """Return on delete budget."""
         budget = self._selected_budget()
         if budget is None:
             return
@@ -1013,6 +1054,7 @@ class BudgetView(QWidget):
         self.refresh()
 
     def _on_set_default_budget(self) -> None:
+        """Return on set default budget."""
         budget = self._selected_budget()
         if budget is None:
             return
@@ -1034,12 +1076,14 @@ class BudgetView(QWidget):
         self.refresh()
 
     def _on_toggle_compare(self) -> None:
+        """Return on toggle compare."""
         showing = self._btn_compare.isChecked()
         self._set_budget_view_mode("comparison" if showing else "editor")
         if showing:
             self._refresh_comparison()
 
     def _on_toggle_monthly_tracking(self) -> None:
+        """Return on toggle monthly tracking."""
         showing = self._btn_monthly_tracking.isChecked()
         self._set_budget_view_mode("monthly_tracking" if showing else "editor")
         if showing:
@@ -1047,6 +1091,7 @@ class BudgetView(QWidget):
             self._refresh_monthly_tracking()
 
     def _on_export_comparison_excel(self) -> None:
+        """Return on export comparison excel."""
         from PySide6.QtWidgets import QFileDialog
 
         budget = self._selected_budget()
@@ -1095,6 +1140,7 @@ class BudgetView(QWidget):
             )
 
     def _refresh_comparison(self) -> None:
+        """Return refresh comparison."""
         if not self._btn_compare.isChecked() or self._current_budget_id is None:
             return
         granularity = str(self._granularity_combo.currentData() or "quarterly")
@@ -1123,6 +1169,7 @@ class BudgetView(QWidget):
         )
 
     def _tracking_status_meta(self, status: str) -> tuple[str, str]:
+        """Return tracking status meta."""
         if status == "over":
             return (self._t("budget.monthly.status.over", "Sobregiro"), "#E06C75")
         if status == "matched":
@@ -1130,6 +1177,7 @@ class BudgetView(QWidget):
         return (self._t("budget.monthly.status.available", "Saldo disponible"), "#4EC9B0")
 
     def _refresh_monthly_tracking(self) -> None:
+        """Return refresh monthly tracking."""
         if not self._btn_monthly_tracking.isChecked() or self._current_budget_id is None:
             return
         year = int(self._tracking_year_spin.value())
@@ -1153,6 +1201,7 @@ class BudgetView(QWidget):
         )
 
     def _populate_monthly_tracking(self, tracking: dict[str, Any]) -> None:
+        """Return populate monthly tracking."""
         self._current_monthly_tracking = tracking
         budget = cast(dict[str, Any], tracking["budget"])
         totals = cast(dict[str, Any], tracking["totals"])
@@ -1220,6 +1269,7 @@ class BudgetView(QWidget):
         self._btn_apply_reassign.setEnabled(can_reassign)
 
     def _on_reassign_source_changed(self) -> None:
+        """Return on reassign source changed."""
         if self._current_budget_id is None or self._current_monthly_tracking is None:
             return
         if self._reassign_source_combo.count() <= 0:
@@ -1251,6 +1301,7 @@ class BudgetView(QWidget):
         )
 
     def _on_apply_reassignment(self) -> None:
+        """Return on apply reassignment."""
         if self._current_budget_id is None:
             return
         source_category_id = self._reassign_source_combo.currentData()
@@ -1290,6 +1341,7 @@ class BudgetView(QWidget):
         self._refresh_monthly_tracking()
 
     def _populate_comparison_table(self, comparison: dict[str, Any]) -> None:
+        """Return populate comparison table."""
         periods = list(comparison["periods"])
         headers = [self._t("budget.table.category", "Categoría")]
         for period in periods:
@@ -1419,10 +1471,12 @@ class BudgetView(QWidget):
             self._apply_signal_highlight(self._comparison_table.item(row_idx, col_idx + 2), annual_color)
 
     def refresh(self) -> None:
+        """Return refresh."""
         budgets = self._load_budget_list()
         self._apply_budget_selection_state(budgets)
 
     def _load_budget_list(self) -> list[dict[str, Any]]:
+        """Return load budget list."""
         if self._budget_list_dirty or not self._budget_list_cache:
             self._budget_list_cache = self._db.budget.list()
             self._budget_list_dirty = False
@@ -1438,6 +1492,7 @@ class BudgetView(QWidget):
         return list(self._budget_list_cache)
 
     def _apply_budget_selection_state(self, budgets: list[dict[str, Any]]) -> None:
+        """Return apply budget selection state."""
         has_budgets = bool(budgets)
         self._set_budget_enabled(has_budgets)
         if not has_budgets:

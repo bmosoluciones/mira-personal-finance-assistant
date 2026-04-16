@@ -45,6 +45,7 @@ class InitialSetupDialog(QWizard):
     _PAGE_ACCOUNTS = 4
 
     def __init__(self, db: Database, parent: QWidget | None = None) -> None:
+        """Initialize the InitialSetupDialog instance."""
         super().__init__(parent)
         self._db = db
         self._wizard_language = "en"
@@ -74,6 +75,7 @@ class InitialSetupDialog(QWizard):
         self._apply_language(self._page_language.get_language())
 
     def _apply_language(self, language: str) -> None:
+        """Return apply language."""
         lang = normalize_language(language)
         self._wizard_language = lang
 
@@ -90,6 +92,7 @@ class InitialSetupDialog(QWizard):
         self._page_accounts.apply_language(lang)
 
     def get_data(self) -> dict:
+        """Return get data."""
         language = self._page_language.get_language()
         return {
             "username": self._page_profile.get_username(language),
@@ -104,10 +107,14 @@ class InitialSetupDialog(QWizard):
 
 
 class _WelcomePage(QWizardPage):
+    """Represent the _WelcomePage class."""
+
     _ICON_SIZE = 75
+
     _BMO_LOGO_HEIGHT = 66
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the _WelcomePage instance."""
         super().__init__(parent)
         self._language = "en"
         self.setTitle(" ")
@@ -198,6 +205,7 @@ class _WelcomePage(QWizardPage):
         self.apply_language("en")
 
     def apply_language(self, lang: str) -> None:
+        """Return apply language."""
         self._tagline_lbl.setText(tr("setup.page.welcome.tagline", lang, default="Personal Finance Assistant"))
         self._welcome_text_lbl.setText(tr("setup.page.welcome.text", lang))
         self._features_box.setTitle(tr("setup.page.welcome.features_title", lang))
@@ -213,7 +221,10 @@ class _WelcomePage(QWizardPage):
 
 
 class _ProfilePage(QWizardPage):
+    """Represent the _ProfilePage class."""
+
     def __init__(self, db: Database, parent: QWidget | None = None) -> None:
+        """Initialize the _ProfilePage instance."""
         super().__init__(parent)
         self._db = db
         self.setTitle("")
@@ -248,6 +259,7 @@ class _ProfilePage(QWizardPage):
         self.apply_language("en")
 
     def apply_language(self, lang: str) -> None:
+        """Return apply language."""
         self.setTitle(tr("setup.page.profile.title", lang))
         self.setSubTitle(tr("setup.page.profile.subtitle", lang))
         self._intro_label.setText(tr("setup.page.profile.intro", lang))
@@ -256,6 +268,7 @@ class _ProfilePage(QWizardPage):
         self._hint_label.setText(tr("setup.page.profile.hint", lang))
 
     def validatePage(self) -> bool:  # noqa: N802
+        """Return validatePage."""
         if not self._name_edit.text().strip():
             from mira.ui.views._shared import _notify_warning as shared_notify_warning
 
@@ -271,13 +284,17 @@ class _ProfilePage(QWizardPage):
         return True
 
     def get_username(self, language: str) -> str:
+        """Return get username."""
         return self._name_edit.text().strip() or tr("settings.saved_default_user", language)
 
 
 class _LanguageThemePage(QWizardPage):
+    """Represent the _LanguageThemePage class."""
+
     language_changed = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the _LanguageThemePage instance."""
         super().__init__(parent)
         self._fallback_theme_options: list[tuple[str, str, str]] = []
         self.setTitle("")
@@ -323,6 +340,7 @@ class _LanguageThemePage(QWizardPage):
         self.apply_language("en")
 
     def _populate_fallback_theme_labels(self, lang: str) -> None:
+        """Return populate fallback theme labels."""
         if not self._fallback_theme_options:
             return
         current_value = self._theme_combo.currentData()
@@ -335,11 +353,13 @@ class _LanguageThemePage(QWizardPage):
             self._theme_combo.setCurrentIndex(default_idx)
 
     def _on_language_changed(self) -> None:
+        """Return on language changed."""
         lang = self.get_language()
         self.apply_language(lang)
         self.language_changed.emit(lang)
 
     def apply_language(self, lang: str) -> None:
+        """Return apply language."""
         self.setTitle(tr("setup.page.language.title", lang))
         self.setSubTitle(tr("setup.page.language.subtitle", lang))
         self._language_label.setText(tr("setup.page.language.language_label", lang))
@@ -347,14 +367,19 @@ class _LanguageThemePage(QWizardPage):
         self._populate_fallback_theme_labels(lang)
 
     def get_language(self) -> str:
+        """Return get language."""
         return self._language_combo.currentData() or "en"
 
     def get_theme(self) -> str:
+        """Return get theme."""
         return self._theme_combo.currentData() or _INITIAL_SETUP_THEME
 
 
 class _CurrencyFormatPage(QWizardPage):
+    """Represent the _CurrencyFormatPage class."""
+
     def __init__(self, db: Database, parent: QWidget | None = None) -> None:
+        """Initialize the _CurrencyFormatPage instance."""
         super().__init__(parent)
         self._db = db
         self._language = "en"
@@ -407,6 +432,7 @@ class _CurrencyFormatPage(QWizardPage):
         self.apply_language("en")
 
     def apply_language(self, lang: str) -> None:
+        """Return apply language."""
         self._language = normalize_language(lang)
         self.setTitle(tr("setup.page.currency.title", lang))
         self.setSubTitle(tr("setup.page.currency.subtitle", lang))
@@ -416,15 +442,19 @@ class _CurrencyFormatPage(QWizardPage):
         self._hint_label.setText(tr("setup.page.currency.hint", lang))
 
     def get_currency(self) -> str:
+        """Return get currency."""
         return self._currency_combo.currentData() or "USD"
 
     def get_thousands_sep(self) -> str:
+        """Return get thousands sep."""
         return self._thousands_combo.currentData() or ","
 
     def get_decimal_sep(self) -> str:
+        """Return get decimal sep."""
         return self._decimal_combo.currentData() or "."
 
     def validatePage(self) -> bool:
+        """Return validatePage."""
         try:
             validate_number_format_config(self.get_thousands_sep(), self.get_decimal_sep())
         except ValueError:
@@ -443,7 +473,10 @@ class _CurrencyFormatPage(QWizardPage):
 
 
 class _AccountsPage(QWizardPage):
+    """Represent the _AccountsPage class."""
+
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the _AccountsPage instance."""
         super().__init__(parent)
         self._account_rows: list[dict[str, object]] = []
 
@@ -482,6 +515,7 @@ class _AccountsPage(QWizardPage):
         self.apply_language("en")
 
     def initializePage(self) -> None:
+        """Return initializePage."""
         super().initializePage()
         if not self._account_rows:
             self._add_input_row()
@@ -489,6 +523,7 @@ class _AccountsPage(QWizardPage):
             self._sync_account_row_currency_defaults()
 
     def _add_input_row(self) -> None:
+        """Return add input row."""
         idx = len(self._account_rows) + 1
         lang = getattr(self, "_lang", "en")
         currency_default = self._db_default_currency()
@@ -538,21 +573,25 @@ class _AccountsPage(QWizardPage):
         self._inputs_layout.insertWidget(stretch_idx, card)
 
     def _db_ref(self) -> Database:
+        """Return db ref."""
         wizard = self.wizard()
         if wizard is not None and hasattr(wizard, "_db"):
             return cast(Database, wizard._db)
         raise RuntimeError("Accounts page requires a database reference")
 
     def _db_default_currency(self) -> str:
+        """Return db default currency."""
         wizard = self.wizard()
         if wizard is not None and hasattr(wizard, "_page_currency"):
             return str(wizard._page_currency.get_currency()).upper()
         return self._db_ref().setting.get_default_currency()
 
     def _db_currencies(self) -> list[dict]:
+        """Return db currencies."""
         return self._db_ref().setting.list_currencies(region="americas")
 
     def _sync_account_row_currency_defaults(self) -> None:
+        """Return sync account row currency defaults."""
         current_default = self._db_default_currency()
         for row_spec in self._account_rows:
             currency_combo = cast(QComboBox, row_spec["currency"])
@@ -566,6 +605,7 @@ class _AccountsPage(QWizardPage):
             row_spec["suggested_currency"] = current_default
 
     def _apply_row_title(self, row_spec: dict[str, object], idx: int) -> None:
+        """Return apply row title."""
         card = cast(QGroupBox, row_spec["card"])
         name_edit = cast(QLineEdit, row_spec["name"])
         lang = getattr(self, "_lang", "en")
@@ -573,13 +613,16 @@ class _AccountsPage(QWizardPage):
         name_edit.setPlaceholderText(tr("setup.page.accounts.row.name_placeholder", lang, params={"idx": idx}))
 
     def _refresh_input_labels(self) -> None:
+        """Return refresh input labels."""
         for idx, row_spec in enumerate(self._account_rows, start=1):
             self._apply_row_title(row_spec, idx)
 
     def _on_skip(self) -> None:
+        """Return on skip."""
         return
 
     def apply_language(self, lang: str) -> None:
+        """Return apply language."""
         self._lang = lang
         self.setTitle(tr("setup.page.accounts.title", lang))
         self.setSubTitle(tr("setup.page.accounts.subtitle", lang))
@@ -588,9 +631,11 @@ class _AccountsPage(QWizardPage):
         self._refresh_input_labels()
 
     def get_account_names(self) -> list[str]:
+        """Return get account names."""
         return [str(spec["name"]) for spec in self.get_account_specs()]
 
     def get_account_specs(self) -> list[dict[str, object]]:
+        """Return get account specs."""
         specs: list[dict[str, object]] = []
         for row_spec in self._account_rows:
             name_edit = cast(QLineEdit, row_spec["name"])

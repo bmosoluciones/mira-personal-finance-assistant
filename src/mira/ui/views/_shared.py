@@ -32,6 +32,7 @@ from mira.ui.number_format import format_number, get_number_format_config
 
 
 def _make_tag_badge(tag: dict) -> QLabel:
+    """Return make tag badge."""
     lbl = QLabel(tag["name"])
     lbl.setStyleSheet(
         f"background:{tag['color']};color:#222;border-radius:6px;padding:2px 8px;margin:2px;font-size:11px;"
@@ -40,6 +41,7 @@ def _make_tag_badge(tag: dict) -> QLabel:
 
 
 def _notify(widget: QWidget, *args: object, level: str = "info") -> None:
+    """Return notify."""
     if len(args) == 3 and isinstance(args[0], QWidget):
         _, title, message = args
     elif len(args) == 2:
@@ -50,22 +52,27 @@ def _notify(widget: QWidget, *args: object, level: str = "info") -> None:
 
 
 def _notify_info(widget: QWidget, *args: object) -> None:
+    """Return notify info."""
     _notify(widget, *args, level="info")
 
 
 def _notify_warning(widget: QWidget, *args: object) -> None:
+    """Return notify warning."""
     _notify(widget, *args, level="warning")
 
 
 def _notify_error(widget: QWidget, *args: object) -> None:
+    """Return notify error."""
     _notify(widget, *args, level="error")
 
 
 def _describe_exception(db: Database, error: Exception) -> ErrorDescriptor:
+    """Return describe exception."""
     return describe_error(error, language=_ui_lang(db))
 
 
 def _notify_exception(widget: QWidget, db: Database, error: Exception, *, title: str | None = None) -> None:
+    """Return notify exception."""
     descriptor = _describe_exception(db, error)
     _notify(widget, title or descriptor.title, descriptor.message, level=descriptor.level)
 
@@ -95,6 +102,7 @@ def _date_to_qdate(d: date) -> QDate:
 
 
 def _section_title(text: str) -> QLabel:
+    """Return section title."""
     lbl = QLabel(text)
     lbl.setFont(QFont("Arial", 15, QFont.Weight.Bold))
     lbl.setStyleSheet("padding-bottom:4px;")
@@ -102,12 +110,14 @@ def _section_title(text: str) -> QLabel:
 
 
 def _sub_title(text: str) -> QLabel:
+    """Return sub title."""
     lbl = QLabel(text)
     lbl.setStyleSheet("font-weight:bold;font-size:12px;padding:4px 0 2px 0;")
     return lbl
 
 
 def _make_toolbar_btn(label: str) -> QPushButton:
+    """Return make toolbar btn."""
     btn = QPushButton(label)
     btn.setStyleSheet(_BTN_STYLE)
     return btn
@@ -147,11 +157,13 @@ def _select_row_at_pos(table: QTableWidget, pos: QPoint) -> bool:
 
 
 def _fmt_amount(db: Database, amount: float, *, decimals: int = 2) -> str:
+    """Return fmt amount."""
     cfg = get_number_format_config(db.setting)
     return format_number(float(amount), cfg, decimals=decimals, grouping=True)
 
 
 def _fmt_amount_with_currency(db: Database, amount: float, currency: str, *, decimals: int = 2) -> str:
+    """Return fmt amount with currency."""
     normalized_currency = currency.strip().upper()
     return (
         f"{normalized_currency} {_fmt_amount(db, amount, decimals=decimals)}"
@@ -161,10 +173,12 @@ def _fmt_amount_with_currency(db: Database, amount: float, currency: str, *, dec
 
 
 def _savings_category_names(db: Database) -> set[str]:
+    """Return savings category names."""
     return build_savings_lookup(db.category.list("expense"))[1]
 
 
 def _tx_type_indicator(tx: dict[str, Any], savings_categories: set[str]) -> tuple[str, QColor]:
+    """Return tx type indicator."""
     if is_balance_adjustment_transaction(tx):
         return "~ adjustment", QColor("#7AA2F7")
     is_transfer = int(tx.get("is_transfer") or 0) == 1
@@ -182,6 +196,7 @@ def _tx_type_indicator(tx: dict[str, Any], savings_categories: set[str]) -> tupl
 
 
 def _make_tx_type_item(tx: dict[str, Any], savings_categories: set[str]) -> QTableWidgetItem:
+    """Return make tx type item."""
     text, color = _tx_type_indicator(tx, savings_categories)
     item = QTableWidgetItem(text)
     item.setForeground(QBrush(color))
@@ -205,14 +220,17 @@ def _make_tx_type_item(tx: dict[str, Any], savings_categories: set[str]) -> QTab
 
 
 def _ui_lang(db: Database) -> str:
+    """Return ui lang."""
     return normalize_language(db.setting.get("language"))
 
 
 def _tr_db(db: Database, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+    """Return tr db."""
     return tr(key, _ui_lang(db), default=default, params=params)
 
 
 def _account_type_label(db: Database, account_type: str) -> str:
+    """Return account type label."""
     normalized = str(account_type or "bank").strip().lower()
     if normalized == "card":
         normalized = "credit"

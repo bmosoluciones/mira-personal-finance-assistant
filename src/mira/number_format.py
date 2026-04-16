@@ -10,7 +10,11 @@ from typing import Protocol
 
 
 class _SettingsProvider(Protocol):
-    def get(self, key: str) -> str | None: ...
+    """Represent the _SettingsProvider class."""
+
+    def get(self, key: str) -> str | None:
+        """Return get."""
+        ...
 
 
 _SEP_DEFAULT_THOUSANDS = ","
@@ -28,7 +32,10 @@ _SEPARATOR_OPTIONS: tuple[tuple[str, str], ...] = (
 
 @dataclass(frozen=True)
 class NumberFormatConfig:
+    """Represent the NumberFormatConfig class."""
+
     thousands_sep: str = _SEP_DEFAULT_THOUSANDS
+
     decimal_sep: str = _SEP_DEFAULT_DECIMAL
 
 
@@ -38,6 +45,7 @@ def separator_options() -> tuple[tuple[str, str], ...]:
 
 
 def _normalize_separator(value: str | None, default: str) -> str:
+    """Return normalize separator."""
     if value is None:
         return default
     for sep, _label in _SEPARATOR_OPTIONS:

@@ -16,6 +16,7 @@ class _SignalCellDelegate(QStyledItemDelegate):
     """Paint semantic comparison cells without relying on theme foreground/background rules."""
 
     def paint(self, painter: QPainter, option, index) -> None:  # type: ignore[override]
+        """Return paint."""
         signal = index.data(_SIGNAL_CELL_ROLE)
         if signal not in {"positive", "negative", "neutral"}:
             super().paint(painter, option, index)
@@ -73,6 +74,7 @@ class _TypeBadgeDelegate(QStyledItemDelegate):
     """Paint type badges without being overridden by active theme rules."""
 
     def paint(self, painter: QPainter, option, index) -> None:  # type: ignore[override]
+        """Return paint."""
         badge = index.data(_TYPE_BADGE_ROLE)
         if badge not in {"income", "expense", "savings", "transfer", "adjustment"}:
             super().paint(painter, option, index)

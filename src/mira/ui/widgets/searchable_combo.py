@@ -23,6 +23,7 @@ class SearchableComboBox(QComboBox):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the SearchableComboBox instance."""
         super().__init__(parent)
         self._source_model = QStandardItemModel(0, 1, self)
         self._proxy_model = QSortFilterProxyModel(self)
@@ -88,16 +89,19 @@ class SearchableComboBox(QComboBox):
     # ------------------------------------------------------------------
 
     def addItem(self, text: str, userData: object = None) -> None:  # type: ignore[override]
+        """Return addItem."""
         item = QStandardItem(text)
         if userData is not None:
             item.setData(userData, Qt.ItemDataRole.UserRole)
         self._source_model.appendRow(item)
 
     def addItems(self, texts: list[str]) -> None:  # type: ignore[override]
+        """Return addItems."""
         for text in texts:
             self.addItem(str(text))
 
     def clear(self) -> None:
+        """Return clear."""
         self._source_model.clear()
         self._proxy_model.setFilterRegularExpression("")
         self._line_edit.clear()
@@ -107,6 +111,7 @@ class SearchableComboBox(QComboBox):
         return self._source_model.rowCount()
 
     def currentData(self, role: int = Qt.ItemDataRole.UserRole) -> object:  # type: ignore[override]
+        """Return currentData."""
         proxy_idx = self._proxy_model.index(self.currentIndex(), 0)
         source_idx = self._proxy_model.mapToSource(proxy_idx)
         if source_idx.isValid():
@@ -114,6 +119,7 @@ class SearchableComboBox(QComboBox):
         return None
 
     def itemData(self, index: int, role: int = Qt.ItemDataRole.UserRole) -> object:  # type: ignore[override]
+        """Return itemData."""
         proxy_idx = self._proxy_model.index(index, 0)
         if not proxy_idx.isValid():
             return None

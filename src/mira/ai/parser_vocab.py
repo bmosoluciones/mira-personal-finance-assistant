@@ -432,6 +432,7 @@ def build_patterns(
 
     # Deduplicate while preserving order so the compiled pattern stays stable.
     def _dedup(lst: list[str]) -> list[str]:
+        """Return dedup."""
         seen: set[str] = set()
         return [x for x in lst if not (x in seen or seen.add(x))]  # type: ignore[func-returns-value]
 

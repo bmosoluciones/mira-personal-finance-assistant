@@ -15,14 +15,16 @@ from mira.ui.i18n import normalize_language, tr
 
 @dataclass(frozen=True)
 class ErrorDescriptor:
+    """Represent the ErrorDescriptor class."""
+
     title: str
+
     message: str
     level: str = "error"
 
 
 def describe(error: Exception, *, language: str = "en") -> ErrorDescriptor:
     """Convert internal exceptions into consistent UI copy."""
-
     lang = normalize_language(language)
 
     match error:

@@ -15,6 +15,7 @@ class MenuBuilder:
     """Extracted menu construction for MainWindow."""
 
     def build(self, window) -> None:
+        """Return build."""
         mb = window.menuBar()
         mb.clear()
 

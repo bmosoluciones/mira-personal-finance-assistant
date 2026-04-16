@@ -71,6 +71,7 @@ class _HistoryLineEdit(QLineEdit):
     """QLineEdit that navigates command history with ↑ / ↓ keys."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the _HistoryLineEdit instance."""
         super().__init__(parent)
         self._history: list[str] = []
         self._cursor: int = -1  # -1 = at current (empty) input
@@ -84,6 +85,7 @@ class _HistoryLineEdit(QLineEdit):
         self._draft = ""
 
     def keyPressEvent(self, event: QKeyEvent) -> None:  # type: ignore[override]
+        """Return keyPressEvent."""
         if event.key() == Qt.Key.Key_Up:
             if not self._history:
                 return
@@ -137,6 +139,7 @@ class MainWindow(
         startup_alert: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
+        """Initialize the MainWindow instance."""
         super().__init__(parent)
         self._db = db
         self._pipeline = pipeline
@@ -198,9 +201,11 @@ class MainWindow(
     # ------------------------------------------------------------------
 
     def _build_menu(self) -> None:
+        """Return build menu."""
         MenuBuilder().build(self)
 
     def _history_line_edit_class(self) -> type[_HistoryLineEdit]:
+        """Return history line edit class."""
         return _HistoryLineEdit
 
     # ------------------------------------------------------------------
@@ -208,6 +213,7 @@ class MainWindow(
     # ------------------------------------------------------------------
 
     def _on_import_csv(self) -> None:
+        """Return on import csv."""
         from PySide6.QtWidgets import QFileDialog
 
         path, _ = QFileDialog.getOpenFileName(
@@ -225,6 +231,7 @@ class MainWindow(
         self._file_actions.import_csv(path)
 
     def _on_export_csv(self) -> None:
+        """Return on export csv."""
         from PySide6.QtWidgets import QFileDialog
 
         path, _ = QFileDialog.getSaveFileName(
@@ -242,6 +249,7 @@ class MainWindow(
         self._file_actions.export_csv(path)
 
     def _on_backup(self) -> None:
+        """Return on backup."""
         from PySide6.QtWidgets import QFileDialog
 
         default_name = default_backup_name()
@@ -256,6 +264,7 @@ class MainWindow(
         self._file_actions.backup(path)
 
     def _on_restore(self) -> None:
+        """Return on restore."""
         from PySide6.QtWidgets import QFileDialog
 
         path, _ = QFileDialog.getOpenFileName(
@@ -273,6 +282,7 @@ class MainWindow(
         self._file_actions.restore(path)
 
     def _on_diagnostics(self) -> None:
+        """Return on diagnostics."""
         parser_type = type(self._pipeline.engine).__name__
         chat_engine = getattr(self._pipeline, "chat_engine", None)
         chat_type = type(chat_engine).__name__ if chat_engine is not None else "Disabled"

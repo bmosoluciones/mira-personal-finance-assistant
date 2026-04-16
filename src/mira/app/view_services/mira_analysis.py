@@ -21,13 +21,19 @@ from mira.ui.i18n import tr
 
 @dataclass(frozen=True)
 class MiraAnalysisComparisonBadge:
+    """Represent the MiraAnalysisComparisonBadge class."""
+
     text: str
+
     color: str
 
 
 @dataclass(frozen=True)
 class MiraAnalysisCardState:
+    """Represent the MiraAnalysisCardState class."""
+
     value: str
+
     color: str
     primary_text: str
     primary_color: str
@@ -37,13 +43,19 @@ class MiraAnalysisCardState:
 
 @dataclass(frozen=True)
 class MiraAnalysisAmountRow:
+    """Represent the MiraAnalysisAmountRow class."""
+
     name: str
+
     amount_text: str
 
 
 @dataclass(frozen=True)
 class MiraAnalysisDrilldownRow:
+    """Represent the MiraAnalysisDrilldownRow class."""
+
     name: str
+
     amount_text: str
     detail_title: str
     detail_rows: tuple[MiraAnalysisAmountRow, ...]
@@ -51,13 +63,19 @@ class MiraAnalysisDrilldownRow:
 
 @dataclass(frozen=True)
 class MiraAnalysisDrilldownSection:
+    """Represent the MiraAnalysisDrilldownSection class."""
+
     top_rows: tuple[MiraAnalysisDrilldownRow, ...]
+
     empty_title: str
 
 
 @dataclass(frozen=True)
 class MiraAnalysisIncomeExpenseRow:
+    """Represent the MiraAnalysisIncomeExpenseRow class."""
+
     income_category: str
+
     income_amount_text: str
     expense_category: str
     expense_amount_text: str
@@ -65,13 +83,19 @@ class MiraAnalysisIncomeExpenseRow:
 
 @dataclass(frozen=True)
 class MiraAnalysisIncomeExpenseSection:
+    """Represent the MiraAnalysisIncomeExpenseSection class."""
+
     rows: tuple[MiraAnalysisIncomeExpenseRow, ...]
+
     empty_title: str
 
 
 @dataclass(frozen=True)
 class MiraAnalysisWaterfallStep:
+    """Represent the MiraAnalysisWaterfallStep class."""
+
     label: str
+
     kind: str
     value: float
     start: float
@@ -80,6 +104,7 @@ class MiraAnalysisWaterfallStep:
     is_grouped: bool = False
 
     def as_dict(self) -> dict[str, Any]:
+        """Return as dict."""
         return {
             "label": self.label,
             "kind": self.kind,
@@ -93,42 +118,60 @@ class MiraAnalysisWaterfallStep:
 
 @dataclass(frozen=True)
 class MiraAnalysisWaterfallState:
+    """Represent the MiraAnalysisWaterfallState class."""
+
     steps: tuple[MiraAnalysisWaterfallStep, ...]
+
     legend_html: str
     summary_text: str
 
 
 @dataclass(frozen=True)
 class MiraAnalysisLineSeries:
+    """Represent the MiraAnalysisLineSeries class."""
+
     name: str
+
     color: str
     points: tuple[tuple[float, float], ...]
 
 
 @dataclass(frozen=True)
 class MiraAnalysisBarSeries:
+    """Represent the MiraAnalysisBarSeries class."""
+
     name: str
+
     color: str
     values: tuple[float, ...]
 
 
 @dataclass(frozen=True)
 class MiraAnalysisLineChartState:
+    """Represent the MiraAnalysisLineChartState class."""
+
     title: str
+
     labels: tuple[str, ...]
     series: tuple[MiraAnalysisLineSeries, ...]
 
 
 @dataclass(frozen=True)
 class MiraAnalysisStackedBarChartState:
+    """Represent the MiraAnalysisStackedBarChartState class."""
+
     title: str
+
     labels: tuple[str, ...]
     series: tuple[MiraAnalysisBarSeries, ...]
 
 
 @dataclass(frozen=True)
 class MiraAnalysisViewState:
+    """Represent the MiraAnalysisViewState class."""
+
     income_card: MiraAnalysisCardState
+
     expense_card: MiraAnalysisCardState
     balance_card: MiraAnalysisCardState
     savings_card: MiraAnalysisCardState
@@ -148,6 +191,7 @@ def _comparison_badge(
     label: str,
     missing_text: str,
 ) -> MiraAnalysisComparisonBadge:
+    """Return comparison badge."""
     if not comparison or comparison.get("base") is None or comparison.get("pct") is None:
         return MiraAnalysisComparisonBadge(missing_text, "#9FB3C8")
 
@@ -173,9 +217,11 @@ class MiraAnalysisService:
     """Load the MIRA master report payload outside the QWidget."""
 
     def __init__(self, db: Database) -> None:
+        """Initialize the MiraAnalysisService instance."""
         self._db = db
 
     def load_payload(self, *, year: int, month: int) -> dict[str, Any]:
+        """Return load payload."""
         return cast(dict[str, Any], self._db.report.get_mira_master_report(year=year, month=month))
 
 
@@ -183,9 +229,11 @@ class MiraAnalysisViewStateBuilder:
     """Build UI-facing state for the MIRA analysis workspace."""
 
     def __init__(self, db: Database) -> None:
+        """Initialize the MiraAnalysisViewStateBuilder instance."""
         self._db = db
 
     def build_state(self, payload: dict[str, Any]) -> MiraAnalysisViewState:
+        """Return build state."""
         context = PresentationContext.from_db(self._db)
         comparisons = cast(dict[str, Any], payload.get("comparisons") or {})
         allocation = cast(dict[str, Any], payload.get("allocation") or {})
@@ -208,6 +256,7 @@ class MiraAnalysisViewStateBuilder:
         comparisons: dict[str, Any],
         context: PresentationContext,
     ) -> MiraAnalysisCardState:
+        """Return build income card."""
         kpis = cast(dict[str, Any], payload.get("kpis") or {})
         income_cmp = cast(dict[str, Any], comparisons.get("income") or {})
         primary = _comparison_badge(
@@ -239,6 +288,7 @@ class MiraAnalysisViewStateBuilder:
         comparisons: dict[str, Any],
         context: PresentationContext,
     ) -> MiraAnalysisCardState:
+        """Return build expense card."""
         kpis = cast(dict[str, Any], payload.get("kpis") or {})
         expense_cmp = cast(dict[str, Any], comparisons.get("expense_operational") or {})
         primary = _comparison_badge(
@@ -270,6 +320,7 @@ class MiraAnalysisViewStateBuilder:
         comparisons: dict[str, Any],
         context: PresentationContext,
     ) -> MiraAnalysisCardState:
+        """Return build balance card."""
         kpis = cast(dict[str, Any], payload.get("kpis") or {})
         net = float(kpis.get("net") or 0.0)
         net_cmp = cast(dict[str, Any], comparisons.get("net") or {})
@@ -306,6 +357,7 @@ class MiraAnalysisViewStateBuilder:
         comparisons: dict[str, Any],
         context: PresentationContext,
     ) -> MiraAnalysisCardState:
+        """Return build savings card."""
         kpis = cast(dict[str, Any], payload.get("kpis") or {})
         savings_cmp = cast(dict[str, Any], comparisons.get("savings") or {})
         primary = _comparison_badge(
@@ -336,6 +388,7 @@ class MiraAnalysisViewStateBuilder:
         allocation: dict[str, Any],
         context: PresentationContext,
     ) -> MiraAnalysisDrilldownSection:
+        """Return build category section."""
         empty_title = context.translate(
             "mira.analysis.category_detail.empty",
             "Selecciona una categoría para ver el desglose.",
@@ -378,6 +431,7 @@ class MiraAnalysisViewStateBuilder:
         payload: dict[str, Any],
         context: PresentationContext,
     ) -> MiraAnalysisIncomeExpenseSection:
+        """Return build income vs expense section."""
         raw_rows = list(payload.get("income_vs_expense_by_income") or [])
         rows: list[MiraAnalysisIncomeExpenseRow] = []
         for entry in raw_rows:
@@ -426,6 +480,7 @@ class MiraAnalysisViewStateBuilder:
         allocation: dict[str, Any],
         context: PresentationContext,
     ) -> MiraAnalysisDrilldownSection:
+        """Return build tag section."""
         empty_title = context.translate(
             "mira.analysis.tag_detail.empty",
             "Selecciona una etiqueta para ver su composición.",
@@ -468,6 +523,7 @@ class MiraAnalysisViewStateBuilder:
         payload: dict[str, Any],
         context: PresentationContext,
     ) -> MiraAnalysisWaterfallState:
+        """Return build waterfall state."""
         waterfall = cast(dict[str, Any], payload.get("waterfall") or {})
         summary = cast(dict[str, Any], waterfall.get("summary") or {})
         steps: list[MiraAnalysisWaterfallStep] = []
@@ -557,6 +613,7 @@ class MiraAnalysisViewStateBuilder:
         )
 
     def _waterfall_label(self, step: dict[str, Any], context: PresentationContext) -> str:
+        """Return waterfall label."""
         kind = try_parse_waterfall_step_kind(step.get("kind"))
         label = str(step.get("label") or "")
 
@@ -590,6 +647,7 @@ class MiraAnalysisViewStateBuilder:
         payload: dict[str, Any],
         context: PresentationContext,
     ) -> MiraAnalysisLineChartState:
+        """Return build ytd chart."""
         ytd = list(payload.get("ytd") or [])
         labels = tuple(f"{int(item['month']):02d}/{int(item['year'])}" for item in ytd)
         return MiraAnalysisLineChartState(
@@ -626,6 +684,7 @@ class MiraAnalysisViewStateBuilder:
         payload: dict[str, Any],
         context: PresentationContext,
     ) -> dict[str, MiraAnalysisStackedBarChartState]:
+        """Return build trend charts."""
         charts: dict[str, MiraAnalysisStackedBarChartState] = {}
         stacked = cast(dict[str, Any], payload.get("historical_stacked") or {})
         for section, rows_obj in stacked.items():
@@ -674,12 +733,15 @@ class MiraAnalysisMessageBuilder:
     """Build assistant-facing narrative strings from a MIRA payload."""
 
     def __init__(self, db: Database) -> None:
+        """Initialize the MiraAnalysisMessageBuilder instance."""
         self._db = db
 
     def _t(self, language: str, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        """Return t."""
         return tr(key, language, default=default, params=params)
 
     def _context(self, language: str) -> PresentationContext:
+        """Return context."""
         base = PresentationContext.from_db(self._db)
         return PresentationContext(
             language=language,
@@ -700,6 +762,7 @@ class MiraAnalysisMessageBuilder:
         budget: dict[str, Any],
         metrics: dict[str, Any],
     ) -> list[str]:
+        """Return build efficiency context lines."""
         income_cmp = cast(dict[str, Any], comparisons.get("income") or {})
         expense_cmp = cast(dict[str, Any], comparisons.get("expense_operational") or {})
 
@@ -870,6 +933,7 @@ class MiraAnalysisMessageBuilder:
         metrics: dict[str, Any],
         history_hints: list[str],
     ) -> list[str]:
+        """Return build security context lines."""
         kpis = cast(dict[str, Any], payload.get("kpis") or {})
         burn_days = metrics.get("burn_rate_days")
         net_amount = float(kpis.get("net") or 0.0)
@@ -915,6 +979,7 @@ class MiraAnalysisMessageBuilder:
         metrics: dict[str, Any],
         goals_summary: dict[str, Any],
     ) -> list[str]:
+        """Return build purpose context lines."""
         lines = [context.translate("mira.analysis.context.purpose", "Purpose report")]
         lines.append(
             context.translate(
@@ -940,6 +1005,7 @@ class MiraAnalysisMessageBuilder:
         return lines
 
     def build_context_message(self, payload: dict[str, Any], *, language: str) -> str:
+        """Return build context message."""
         context = self._context(language)
         comparisons = cast(dict[str, Any], payload.get("comparisons") or {})
         budget = cast(dict[str, Any], payload.get("budget") or {})

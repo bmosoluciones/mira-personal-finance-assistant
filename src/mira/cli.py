@@ -17,6 +17,7 @@ from mira.db.helpers import default_db_path_for_display
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """Return build parser."""
     parser = argparse.ArgumentParser(
         prog="mira-cli",
         description="Maintenance commands for MIRA databases.",
@@ -67,6 +68,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _resolve_installed_version() -> str:
+    """Return resolve installed version."""
     for package_name in ("mira-personal-finance-assistant", "mira"):
         try:
             return metadata.version(package_name)
@@ -76,6 +78,7 @@ def _resolve_installed_version() -> str:
 
 
 def _run_import_check() -> int:
+    """Return run import check."""
     modules_to_probe = (
         "mira",
         "mira.db.database",
@@ -120,6 +123,7 @@ def _run_import_check() -> int:
 
 
 def _open_database(path: str | None) -> Database:
+    """Return open database."""
     db = Database(path=path)
     try:
         db.connect()
@@ -129,6 +133,7 @@ def _open_database(path: str | None) -> Database:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Return main."""
     parser = _build_parser()
     args = parser.parse_args(argv)
 

@@ -16,6 +16,7 @@ class SavingsGoalDialog(QDialog):
     """Create a savings goal."""
 
     def __init__(self, db: Database, goal: dict | None = None, prefill: dict | None = None, parent=None) -> None:
+        """Initialize the SavingsGoalDialog instance."""
         super().__init__(parent)
         self._db = db
         self._goal = goal
@@ -34,9 +35,11 @@ class SavingsGoalDialog(QDialog):
         self._update_notice()
 
     def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        """Return t."""
         return tr(key, self._language, default=default, params=params)
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         form = QFormLayout()
         form.setSpacing(10)
@@ -59,6 +62,7 @@ class SavingsGoalDialog(QDialog):
         layout.addWidget(buttons)
 
     def _prefill(self, goal: dict) -> None:
+        """Return prefill."""
         from PySide6.QtCore import QDate
 
         self._name_edit.setText(goal.get("name", ""))
@@ -76,6 +80,7 @@ class SavingsGoalDialog(QDialog):
                     pass
 
     def _update_notice(self) -> None:
+        """Return update notice."""
         goal_name = self._name_edit.text().strip()
         parent_name = self._db.setting.get_savings_goals_parent_name()
         if self._goal is None:
@@ -99,6 +104,7 @@ class SavingsGoalDialog(QDialog):
         self._notice_lbl.setText(self._t(key, default, params={"name": goal_name, "parent": parent_name}))
 
     def _on_accept(self) -> None:
+        """Return on accept."""
         if not self._name_edit.text().strip():
             _notify_warning(
                 self,
@@ -116,6 +122,7 @@ class SavingsGoalDialog(QDialog):
         self.accept()
 
     def get_data(self) -> dict:
+        """Return get data."""
         return {
             "name": self._name_edit.text().strip(),
             "target_amount": self._target_spin.value(),
@@ -140,6 +147,7 @@ class ContributeGoalDialog(QDialog):
         goals: list[dict] | None = None,
         selected_goal_id: int | None = None,
     ) -> None:
+        """Initialize the ContributeGoalDialog instance."""
         super().__init__(parent)
         self._db = db
         self._language = normalize_language(self._db.setting.get("language"))
@@ -149,9 +157,11 @@ class ContributeGoalDialog(QDialog):
         self._build_ui(goal_name=goal_name, selected_goal_id=selected_goal_id)
 
     def _t(self, key: str, default: str, *, params: dict[str, object] | None = None) -> str:
+        """Return t."""
         return tr(key, self._language, default=default, params=params)
 
     def _build_ui(self, *, goal_name: str, selected_goal_id: int | None) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         form = QFormLayout()
         form.setSpacing(10)
@@ -187,6 +197,7 @@ class ContributeGoalDialog(QDialog):
         layout.addWidget(buttons)
 
     def _on_accept(self) -> None:
+        """Return on accept."""
         if self._amount_spin.value() <= 0:
             _notify_warning(
                 self,
@@ -197,6 +208,7 @@ class ContributeGoalDialog(QDialog):
         self.accept()
 
     def get_data(self) -> dict:
+        """Return get data."""
         data: dict = {"amount": self._amount_spin.value()}
         if self._goal_combo is not None:
             data["goal_id"] = self._goal_combo.currentData()

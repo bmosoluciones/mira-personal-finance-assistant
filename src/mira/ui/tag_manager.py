@@ -3,6 +3,7 @@
 
 """
 Tag management dialog for MIRA Personal Finance.
+
 Provides full CRUD for tags, including color selection and badge preview.
 """
 
@@ -27,11 +28,15 @@ from mira.ui.notifications import show_user_message
 
 
 def _notify_warning(widget, title: str, message: str) -> None:
+    """Return notify warning."""
     show_user_message(widget, title, message, level="warning")
 
 
 class TagManagerDialog(QDialog):
+    """Represent the TagManagerDialog class."""
+
     def __init__(self, db: Database, parent=None):
+        """Initialize the TagManagerDialog instance."""
         super().__init__(parent)
         self.db = db
         self._language = normalize_language(self.db.setting.get("language"))
@@ -55,6 +60,7 @@ class TagManagerDialog(QDialog):
         self.del_btn.clicked.connect(self._delete_tag)
 
     def _refresh_list(self):
+        """Return refresh list."""
         self._list_widget.clear()
         for tag in self.db.tag.list():
             item = QListWidgetItem(tag["name"])
@@ -64,6 +70,7 @@ class TagManagerDialog(QDialog):
             self._list_widget.addItem(item)
 
     def _add_tag(self):
+        """Return add tag."""
         name, ok = QInputDialog.getText(
             self,
             tr("tag_manager.add.title", self._language, default="Add Tag"),
@@ -80,6 +87,7 @@ class TagManagerDialog(QDialog):
         self._refresh_list()
 
     def _edit_tag(self):
+        """Return edit tag."""
         item = self._list_widget.currentItem()
         if not item:
             _notify_warning(
@@ -106,6 +114,7 @@ class TagManagerDialog(QDialog):
         self._refresh_list()
 
     def _delete_tag(self):
+        """Return delete tag."""
         item = self._list_widget.currentItem()
         if not item:
             _notify_warning(

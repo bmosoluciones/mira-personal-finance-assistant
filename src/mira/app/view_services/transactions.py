@@ -15,14 +15,20 @@ from mira.finance_summary import build_savings_lookup
 
 @dataclass(frozen=True)
 class TransactionsFilterOptions:
+    """Represent the TransactionsFilterOptions class."""
+
     accounts: list[dict[str, Any]]
+
     categories: list[dict[str, Any]]
     tags: list[dict[str, Any]]
 
 
 @dataclass(frozen=True)
 class TransactionsViewState:
+    """Represent the TransactionsViewState class."""
+
     options: TransactionsFilterOptions
+
     transactions: list[dict[str, Any]]
     summary: dict[str, float]
     tags_by_transaction: dict[int, list[dict[str, Any]]]
@@ -33,6 +39,7 @@ class TransactionsViewService:
     """Move transaction querying and commands out of the QWidget."""
 
     def __init__(self, db: Database) -> None:
+        """Initialize the TransactionsViewService instance."""
         self._db = db
 
     def load_state(
@@ -46,6 +53,7 @@ class TransactionsViewService:
         tag_id: int | None,
         limit: int = 1_000,
     ) -> TransactionsViewState:
+        """Return load state."""
         options = TransactionsFilterOptions(
             accounts=self._db.account.list(),
             categories=self._db.category.list(),
@@ -73,6 +81,7 @@ class TransactionsViewService:
         )
 
     def create(self, data: dict[str, Any]) -> OperationFeedback:
+        """Return create."""
         tx = self._db.transaction.create(
             account_id=data["account_id"],
             tx_type=data["tx_type"],
@@ -94,6 +103,7 @@ class TransactionsViewService:
         )
 
     def update(self, transaction_id: int, data: dict[str, Any]) -> OperationFeedback:
+        """Return update."""
         self._db.transaction.update(
             transaction_id,
             account_id=data["account_id"],
@@ -113,13 +123,16 @@ class TransactionsViewService:
         return OperationFeedback(selected_id=int(transaction_id))
 
     def delete(self, transaction_id: int) -> OperationFeedback:
+        """Return delete."""
         self._db.transaction.delete(transaction_id)
         return OperationFeedback()
 
     def duplicate(self, data: dict[str, Any]) -> OperationFeedback:
+        """Return duplicate."""
         return self.create(data)
 
     def transfer(self, data: dict[str, Any]) -> OperationFeedback:
+        """Return transfer."""
         self._db.transaction.transfer_between_accounts(
             from_account_id=data["from_account_id"],
             to_account_id=data["to_account_id"],
@@ -133,6 +146,7 @@ class TransactionsViewService:
         return OperationFeedback()
 
     def record_credit_payment(self, data: dict[str, Any]) -> OperationFeedback:
+        """Return record credit payment."""
         self._db.transaction.record_credit_card_payment(
             from_account_id=data["from_account_id"],
             credit_account_id=data["to_account_id"],
@@ -146,6 +160,7 @@ class TransactionsViewService:
         return OperationFeedback()
 
     def update_balance_adjustment(self, transaction_id: int, data: dict[str, Any]) -> OperationFeedback:
+        """Return update balance adjustment."""
         self._db.transaction.update_balance_adjustment(
             transaction_id,
             account_id=int(data["account_id"]),
@@ -156,13 +171,16 @@ class TransactionsViewService:
         return OperationFeedback(selected_id=int(transaction_id))
 
     def update_account(self, transaction_id: int, account_id: int) -> OperationFeedback:
+        """Return update account."""
         self._db.transaction.update_account(transaction_id, account_id)
         return OperationFeedback(selected_id=int(transaction_id))
 
     def update_category(self, transaction_id: int, category: str) -> OperationFeedback:
+        """Return update category."""
         self._db.transaction.update_category(transaction_id, category)
         return OperationFeedback(selected_id=int(transaction_id))
 
     def update_date(self, transaction_id: int, tx_date: str) -> OperationFeedback:
+        """Return update date."""
         self._db.transaction.update(transaction_id, tx_date=tx_date)
         return OperationFeedback(selected_id=int(transaction_id))

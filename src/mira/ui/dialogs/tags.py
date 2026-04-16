@@ -29,6 +29,7 @@ class TagDialog(QDialog):
     """Create or edit a transversal tag."""
 
     def __init__(self, db: Database, tag: dict | None = None, parent=None) -> None:
+        """Initialize the TagDialog instance."""
         super().__init__(parent)
         self._db = db
         self._tag = tag
@@ -46,6 +47,7 @@ class TagDialog(QDialog):
             self._prefill(tag)
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         layout = QVBoxLayout(self)
         form = QFormLayout()
         form.setSpacing(10)
@@ -79,11 +81,13 @@ class TagDialog(QDialog):
         layout.addWidget(buttons)
 
     def _prefill(self, tag: dict) -> None:
+        """Return prefill."""
         self._name_edit.setText(tag.get("name", ""))
         self._update_color_preview(str(tag.get("color") or "#888888"))
         _set_icon_combo_value(self._icon_combo, str(tag.get("icon") or ""))
 
     def _update_color_preview(self, color_value: str) -> None:
+        """Return update color preview."""
         color = QColor(color_value)
         if not color.isValid():
             color = QColor("#888888")
@@ -94,6 +98,7 @@ class TagDialog(QDialog):
         )
 
     def _choose_color(self) -> None:
+        """Return choose color."""
         color = QColorDialog.getColor(
             QColor(self._selected_color),
             self,
@@ -103,6 +108,7 @@ class TagDialog(QDialog):
             self._update_color_preview(color.name())
 
     def _on_accept(self) -> None:
+        """Return on accept."""
         if not self._name_edit.text().strip():
             _notify_warning(
                 self,
@@ -117,6 +123,7 @@ class TagDialog(QDialog):
         self.accept()
 
     def get_data(self) -> dict:
+        """Return get data."""
         icon_value = (self._icon_combo.currentData() or self._icon_combo.currentText()).strip()
         return {
             "name": self._name_edit.text().strip(),

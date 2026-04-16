@@ -28,6 +28,7 @@ class ModelDownloadWorker(QThread):
     error = Signal(str)
 
     def __init__(self, url: str, dest_dir: Path) -> None:
+        """Initialize the ModelDownloadWorker instance."""
         super().__init__()
         self._url = url
         self._dest_dir = dest_dir
@@ -36,10 +37,12 @@ class ModelDownloadWorker(QThread):
         self._active_response: object | None = None
 
     def _set_active_response(self, response: object | None) -> None:
+        """Return set active response."""
         with self._response_lock:
             self._active_response = response
 
     def cancel(self) -> None:
+        """Return cancel."""
         self._cancel_event.set()
         with self._response_lock:
             response = self._active_response
@@ -50,9 +53,11 @@ class ModelDownloadWorker(QThread):
             close()
 
     def run(self) -> None:
+        """Return run."""
         try:
 
             def _cb(received: int, total: int) -> None:
+                """Return cb."""
                 self.progress.emit(received, total)
 
             path = download_model_to(
@@ -76,12 +81,14 @@ class ModelDownloadHandle:
     """Bundle download metadata with the active worker."""
 
     def __init__(self, *, url: str, filename: str, dest_dir: Path, worker: ModelDownloadWorker) -> None:
+        """Initialize the ModelDownloadHandle instance."""
         self.url = url
         self.filename = filename
         self.dest_dir = dest_dir
         self.worker = worker
 
     def cancel(self) -> None:
+        """Return cancel."""
         self.worker.cancel()
 
 
@@ -94,6 +101,7 @@ class ModelDownloadCoordinator:
         on_finished: Callable[[str], None],
         on_error: Callable[[str], None],
     ) -> ModelDownloadHandle:
+        """Return start default download."""
         url = get_default_model_download_url()
         filename = model_filename_from_url(url)
         dest_dir = get_writable_models_dir()

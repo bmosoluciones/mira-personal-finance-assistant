@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 import os
 import sqlite3
@@ -17,13 +20,17 @@ from mira.db.model import inspect_database_schema_details
 
 @dataclass(frozen=True)
 class RestoreResult:
+    """Represent the RestoreResult class."""
+
     restored_from: Path
+
     source_schema_version: int | None
     target_schema_version: int
     migration_applied: bool = False
 
 
 def _cleanup_sqlite_sidecars(path: Path) -> None:
+    """Return cleanup sqlite sidecars."""
     for candidate in (
         path.with_name(f"{path.name}-wal"),
         path.with_name(f"{path.name}-shm"),
@@ -33,12 +40,24 @@ def _cleanup_sqlite_sidecars(path: Path) -> None:
 
 
 class BackupRepository:
+    """Represent the BackupRepository class."""
+
     if TYPE_CHECKING:
+
         path: Path
 
-        def _require_connection(self) -> sqlite3.Connection: ...
-        def close(self) -> None: ...
-        def connect(self) -> None: ...
+        def _require_connection(self) -> sqlite3.Connection:
+            """Return require connection."""
+
+        def close(self) -> None:
+            """Return close."""
+            ...
+
+        def connect(self) -> None:
+            """Return connect."""
+            ...
+
+            ...
 
     def create_backup(self, filepath: str | Path) -> Path:
         """Create a full SQLite backup of the current database file."""

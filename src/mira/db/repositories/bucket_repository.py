@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
+"""Module documentation."""
+
 from __future__ import annotations
+
 
 from typing import TYPE_CHECKING, Any
 
@@ -10,12 +13,21 @@ from mira.db.model import Bucket
 
 
 class BucketRepository:
+    """Represent the BucketRepository class."""
+
     if TYPE_CHECKING:
 
-        def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any: ...
-        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None: ...
+        def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any:
+            """Return cents to money."""
+
+        def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
+            """Return money to cents."""
+            ...
+
+            ...
 
     def _serialize_bucket_row(self, row: Bucket) -> dict[str, Any]:
+        """Return serialize bucket row."""
         return {
             "id": row.id,
             "name": row.name,
@@ -28,9 +40,11 @@ class BucketRepository:
         }
 
     def get_buckets(self) -> list[dict]:
+        """Return get buckets."""
         return [self._serialize_bucket_row(row) for row in Bucket.select().order_by(Bucket.name)]
 
     def get_bucket_by_name(self, name: str) -> dict | None:
+        """Return get bucket by name."""
         row = Bucket.get_or_none(Bucket.name == name)
         if row is None:
             return None
@@ -45,6 +59,7 @@ class BucketRepository:
         end_day: int = 31,
         alert_threshold: float = 0.75,
     ) -> dict:
+        """Return upsert bucket."""
         Bucket.insert(
             name=name,
             budget_amount=self._money_to_cents(budget_amount),
@@ -69,6 +84,7 @@ class BucketRepository:
         return bucket
 
     def update_bucket_spent(self, bucket_name: str, amount: MoneyLike) -> None:
+        """Return update bucket spent."""
         amount_cents = self._money_to_cents(amount) or 0
         Bucket.update(spent_amount=Bucket.spent_amount + amount_cents).where(Bucket.name == bucket_name).execute()
 

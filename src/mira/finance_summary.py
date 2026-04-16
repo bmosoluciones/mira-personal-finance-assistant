@@ -25,6 +25,7 @@ class FinancialSummary:
 
 
 def build_savings_lookup(categories: list[dict[str, Any]]) -> SavingsLookup:
+    """Return build savings lookup."""
     savings_ids: set[int] = set()
     savings_names: set[str] = set()
     for category in categories:
@@ -45,6 +46,7 @@ def build_savings_lookup(categories: list[dict[str, Any]]) -> SavingsLookup:
 
 
 def is_savings_transaction(tx: dict[str, Any], savings_lookup: SavingsLookup) -> bool:
+    """Return whether savings transaction."""
     if str(tx.get("type") or "").strip().casefold() != TransactionType.EXPENSE:
         return False
 
@@ -65,6 +67,7 @@ def summarize_financial_kpis(
     transactions: list[dict[str, Any]],
     savings_lookup: SavingsLookup,
 ) -> FinancialSummary:
+    """Return summarize financial kpis."""
     income = MONEY_ZERO
     expense = MONEY_ZERO
     savings = MONEY_ZERO

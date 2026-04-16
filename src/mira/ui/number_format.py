@@ -21,10 +21,15 @@ from mira.number_format import (
 
 
 class _SettingsProvider(Protocol):
-    def get(self, key: str) -> str | None: ...
+    """Represent the _SettingsProvider class."""
+
+    def get(self, key: str) -> str | None:
+        """Return get."""
+        ...
 
 
 def _strip_prefix_suffix(text: str, prefix: str, suffix: str) -> str:
+    """Return strip prefix suffix."""
     value = text.strip()
     if prefix and value.startswith(prefix):
         value = value[len(prefix) :]
@@ -37,23 +42,29 @@ class NumberMaskedSpinBox(QDoubleSpinBox):
     """QDoubleSpinBox that formats/parses values using app numeric settings."""
 
     def __init__(self, settings: _SettingsProvider, parent: QWidget | None = None) -> None:
+        """Initialize the NumberMaskedSpinBox instance."""
         super().__init__(parent)
         self._settings = settings
 
     def _config(self) -> NumberFormatConfig:
+        """Return config."""
         return get_number_format_config(self._settings)
 
     def _strip_affixes(self, text: str) -> str:
+        """Return strip affixes."""
         return _strip_prefix_suffix(text, self.prefix(), self.suffix())
 
     def textFromValue(self, value: float) -> str:  # type: ignore[override]
+        """Return textFromValue."""
         return format_number(value, self._config(), decimals=self.decimals(), grouping=True)
 
     def valueFromText(self, text: str) -> float:  # type: ignore[override]
+        """Return valueFromText."""
         stripped = self._strip_affixes(text)
         return parse_number(stripped, self._config())
 
     def validate(self, text: str, pos: int) -> tuple[QValidator.State, str, int]:  # type: ignore[override]
+        """Return validate."""
         stripped = self._strip_affixes(text)
         if stripped in {"", "+", "-"}:
             return (QValidator.State.Intermediate, text, pos)
@@ -76,10 +87,12 @@ class FormulaAmountEdit(NumberMaskedSpinBox):
     Formulas follow the same rules as budget cells: they must start with ``=``
     and may contain only ``+``, ``-``, ``*``, ``/`` and parentheses.  When the
     user commits the input (Enter or focus-out), the formula is evaluated and
+
     replaced by the resulting numeric value.
     """
 
     def validate(self, text: str, pos: int) -> tuple[QValidator.State, str, int]:  # type: ignore[override]
+        """Return validate."""
         stripped = self._strip_affixes(text)
         if stripped.startswith("="):
             # Allow any character while the user is still typing a formula.

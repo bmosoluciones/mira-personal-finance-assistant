@@ -21,12 +21,14 @@ class PipelineCommandWorker(QThread):
     error = Signal(str)
 
     def __init__(self, pipeline: Pipeline, user_input: str, mode: str = "assistant") -> None:
+        """Initialize the PipelineCommandWorker instance."""
         super().__init__()
         self._pipeline = pipeline
         self._user_input = user_input
         self._mode = mode
 
     def run(self) -> None:
+        """Return run."""
         try:
             result: ActionResult
             if self._mode == "chat":
@@ -42,6 +44,7 @@ class CommandCoordinator:
     """Create, connect, and start pipeline workers."""
 
     def __init__(self, pipeline: Pipeline) -> None:
+        """Initialize the CommandCoordinator instance."""
         self._pipeline = pipeline
 
     def execute(
@@ -51,9 +54,11 @@ class CommandCoordinator:
         on_success: Callable[[ActionResult], None],
         on_error: Callable[[str], None],
     ) -> QThread:
+        """Return execute."""
         worker = PipelineCommandWorker(self._pipeline, text, mode)
 
         def success_handler(result: object) -> None:
+            """Return success handler."""
             on_success(cast(ActionResult, result))
 
         try:

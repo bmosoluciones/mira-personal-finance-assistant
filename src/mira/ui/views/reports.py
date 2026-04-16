@@ -101,6 +101,7 @@ class _ReportWorker(QThread):
         filters: dict[str, Any],
         request_snapshot: _ReportRequestSnapshot,
     ) -> None:
+        """Initialize the _ReportWorker instance."""
         super().__init__()
         self._service = service
         self._since = since
@@ -109,6 +110,7 @@ class _ReportWorker(QThread):
         self._request_snapshot = request_snapshot
 
     def run(self) -> None:
+        """Return run."""
         try:
             state = self._service.load_report_state(since=self._since, until=self._until, filters=self._filters)
         except Exception as exc:  # noqa: BLE001
@@ -137,6 +139,7 @@ class ReportsView(QWidget):
         service: ReportsViewService | None = None,
         state_builder: ReportsViewStateBuilder | None = None,
     ) -> None:
+        """Initialize the ReportsView instance."""
         super().__init__(parent)
         self._db = db
         self._service = service or ReportsViewService(db)
@@ -155,10 +158,12 @@ class ReportsView(QWidget):
         self._build_ui()
 
     def _set_report_status(self, text: str, *, color: str = "#9FB3C8") -> None:
+        """Return set report status."""
         self._report_status_lbl.setText(text)
         self._report_status_lbl.setStyleSheet(f"font-size:11px;color:{color};padding:2px 0 0 0;")
 
     def _mark_report_pending(self) -> None:
+        """Return mark report pending."""
         self._report_dirty = True
         if self._report_has_loaded_data:
             self._set_report_status(
@@ -178,6 +183,7 @@ class ReportsView(QWidget):
         )
 
     def _build_ui(self) -> None:
+        """Return build ui."""
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(20, 16, 20, 16)
         outer_layout.setSpacing(10)
@@ -389,6 +395,7 @@ class ReportsView(QWidget):
         self._mark_report_pending()
 
     def _build_total_page(self) -> QWidget:
+        """Return build total page."""
         page = QWidget()
         page_layout = QVBoxLayout(page)
         page_layout.setContentsMargins(0, 0, 0, 0)
@@ -431,6 +438,7 @@ class ReportsView(QWidget):
         return page
 
     def _build_category_page(self) -> QWidget:
+        """Return build category page."""
         page = QWidget()
         page_layout = QVBoxLayout(page)
         page_layout.setContentsMargins(0, 0, 0, 0)
@@ -491,6 +499,7 @@ class ReportsView(QWidget):
         return page
 
     def _build_account_page(self) -> QWidget:
+        """Return build account page."""
         page = QWidget()
         page_layout = QVBoxLayout(page)
         page_layout.setContentsMargins(0, 0, 0, 0)
@@ -526,6 +535,7 @@ class ReportsView(QWidget):
         return page
 
     def _build_cash_page(self) -> QWidget:
+        """Return build cash page."""
         page = QWidget()
         page_layout = QVBoxLayout(page)
         page_layout.setContentsMargins(0, 0, 0, 0)
@@ -553,6 +563,7 @@ class ReportsView(QWidget):
         return page
 
     def _build_tag_page(self) -> QWidget:
+        """Return build tag page."""
         page = QWidget()
         page_layout = QVBoxLayout(page)
         page_layout.setContentsMargins(0, 0, 0, 0)
@@ -588,6 +599,7 @@ class ReportsView(QWidget):
         return page
 
     def _build_budget_page(self) -> QWidget:
+        """Return build budget page."""
         page = QWidget()
         page_layout = QVBoxLayout(page)
         page_layout.setContentsMargins(0, 0, 0, 0)
@@ -621,6 +633,7 @@ class ReportsView(QWidget):
         return page
 
     def _build_account_balance_page(self) -> QWidget:
+        """Return build account balance page."""
         page = QWidget()
         page_layout = QVBoxLayout(page)
         page_layout.setContentsMargins(0, 0, 0, 0)
@@ -659,12 +672,14 @@ class ReportsView(QWidget):
         return page
 
     def _theme_color(self, role: QPalette.ColorRole, fallback: str) -> QColor:
+        """Return theme color."""
         col = self.palette().color(role)
         if not col.isValid():
             return QColor(fallback)
         return col
 
     def _semantic_chart_color(self, key: str, fallback: str = "#9FB3C8") -> QColor:
+        """Return semantic chart color."""
         try:
             role = AnalyticsSemanticRole(str(key).strip().lower())
         except ValueError:
@@ -672,6 +687,7 @@ class ReportsView(QWidget):
         return QColor(ANALYTICS_PALETTE.semantic_hex(role))
 
     def _base_chart(self, title: str) -> QChart:
+        """Return base chart."""
         chart = QChart()
         chart.setTitle(title)
         chart.setBackgroundVisible(False)
@@ -680,6 +696,7 @@ class ReportsView(QWidget):
         return chart
 
     def _refresh_filter_options(self) -> None:
+        """Return refresh filter options."""
         options = self._service.load_filter_options()
         selected_account = self._account_filter.currentData() if hasattr(self, "_account_filter") else None
         selected_type = self._tx_type_filter.currentData() if hasattr(self, "_tx_type_filter") else None
@@ -720,6 +737,7 @@ class ReportsView(QWidget):
             combo.blockSignals(False)
 
     def _reset_cross_filters(self) -> None:
+        """Return reset cross filters."""
         self._account_filter.setCurrentIndex(0)
         self._tx_type_filter.setCurrentIndex(0)
         self._category_filter.setCurrentIndex(0)
@@ -728,9 +746,11 @@ class ReportsView(QWidget):
         self._mark_report_pending()
 
     def _on_report_type_changed(self, index: int) -> None:
+        """Return on report type changed."""
         self._report_stack.setCurrentIndex(index)
 
     def _set_period(self, period: str) -> None:
+        """Return set period."""
         today = date.today()
         if period == "month":
             start = today.replace(day=1)
@@ -753,6 +773,7 @@ class ReportsView(QWidget):
         self._mark_report_pending()
 
     def _current_filters(self) -> dict[str, Any]:
+        """Return current filters."""
         return {
             "account_id": self._account_filter.currentData(),
             "tx_type": self._tx_type_filter.currentData(),
@@ -767,6 +788,7 @@ class ReportsView(QWidget):
         until: str,
         filters: dict[str, Any],
     ) -> _ReportRequestSnapshot:
+        """Return build request snapshot."""
         return (
             since,
             until,
@@ -778,6 +800,7 @@ class ReportsView(QWidget):
         )
 
     def _current_request_snapshot(self) -> _ReportRequestSnapshot:
+        """Return current request snapshot."""
         return self._build_request_snapshot(
             self._from_date.date().toString("yyyy-MM-dd"),
             self._to_date.date().toString("yyyy-MM-dd"),
@@ -785,11 +808,13 @@ class ReportsView(QWidget):
         )
 
     def _should_apply_completed_request(self, request_snapshot: _ReportRequestSnapshot) -> bool:
+        """Return whether should apply completed request."""
         return (
             request_snapshot == self._inflight_request_snapshot and request_snapshot == self._current_request_snapshot()
         )
 
     def _apply_report(self) -> None:
+        """Return apply report."""
         if self._worker is not None and self._worker.isRunning():
             return
         since = self._from_date.date().toString("yyyy-MM-dd")
@@ -810,6 +835,7 @@ class ReportsView(QWidget):
         self._worker.start()
 
     def _on_report_loaded(self, request_snapshot: object, state: object) -> None:
+        """Return on report loaded."""
         snapshot = cast(_ReportRequestSnapshot, request_snapshot)
         if not self._should_apply_completed_request(snapshot):
             self._mark_report_pending()
@@ -823,6 +849,7 @@ class ReportsView(QWidget):
         )
 
     def _on_report_failed(self, request_snapshot: object, message: str) -> None:
+        """Return on report failed."""
         snapshot = cast(_ReportRequestSnapshot, request_snapshot)
         if not self._should_apply_completed_request(snapshot):
             self._mark_report_pending()
@@ -838,6 +865,7 @@ class ReportsView(QWidget):
         )
 
     def _on_report_finished(self) -> None:
+        """Return on report finished."""
         self._worker = None
         self._inflight_request_snapshot = None
 
@@ -860,14 +888,17 @@ class ReportsView(QWidget):
         self._inflight_request_snapshot = None
 
     def closeEvent(self, event: QCloseEvent) -> None:  # type: ignore[override]
+        """Return closeEvent."""
         self._stop_worker()
         super().closeEvent(event)
 
     def _set_loaded_state(self, state: ReportsLoadedState) -> None:
+        """Return set loaded state."""
         self._loaded_state = state
         self._rebuild_presentation_state()
 
     def _rebuild_presentation_state(self) -> None:
+        """Return rebuild presentation state."""
         if self._loaded_state is None:
             return
         self._presentation_state = self._state_builder.build_state(
@@ -879,6 +910,7 @@ class ReportsView(QWidget):
         self._bind_presentation_state(self._presentation_state)
 
     def _on_category_slice_clicked(self, slice_item) -> None:  # type: ignore[no-untyped-def]
+        """Return on category slice clicked."""
         label = str(slice_item.label())
         if (
             self._loaded_state is not None
@@ -889,10 +921,12 @@ class ReportsView(QWidget):
             self._rebuild_presentation_state()
 
     def _category_drill_up(self) -> None:
+        """Return category drill up."""
         self._category_drill_root = None
         self._rebuild_presentation_state()
 
     def _change_tx_page(self, delta: int) -> None:
+        """Return change tx page."""
         if self._loaded_state is None:
             return
         total_pages = max(1, (len(self._loaded_state.transactions) + self._tx_page_size - 1) // self._tx_page_size)
@@ -900,6 +934,7 @@ class ReportsView(QWidget):
         self._rebuild_presentation_state()
 
     def _open_tx_detail(self, row: int, _col: int) -> None:
+        """Return open tx detail."""
         if self._presentation_state is None:
             return
         items = self._presentation_state.transactions.items
@@ -921,6 +956,7 @@ class ReportsView(QWidget):
         dlg.exec()
 
     def _bind_presentation_state(self, state: ReportsPresentationState) -> None:
+        """Return bind presentation state."""
         self._cmp_prev_lbl.setText(state.comparisons.previous_text)
         self._cmp_yoy_lbl.setText(state.comparisons.yoy_text)
 
@@ -957,11 +993,13 @@ class ReportsView(QWidget):
         self._btn_next_page.setEnabled(state.transactions.next_enabled)
 
     def _bind_account_balance_preview(self) -> None:
+        """Return bind account balance preview."""
         section = self._state_builder.build_account_balance_preview(self._service.load_account_balance_report())
         self._account_balance_summary_lbl.setText(section.summary_text)
         self._bind_table_rows(self._account_balance_table, section.rows)
 
     def _bind_table_rows(self, table: QTableWidget, rows: tuple[PresentationRow, ...]) -> None:
+        """Return bind table rows."""
         table.clearContents()
         table.setRowCount(len(rows))
         for row_idx, row in enumerate(rows):
@@ -969,6 +1007,7 @@ class ReportsView(QWidget):
                 table.setItem(row_idx, col_idx, self._make_table_item(cell))
 
     def _make_table_item(self, cell: PresentationCell) -> QTableWidgetItem:
+        """Return make table item."""
         item = QTableWidgetItem(cell.text)
         if cell.signal:
             item.setData(_SIGNAL_CELL_ROLE, cell.signal)
@@ -979,11 +1018,13 @@ class ReportsView(QWidget):
         return item
 
     def _chart_color(self, color_key: str) -> QColor:
+        """Return chart color."""
         if color_key.startswith("#"):
             return QColor(color_key)
         return self._semantic_chart_color(color_key)
 
     def _bind_bar_chart(self, chart_view: QChartView, chart_state: Any) -> None:
+        """Return bind bar chart."""
         chart = self._base_chart(chart_state.title)
         series = QBarSeries()
         for series_state in chart_state.series:
@@ -1003,6 +1044,7 @@ class ReportsView(QWidget):
         chart_view.setChart(chart)
 
     def _bind_bar_line_chart(self, chart_view: QChartView, chart_state: Any) -> None:
+        """Return bind bar line chart."""
         chart = self._base_chart(chart_state.title)
         bars = QBarSeries()
         for series_state in chart_state.bar_series:
@@ -1039,6 +1081,7 @@ class ReportsView(QWidget):
         chart_view.setChart(chart)
 
     def _bind_pie_chart(self, chart_view: QChartView, chart_state: Any, *, on_clicked=None) -> None:
+        """Return bind pie chart."""
         chart = self._base_chart(chart_state.title)
         series = QPieSeries()
         if getattr(chart_state, "hole_size", 0.0) > 0:
@@ -1052,6 +1095,7 @@ class ReportsView(QWidget):
         chart_view.setChart(chart)
 
     def set_report_payload(self, payload: dict[str, Any]) -> None:
+        """Return set report payload."""
         self._current_report_payload = payload
         txs = payload.get("transactions") if isinstance(payload, dict) else None
         if isinstance(txs, list):
@@ -1098,6 +1142,7 @@ class ReportsView(QWidget):
             self._mark_report_pending()
 
     def refresh(self) -> None:
+        """Return refresh."""
         self._language = normalize_language(self._db.setting.get("language"))
         self._refresh_filter_options()
         if self._loaded_state is not None:
