@@ -7,10 +7,13 @@ from __future__ import annotations
 
 from datetime import date
 
-from PySide6.QtCore import QPoint, Qt
+from PySide6.QtCore import QDate, QPoint, Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDateEdit,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
     QFrame,
     QHBoxLayout,
     QHeaderView,
@@ -478,29 +481,120 @@ class TransactionsView(QWidget):
             return
 
         current = tx.get("category") or ""
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle(_tr_db(self._db, "transactions.change_category.title", "Change Category"))
+        layout = QVBoxLayout(dlg)
+        form = QFormLayout()
+        combo = QComboBox()
+        combo.setEditable(True)
+        combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        completer = combo.completer()
+        if completer is not None:
+            completer.setFilterMode(Qt.MatchFlag.MatchContains)
+            completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        combo.addItems(categories)
         idx = categories.index(current) if current in categories else 0
-        new_category, ok = QInputDialog.getItem(
-            self,
-            "Change Category",
-            "Select category:",
-            categories,
-            idx,
-            False,
+        combo.setCurrentIndex(idx)
+        if combo.lineEdit() is not None:
+            combo.lineEdit().setPlaceholderText(
+                _tr_db(self._db, "transactions.change_category.search", "Search categories…")
+            )
+        form.addRow(
+            _tr_db(self._db, "transactions.change_category.label", "Category:"),
+            combo,
         )
-        if not ok:
+        layout.addLayout(form)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        layout.addWidget(buttons)
+
+        if dlg.exec() != QDialog.DialogCode.Accepted:
             return
-        if new_category == current:
+
+        new_category = combo.currentText().strip()
+        if not new_category or new_category == current:
             return
 
         reply = QMessageBox.question(
             self,
-            "Change Category",
-            f"Change category to '{new_category}'?",
+            _tr_db(self._db, "transactions.change_category.title", "Change Category"),
+            _tr_db(
+                self._db,
+                "transactions.change_category.confirm",
+                f"Change category to '{new_category}'?",
+                params={"category": new_category},
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
         self._service.update_category(int(tx["id"]), new_category)
+        self.refresh()
+
+    def _on_change_date_quick(self) -> None:
+        tx = self._get_selected_tx()
+        if tx is None:
+            _notify_info(
+                self,
+                _tr_db(self._db, "transactions.change_date.title", "Change Date"),
+                _tr_db(self._db, "selection.transaction_required", "Select a transaction first."),
+            )
+            return
+        if self._is_balance_adjustment_selected(tx):
+            _notify_info(
+                self,
+                _tr_db(self._db, "transactions.balance_adjustment.title", "Balance adjustment"),
+                self._adjustment_action_blocked_message(),
+            )
+            return
+
+        current_date_str = str(tx.get("date") or "")
+        try:
+            current_date = date.fromisoformat(current_date_str)
+        except (ValueError, TypeError):
+            current_date = date.today()
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle(_tr_db(self._db, "transactions.change_date.title", "Change Date"))
+        layout = QVBoxLayout(dlg)
+        form = QFormLayout()
+        date_edit = QDateEdit()
+        date_edit.setCalendarPopup(True)
+        date_edit.setDate(QDate(current_date.year, current_date.month, current_date.day))
+        date_edit.setDisplayFormat("yyyy-MM-dd")
+        form.addRow(
+            _tr_db(self._db, "transactions.change_date.label", "Date:"),
+            date_edit,
+        )
+        layout.addLayout(form)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        layout.addWidget(buttons)
+
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        new_date = date_edit.date().toString("yyyy-MM-dd")
+        if new_date == current_date_str:
+            return
+
+        reply = QMessageBox.question(
+            self,
+            _tr_db(self._db, "transactions.change_date.title", "Change Date"),
+            _tr_db(
+                self._db,
+                "transactions.change_date.confirm",
+                f"Change date to '{new_date}'?",
+                params={"date": new_date},
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        self._service.update_date(int(tx["id"]), new_date)
         self.refresh()
 
     def _open_context_menu(self, pos: QPoint) -> None:
@@ -513,6 +607,7 @@ class TransactionsView(QWidget):
         menu.addSeparator()
         act_change_acc = menu.addAction(_tr_db(self._db, "transactions.change_account.title", "Change Account"))
         act_change_cat = menu.addAction(_tr_db(self._db, "transactions.change_category.title", "Change Category"))
+        act_change_date = menu.addAction(_tr_db(self._db, "transactions.change_date.title", "Change Date"))
 
         chosen = menu.exec(self._table.viewport().mapToGlobal(pos))
         if chosen is act_edit:
@@ -525,6 +620,8 @@ class TransactionsView(QWidget):
             self._on_change_account_quick()
         elif chosen is act_change_cat:
             self._on_change_category_quick()
+        elif chosen is act_change_date:
+            self._on_change_date_quick()
 
     def open_add_dialog(self) -> None:
         """Public helper used by the main menu to add a transaction."""

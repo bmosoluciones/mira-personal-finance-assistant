@@ -103,11 +103,13 @@ def test_transactions_view_service_create_duplicate_transfer_and_quick_actions(d
 
     service.update_category(created.selected_id, utilities["name"])
     service.update_account(created.selected_id, int(destination["id"]))
+    service.update_date(created.selected_id, "2026-04-01")
 
     updated = db.transaction.get(created.selected_id)
     assert updated is not None
     assert updated["category"] == "Utilities"
     assert int(updated["account_id"]) == int(destination["id"])
+    assert updated["date"] == "2026-04-01"
 
     service.transfer(
         {

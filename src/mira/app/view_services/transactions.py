@@ -162,3 +162,7 @@ class TransactionsViewService:
     def update_category(self, transaction_id: int, category: str) -> OperationFeedback:
         self._db.transaction.update_category(transaction_id, category)
         return OperationFeedback(selected_id=int(transaction_id))
+
+    def update_date(self, transaction_id: int, tx_date: str) -> OperationFeedback:
+        self._db.transaction.update(transaction_id, tx_date=tx_date)
+        return OperationFeedback(selected_id=int(transaction_id))
