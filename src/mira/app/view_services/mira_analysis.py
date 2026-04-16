@@ -56,6 +56,20 @@ class MiraAnalysisDrilldownSection:
 
 
 @dataclass(frozen=True)
+class MiraAnalysisIncomeExpenseRow:
+    income_category: str
+    income_amount_text: str
+    expense_category: str
+    expense_amount_text: str
+
+
+@dataclass(frozen=True)
+class MiraAnalysisIncomeExpenseSection:
+    rows: tuple[MiraAnalysisIncomeExpenseRow, ...]
+    empty_title: str
+
+
+@dataclass(frozen=True)
 class MiraAnalysisWaterfallStep:
     label: str
     kind: str
@@ -120,6 +134,7 @@ class MiraAnalysisViewState:
     savings_card: MiraAnalysisCardState
     categories: MiraAnalysisDrilldownSection
     tags: MiraAnalysisDrilldownSection
+    income_vs_expense: MiraAnalysisIncomeExpenseSection
     waterfall: MiraAnalysisWaterfallState
     ytd_chart: MiraAnalysisLineChartState
     trend_charts: dict[str, MiraAnalysisStackedBarChartState]
@@ -182,6 +197,7 @@ class MiraAnalysisViewStateBuilder:
             categories=self._build_category_section(allocation, context),
             tags=self._build_tag_section(allocation, context),
             waterfall=self._build_waterfall_state(payload, context),
+            income_vs_expense=self._build_income_vs_expense_section(payload, context),
             ytd_chart=self._build_ytd_chart(payload, context),
             trend_charts=self._build_trend_charts(payload, context),
         )
@@ -356,6 +372,54 @@ class MiraAnalysisViewStateBuilder:
                 )
             )
         return MiraAnalysisDrilldownSection(top_rows=tuple(rows), empty_title=empty_title)
+
+    def _build_income_vs_expense_section(
+        self,
+        payload: dict[str, Any],
+        context: PresentationContext,
+    ) -> MiraAnalysisIncomeExpenseSection:
+        raw_rows = list(payload.get("income_vs_expense_by_income") or [])
+        rows: list[MiraAnalysisIncomeExpenseRow] = []
+        for entry in raw_rows:
+            income_category = str(entry.get("income_category") or "")
+            income_amount_text = context.format_amount(float(entry.get("income_amount") or 0.0))
+            expense_total_text = context.format_amount(float(entry.get("expense_total") or 0.0))
+            expenses = list(entry.get("expenses") or [])
+            first_expense = True
+            for expense in expenses:
+                rows.append(
+                    MiraAnalysisIncomeExpenseRow(
+                        income_category=income_category if first_expense else "",
+                        income_amount_text=income_amount_text if first_expense else "",
+                        expense_category=str(expense.get("category") or ""),
+                        expense_amount_text=context.format_amount(float(expense.get("amount") or 0.0)),
+                    )
+                )
+                first_expense = False
+            if expenses:
+                rows.append(
+                    MiraAnalysisIncomeExpenseRow(
+                        income_category="",
+                        income_amount_text="",
+                        expense_category=context.translate("report.income_vs_expense.total", "Total"),
+                        expense_amount_text=expense_total_text,
+                    )
+                )
+            elif income_category:
+                rows.append(
+                    MiraAnalysisIncomeExpenseRow(
+                        income_category=income_category,
+                        income_amount_text=income_amount_text,
+                        expense_category=context.translate("report.income_vs_expense.total", "Total"),
+                        expense_amount_text=expense_total_text,
+                    )
+                )
+
+        empty_title = context.translate(
+            "mira.analysis.income_vs_expense.empty",
+            "No hay relaciones de ingresos y gastos para este período.",
+        )
+        return MiraAnalysisIncomeExpenseSection(rows=tuple(rows), empty_title=empty_title)
 
     def _build_tag_section(
         self,

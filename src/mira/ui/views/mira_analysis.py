@@ -520,6 +520,25 @@ class MiraAnalysisView(QWidget):
         tables_row.addLayout(tags_panel, 1)
         layout.addLayout(tables_row, 2)
 
+        self._income_vs_expense_title = _sub_title(
+            self._t("report.income_vs_expense.title", "Ingresos vs Gastos por Categoría de Ingreso")
+        )
+        layout.addWidget(self._income_vs_expense_title)
+        self._income_vs_expense_table = QTableWidget(0, 4)
+        self._income_vs_expense_table.setHorizontalHeaderLabels(
+            [
+                self._t("report.income_vs_expense.col.income_category", "Categoría Ingreso"),
+                self._t("report.income_vs_expense.col.amount", "Monto"),
+                self._t("report.income_vs_expense.col.expense_category", "Categoría Gasto"),
+                self._t("report.income_vs_expense.col.amount", "Monto"),
+            ]
+        )
+        self._configure_summary_table(self._income_vs_expense_table)
+        self._income_vs_expense_table.setMinimumHeight(220)
+        self._income_vs_expense_table.hide()
+        self._income_vs_expense_title.hide()
+        layout.addWidget(self._income_vs_expense_table, 1)
+
         trend_controls = QHBoxLayout()
         trend_controls.addWidget(_sub_title(self._t("mira.analysis.trend", "Tendencia de tiempo")))
         trend_controls.addSpacing(12)
@@ -720,6 +739,29 @@ class MiraAnalysisView(QWidget):
         self._render_ytd_chart()
         self._render_waterfall_chart()
         self._render_trend_chart()
+        self._render_income_vs_expense_section()
+
+    def _render_income_vs_expense_section(self) -> None:
+        if self._view_state is None:
+            self._income_vs_expense_title.hide()
+            self._income_vs_expense_table.hide()
+            return
+
+        rows = list(self._view_state.income_vs_expense.rows)
+        if not rows:
+            self._income_vs_expense_title.hide()
+            self._income_vs_expense_table.hide()
+            return
+
+        self._income_vs_expense_title.show()
+        self._income_vs_expense_table.show()
+        self._income_vs_expense_table.clearContents()
+        self._income_vs_expense_table.setRowCount(len(rows))
+        for idx, row in enumerate(rows):
+            self._income_vs_expense_table.setItem(idx, 0, QTableWidgetItem(row.income_category))
+            self._income_vs_expense_table.setItem(idx, 1, QTableWidgetItem(row.income_amount_text))
+            self._income_vs_expense_table.setItem(idx, 2, QTableWidgetItem(row.expense_category))
+            self._income_vs_expense_table.setItem(idx, 3, QTableWidgetItem(row.expense_amount_text))
 
     def _on_apply_report(self) -> None:
         self._load_report(emit_to_assistant=True)

@@ -276,6 +276,44 @@ def test_mira_analysis_view_state_builder_shapes_cards_waterfall_and_trends(db: 
     assert state.trend_charts["expense"].series[0].values[0] == pytest.approx(300.0)
 
 
+def test_mira_analysis_view_state_builder_includes_income_vs_expense_section(db: Database) -> None:
+    builder = MiraAnalysisViewStateBuilder(db)
+    payload = {
+        "kpis": {
+            "income": 2000.0,
+            "expense_operational": 700.0,
+            "net": 1300.0,
+            "savings": 300.0,
+        },
+        "comparisons": {},
+        "allocation": {"top_expense_categories": [], "top_tags": []},
+        "waterfall": {"steps": [], "summary": {"status": "balanced"}},
+        "ytd": [],
+        "historical_stacked": {},
+        "income_vs_expense_by_income": [
+            {
+                "income_category": "Salary",
+                "income_amount": 2000.0,
+                "expenses": [
+                    {"category": "Housing", "amount": 300.0},
+                    {"category": "Food", "amount": 400.0},
+                ],
+                "expense_total": 700.0,
+            }
+        ],
+    }
+
+    state = builder.build_state(payload)
+
+    assert len(state.income_vs_expense.rows) == 3
+    assert state.income_vs_expense.rows[0].income_category == "Salary"
+    assert state.income_vs_expense.rows[0].income_amount_text == "2,000.00"
+    assert state.income_vs_expense.rows[0].expense_category == "Housing"
+    assert state.income_vs_expense.rows[1].expense_category == "Food"
+    assert state.income_vs_expense.rows[-1].expense_category == "Total"
+    assert state.income_vs_expense.rows[-1].expense_amount_text == "700.00"
+
+
 def test_mira_analysis_view_state_builder_and_message_builder_share_comparison_text(db: Database) -> None:
     message_builder = MiraAnalysisMessageBuilder(db)
     state_builder = MiraAnalysisViewStateBuilder(db)
