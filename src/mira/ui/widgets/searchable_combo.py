@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 
-from PySide6.QtCore import QEvent, QRegularExpression, QSortFilterProxyModel, Qt
+from PySide6.QtCore import QEvent, QObject, QRegularExpression, QSortFilterProxyModel, Qt
 from PySide6.QtGui import QKeyEvent, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QComboBox, QCompleter, QWidget
 
@@ -42,7 +42,7 @@ class SearchableComboBox(QComboBox):
         self.setCompleter(self._completer)
 
         self._line_edit.textEdited.connect(self._apply_filter)
-        self._completer.activated[str].connect(self._on_completion_activated)
+        self._completer.activated.connect(lambda *_args: self._on_completion_activated(self._completer.currentCompletion()))
         self.activated.connect(lambda _index: self._clear_filter())
 
     # ------------------------------------------------------------------
@@ -58,19 +58,25 @@ class SearchableComboBox(QComboBox):
             )
         )
         if not text:
-            self._completer.popup().hide()
+            self._hide_completion_popup()
             return
 
         self._completer.setCompletionPrefix(text)
         if self._proxy_model.rowCount() > 0:
             self._completer.complete()
         else:
-            self._completer.popup().hide()
+            self._hide_completion_popup()
 
     def _clear_filter(self) -> None:
         """Restore the full suggestion list for the next interaction."""
         self._proxy_model.setFilterRegularExpression("")
-        self._completer.popup().hide()
+        self._hide_completion_popup()
+
+    def _hide_completion_popup(self) -> None:
+        """Hide the completion popup when it exists."""
+        popup = self._completer.popup()
+        if popup is not None:
+            popup.hide()
 
     def _on_completion_activated(self, text: str) -> None:
         """Sync the combo-box selection after a filtered completion is chosen."""
@@ -94,7 +100,7 @@ class SearchableComboBox(QComboBox):
         current_text = self._line_edit.text()
         return bool(current_text) and current_text == self.itemText(current_index)
 
-    def eventFilter(self, watched: object, event: QEvent) -> bool:
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """Select the current value before the first typed search character."""
         if watched is self._line_edit and event.type() == QEvent.Type.KeyPress and isinstance(event, QKeyEvent):
             if self._should_replace_current_value(event):
