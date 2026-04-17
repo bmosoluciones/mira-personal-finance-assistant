@@ -1,25 +1,22 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
-"""A searchable/filterable QComboBox that shows the full list and filters as you type."""
+"""A searchable/filterable QComboBox that keeps typing in the line edit."""
 
 from __future__ import annotations
 
 import re
 
-from PySide6.QtCore import QRegularExpression, QSortFilterProxyModel, Qt
-from PySide6.QtGui import QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QComboBox, QWidget
+from PySide6.QtCore import QEvent, QRegularExpression, QSortFilterProxyModel, Qt
+from PySide6.QtGui import QKeyEvent, QStandardItem, QStandardItemModel
+from PySide6.QtWidgets import QComboBox, QCompleter, QWidget
 
 
 class SearchableComboBox(QComboBox):
-    """A QComboBox that shows the full item list and filters it in real-time as the user types.
+    """A QComboBox that filters suggestions in real time as the user types.
 
-    Internally uses a QStandardItemModel as the data source and a
-    QSortFilterProxyModel to perform case-insensitive substring filtering.
-    The dropdown popup shows all items when first opened; typing in the
-    embedded line-edit narrows the visible entries. Selecting an item
-    clears the filter so the next interaction starts with the full list.
+    The combo box keeps the full source model attached so the editor remains
+    focused while typing. A proxy-backed completer provides the filtered popup.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -30,51 +27,79 @@ class SearchableComboBox(QComboBox):
         self._proxy_model.setSourceModel(self._source_model)
         self._proxy_model.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self._proxy_model.setFilterKeyColumn(0)
-        # Use the proxy (filtered view) as the QComboBox model so the dropdown
-        # only shows items that match the current search text.
-        super(SearchableComboBox, self).setModel(self._proxy_model)
+        super(SearchableComboBox, self).setModel(self._source_model)
         self.setEditable(True)
         self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        # Remove the default QCompleter – we do filtering via the proxy model.
-        self.setCompleter(None)  # type: ignore[arg-type]
 
-        # Store the line-edit reference now (setEditable(True) guarantees it exists).
         _le = self.lineEdit()
         assert _le is not None, "SearchableComboBox requires an editable line-edit"
         self._line_edit = _le
-        # textEdited fires only on user input, not on programmatic setText.
-        self._line_edit.textEdited.connect(self._apply_filter)
+        self._line_edit.installEventFilter(self)
 
-        # When the user picks an item from the popup, clear the filter so the
-        # list is restored to its full state for the next interaction.
-        self.activated.connect(self._on_item_activated)
+        self._completer = QCompleter(self._proxy_model, self)
+        self._completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self._completer.setCompletionMode(QCompleter.CompletionMode.UnfilteredPopupCompletion)
+        self.setCompleter(self._completer)
+
+        self._line_edit.textEdited.connect(self._apply_filter)
+        self._completer.activated[str].connect(self._on_completion_activated)
+        self.activated.connect(lambda _index: self._clear_filter())
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
     def _apply_filter(self, text: str) -> None:
-        """Update the proxy filter and show the popup if it is not already open."""
+        """Update the filtered suggestions without stealing focus."""
         self._proxy_model.setFilterRegularExpression(
             QRegularExpression(
                 re.escape(text),
                 QRegularExpression.PatternOption.CaseInsensitiveOption,
             )
         )
-        if not self.view().isVisible():
-            self.showPopup()
+        if not text:
+            self._completer.popup().hide()
+            return
 
-    def _on_item_activated(self, proxy_row: int) -> None:
-        """Restore the full list after the user selects an item."""
-        proxy_idx = self._proxy_model.index(proxy_row, 0)
-        source_idx = self._proxy_model.mapToSource(proxy_idx)
-        # Clear the filter so all items become visible again.
+        self._completer.setCompletionPrefix(text)
+        if self._proxy_model.rowCount() > 0:
+            self._completer.complete()
+        else:
+            self._completer.popup().hide()
+
+    def _clear_filter(self) -> None:
+        """Restore the full suggestion list for the next interaction."""
         self._proxy_model.setFilterRegularExpression("")
-        # Remap the selection to the new proxy position (order is preserved
-        # because we do not sort, only filter).
-        new_proxy_idx = self._proxy_model.mapFromSource(source_idx)
-        if new_proxy_idx.isValid():
-            super(SearchableComboBox, self).setCurrentIndex(new_proxy_idx.row())
+        self._completer.popup().hide()
+
+    def _on_completion_activated(self, text: str) -> None:
+        """Sync the combo-box selection after a filtered completion is chosen."""
+        if (source_row := super(SearchableComboBox, self).findText(text)) >= 0:
+            super(SearchableComboBox, self).setCurrentIndex(source_row)
+        self._clear_filter()
+
+    def _should_replace_current_value(self, event: QKeyEvent) -> bool:
+        """Return whether typing should replace the currently selected value."""
+        if not event.text():
+            return False
+        if event.modifiers() & (
+            Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier
+        ):
+            return False
+        if self._line_edit.hasSelectedText():
+            return False
+        current_index = self.currentIndex()
+        if current_index < 0:
+            return False
+        current_text = self._line_edit.text()
+        return bool(current_text) and current_text == self.itemText(current_index)
+
+    def eventFilter(self, watched: object, event: QEvent) -> bool:
+        """Select the current value before the first typed search character."""
+        if watched is self._line_edit and event.type() == QEvent.Type.KeyPress and isinstance(event, QKeyEvent):
+            if self._should_replace_current_value(event):
+                self._line_edit.selectAll()
+        return super(SearchableComboBox, self).eventFilter(watched, event)
 
     # ------------------------------------------------------------------
     # Public convenience API
@@ -84,8 +109,13 @@ class SearchableComboBox(QComboBox):
         """Set placeholder text on the embedded line-edit."""
         self._line_edit.setPlaceholderText(text)
 
+    def showPopup(self) -> None:
+        """Open the full dropdown list when the arrow button is used."""
+        self._clear_filter()
+        super(SearchableComboBox, self).showPopup()
+
     # ------------------------------------------------------------------
-    # QComboBox API overrides – route through the source model
+    # QComboBox API overrides routed through the source model
     # ------------------------------------------------------------------
 
     def addItem(self, text: str, userData: object = None) -> None:  # type: ignore[override]
@@ -103,30 +133,20 @@ class SearchableComboBox(QComboBox):
     def clear(self) -> None:
         """Return clear."""
         self._source_model.clear()
-        self._proxy_model.setFilterRegularExpression("")
+        self._clear_filter()
         self._line_edit.clear()
 
     def count(self) -> int:
-        """Return the total number of items (all, not just filtered)."""
+        """Return the total number of items."""
         return self._source_model.rowCount()
 
     def currentData(self, role: int = Qt.ItemDataRole.UserRole) -> object:  # type: ignore[override]
         """Return currentData."""
-        proxy_idx = self._proxy_model.index(self.currentIndex(), 0)
-        source_idx = self._proxy_model.mapToSource(proxy_idx)
-        if source_idx.isValid():
-            return self._source_model.data(source_idx, role)
-        return None
+        return super(SearchableComboBox, self).currentData(role)
 
     def itemData(self, index: int, role: int = Qt.ItemDataRole.UserRole) -> object:  # type: ignore[override]
         """Return itemData."""
-        proxy_idx = self._proxy_model.index(index, 0)
-        if not proxy_idx.isValid():
-            return None
-        source_idx = self._proxy_model.mapToSource(proxy_idx)
-        if source_idx.isValid():
-            return self._source_model.data(source_idx, role)
-        return None
+        return super(SearchableComboBox, self).itemData(index, role)
 
     def findData(  # type: ignore[override]
         self,
@@ -134,45 +154,16 @@ class SearchableComboBox(QComboBox):
         role: int = Qt.ItemDataRole.UserRole,
         flags: Qt.MatchFlag = Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchCaseSensitive,
     ) -> int:
-        """Search all source items for *value*; return the proxy row index.
-
-        If the matching item is currently hidden by the active filter the
-        filter is cleared first so that every item is visible.
-        """
-        for row in range(self._source_model.rowCount()):
-            source_idx = self._source_model.index(row, 0)
-            if self._source_model.data(source_idx, role) == value:
-                proxy_idx = self._proxy_model.mapFromSource(source_idx)
-                if proxy_idx.isValid():
-                    return proxy_idx.row()
-                # Item is filtered out – clear filter, then remap.
-                self._proxy_model.setFilterRegularExpression("")
-                self._line_edit.clear()
-                proxy_idx = self._proxy_model.mapFromSource(source_idx)
-                return proxy_idx.row() if proxy_idx.isValid() else -1
-        return -1
+        """Search all source items for *value*; return the source row index."""
+        return super(SearchableComboBox, self).findData(value, role, flags)
 
     def findText(  # type: ignore[override]
         self,
         text: str,
         flags: Qt.MatchFlag = Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchCaseSensitive,
     ) -> int:
-        """Search all source items for *text* (display role); return proxy row.
-
-        If the matching item is currently hidden by the active filter the
-        filter is cleared first.
-        """
-        for row in range(self._source_model.rowCount()):
-            source_idx = self._source_model.index(row, 0)
-            if self._source_model.data(source_idx, Qt.ItemDataRole.DisplayRole) == text:
-                proxy_idx = self._proxy_model.mapFromSource(source_idx)
-                if proxy_idx.isValid():
-                    return proxy_idx.row()
-                self._proxy_model.setFilterRegularExpression("")
-                self._line_edit.clear()
-                proxy_idx = self._proxy_model.mapFromSource(source_idx)
-                return proxy_idx.row() if proxy_idx.isValid() else -1
-        return -1
+        """Search all source items for *text*; return the source row index."""
+        return super(SearchableComboBox, self).findText(text, flags)
 
 
 __all__ = ["SearchableComboBox"]

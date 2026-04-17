@@ -653,6 +653,43 @@ def test_recurring_dialog_localizes_visible_labels_to_english(monkeypatch: pytes
         dialog.close()
 
 
+def test_recurring_dialog_category_combo_is_searchable_and_keeps_typing(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+    searchable_combo_module = importlib.import_module("mira.ui.widgets.searchable_combo")
+    qtest = importlib.import_module("PySide6.QtTest")
+
+    db.account.get_or_create("General")
+    db.category.create("Food", "expense")
+    db.category.create("Fuel", "expense")
+    db.category.create("Transport", "expense")
+
+    dialog = dialogs_module.RecurringDialog(db)
+
+    try:
+        combo = dialog._category_combo
+        assert isinstance(combo, searchable_combo_module.SearchableComboBox)
+        assert combo.isEditable() is True
+
+        dialog.show()
+        app.processEvents()
+        dialog._type_combo.setCurrentIndex(dialog._type_combo.findData("expense"))
+        app.processEvents()
+
+        combo.lineEdit().setFocus()
+        qtest.QTest.keyClicks(combo.lineEdit(), "fu")
+        app.processEvents()
+
+        assert combo.lineEdit().text() == "fu"
+        assert combo.currentText() == "fu"
+        assert combo._proxy_model.rowCount() == 1
+        assert combo._completer.popup().isVisible() is True
+    finally:
+        dialog.close()
+
+
 def test_tags_view_shows_color_swatch_instead_of_hex(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
     _get_qapplication_or_xfail(monkeypatch)
     views_module = importlib.import_module("mira.ui.views.tags")

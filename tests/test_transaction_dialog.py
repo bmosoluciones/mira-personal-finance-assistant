@@ -118,6 +118,66 @@ def test_transaction_dialog_category_combo_is_searchable(monkeypatch: pytest.Mon
         dialog.close()
 
 
+def test_transaction_dialog_category_search_keeps_accepting_typing(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+    qtest = importlib.import_module("PySide6.QtTest")
+
+    db.account.get_or_create("General")
+    db.category.create("Food", "expense")
+    db.category.create("Fuel", "expense")
+    db.category.create("Transport", "expense")
+
+    dialog = dialogs_module.TransactionDialog(db)
+    try:
+        combo = dialog._category_combo
+        dialog.show()
+        app.processEvents()
+
+        combo.lineEdit().setFocus()
+        qtest.QTest.keyClicks(combo.lineEdit(), "fu")
+        app.processEvents()
+
+        assert combo.lineEdit().text() == "fu"
+        assert combo.currentText() == "fu"
+        assert combo._proxy_model.rowCount() == 1
+        assert combo._completer.popup().isVisible() is True
+    finally:
+        dialog.close()
+
+
+def test_transaction_dialog_category_search_replaces_existing_value_on_first_key(
+    monkeypatch: pytest.MonkeyPatch, db: Database
+) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+    qtest = importlib.import_module("PySide6.QtTest")
+
+    db.account.get_or_create("General")
+    db.category.create("Food", "expense")
+    db.category.create("Fuel", "expense")
+    db.category.create("Transport", "expense")
+
+    dialog = dialogs_module.TransactionDialog(db)
+    try:
+        combo = dialog._category_combo
+        combo.setCurrentIndex(combo.findData("Food"))
+        dialog.show()
+        app.processEvents()
+
+        combo.lineEdit().setFocus()
+        qtest.QTest.keyClicks(combo.lineEdit(), "fu")
+        app.processEvents()
+
+        assert combo.lineEdit().text() == "fu"
+        assert combo.currentText() == "fu"
+        assert combo._proxy_model.rowCount() == 1
+    finally:
+        dialog.close()
+
+
 def test_transaction_dialog_amount_spin_accepts_formula_via_fixup(
     monkeypatch: pytest.MonkeyPatch, db: Database
 ) -> None:
