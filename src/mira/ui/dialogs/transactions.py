@@ -69,7 +69,9 @@ class TransactionDialog(QDialog):
             )
         )
         self.setMinimumWidth(720)
+        self.setMinimumHeight(700)
         self._build_ui()
+        self.resize(820, 760)
         if tx:
             self._prefill(tx)
         else:

@@ -69,6 +69,20 @@ def test_transaction_dialog_minimum_width_is_at_least_720(monkeypatch: pytest.Mo
         dialog.close()
 
 
+def test_transaction_dialog_initial_size_is_large_enough(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    dialogs_module = importlib.import_module("mira.ui.dialogs")
+
+    db.account.get_or_create("General")
+    dialog = dialogs_module.TransactionDialog(db)
+    try:
+        assert dialog.minimumHeight() >= 700
+        assert dialog.size().width() >= 820
+        assert dialog.size().height() >= 760
+    finally:
+        dialog.close()
+
+
 def test_transaction_dialog_category_combo_is_searchable(monkeypatch: pytest.MonkeyPatch, db: Database) -> None:
     _get_qapplication_or_xfail(monkeypatch)
     dialogs_module = importlib.import_module("mira.ui.dialogs")
