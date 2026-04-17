@@ -45,6 +45,7 @@ from mira.ui.main_window_support import (
     MainWindowFileActions,
     MainWindowNotificationProxy,
     default_backup_name,
+    resolve_transaction_export_path,
     restore_confirmation,
 )
 
@@ -218,35 +219,35 @@ class MainWindow(
 
         path, _ = QFileDialog.getOpenFileName(
             self,
-            tr("menu.file.import_csv", self._language, default="Import CSV..."),
+            tr("menu.file.import_csv", self._language, default="Import transactions..."),
             "",
             tr(
-                "file.filter.csv_all",
+                "file.filter.transactions_all",
                 self._language,
-                default="CSV Files (*.csv);;All Files (*)",
+                default="Transaction Files (*.csv *.xlsx);;CSV Files (*.csv);;Excel Files (*.xlsx);;All Files (*)",
             ),
         )
         if not path:
             return
-        self._file_actions.import_csv(path)
+        self._file_actions.import_transactions_file(path)
 
     def _on_export_csv(self) -> None:
         """Return on export csv."""
         from PySide6.QtWidgets import QFileDialog
 
-        path, _ = QFileDialog.getSaveFileName(
+        path, selected_filter = QFileDialog.getSaveFileName(
             self,
-            tr("menu.file.export_csv", self._language, default="Export CSV..."),
+            tr("menu.file.export_csv", self._language, default="Export transactions..."),
             "transactions.csv",
             tr(
-                "file.filter.csv_all",
+                "file.filter.transactions_all",
                 self._language,
-                default="CSV Files (*.csv);;All Files (*)",
+                default="Transaction Files (*.csv *.xlsx);;CSV Files (*.csv);;Excel Files (*.xlsx);;All Files (*)",
             ),
         )
         if not path:
             return
-        self._file_actions.export_csv(path)
+        self._file_actions.export_transactions_file(resolve_transaction_export_path(path, selected_filter))
 
     def _on_backup(self) -> None:
         """Return on backup."""

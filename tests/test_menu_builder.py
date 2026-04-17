@@ -140,8 +140,12 @@ def test_menu_builder_creates_expected_menus_and_actions(monkeypatch: pytest.Mon
 
         menu_labels = [action.text() for action in window.menuBar().actions()]
         menus = {menu.title(): menu for menu in window.findChildren(qtwidgets.QMenu)}
+        file_menu = menus["Archivo"]
+        file_actions = [action.text() for action in file_menu.actions() if not action.isSeparator()]
         assert "Etiquetas" in menu_labels
         assert any("Archivo" in label or "File" in label for label in menu_labels)
+        assert file_actions.count("Importar transacciones…") == 1
+        assert file_actions.count("Exportar transacciones…") == 1
         assert window._act_sidebar.isCheckable() is True
         assert window._act_prompt.isCheckable() is True
 

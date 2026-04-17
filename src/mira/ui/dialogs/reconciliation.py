@@ -39,6 +39,14 @@ from mira.ui.views._shared import (
 class ReconciliationDialog(QDialog):
     """Represent the ReconciliationDialog class."""
 
+    _REQUIRED_COLUMN_LABEL_KEYS = {
+        "date": "reconciliation.required_column.date",
+        "reference": "reconciliation.required_column.reference",
+        "description": "reconciliation.required_column.description",
+        "income": "reconciliation.required_column.income",
+        "expense": "reconciliation.required_column.expense",
+    }
+
     def __init__(
         self,
         db: Database,
@@ -293,6 +301,9 @@ class ReconciliationDialog(QDialog):
 
         preview = self._service.parse_excel(path)
         if preview.has_blocking_error:
+            translated_columns = ", ".join(
+                self._translate_required_column(column) for column in preview.missing_columns
+            )
             _notify_warning(
                 self,
                 _tr_db(self._db, "reconciliation.load_error.title", "Excel validation"),
@@ -300,7 +311,7 @@ class ReconciliationDialog(QDialog):
                     self._db,
                     "reconciliation.load_error.missing_columns",
                     "Missing required columns: {columns}",
-                    params={"columns": ", ".join(preview.missing_columns)},
+                    params={"columns": translated_columns},
                 ),
             )
             return
@@ -340,6 +351,13 @@ class ReconciliationDialog(QDialog):
             ),
         )
         self._refresh_state()
+
+    def _translate_required_column(self, column_name: str) -> str:
+        """Return a translated label for a reconciliation-required column."""
+        key = self._REQUIRED_COLUMN_LABEL_KEYS.get(column_name)
+        if key is None:
+            return column_name
+        return _tr_db(self._db, key, column_name)
 
     def _selected_external_rows(self) -> tuple[ReconciliationExternalRow, ...]:
         """Return selected external rows."""

@@ -42,7 +42,9 @@ class SearchableComboBox(QComboBox):
         self.setCompleter(self._completer)
 
         self._line_edit.textEdited.connect(self._apply_filter)
-        self._completer.activated.connect(lambda *_args: self._on_completion_activated(self._completer.currentCompletion()))
+        self._completer.activated.connect(
+            lambda *_args: self._on_completion_activated(self._completer.currentCompletion())
+        )
         self.activated.connect(lambda _index: self._clear_filter())
 
     # ------------------------------------------------------------------

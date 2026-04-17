@@ -3,6 +3,8 @@
 
 """Tests for UI translations."""
 
+from collections.abc import Sequence
+
 from mira.ui.i18n import normalize_language, tr
 
 
@@ -69,6 +71,13 @@ def test_new_ui_translation_keys_are_available() -> None:
     assert tr("tag_manager.title", "es", default="Tag Management") == "Gestión de etiquetas"
     assert tr("chat.clear", "es", default="Clear") == "Limpiar"
     assert tr("export.error.title", "es", default="Export Error") == "Error de exportación"
+    assert tr("menu.file.import_csv", "es", default="Import transactions…") == "Importar transacciones…"
+    assert tr("menu.file.export_csv", "en", default="Export transactions…") == "Export transactions…"
+    assert "*.csv" in tr("file.filter.transactions_all", "es")
+    assert "*.xlsx" in tr("file.filter.transactions_all", "en")
+    assert tr("transactions.file_error.unsupported_extension", "es", params={"extension": ".xls"}).startswith(
+        "La extensión"
+    )
 
 
 def test_tag_icon_labels_are_translated_in_both_languages() -> None:
@@ -321,7 +330,7 @@ def test_translation_keys_referenced_from_src_exist_in_english_and_spanish() -> 
     repo_root = Path(__file__).resolve().parents[1]
     referenced_keys: set[str] = set()
 
-    def _string_arg(args: list[ast.AST], index: int) -> str | None:
+    def _string_arg(args: Sequence[ast.AST], index: int) -> str | None:
         if len(args) <= index:
             return None
         node = args[index]
