@@ -157,7 +157,42 @@
   line-height: 1.5;
 }
 
-.mira-hero__actions {
+.md-typeset .mira-home__points {
+  display: grid;
+  gap: 0.55rem;
+  margin: 1rem 0 1.25rem;
+  padding: 0;
+  padding-left: 0;
+  margin-left: 0;
+  list-style: none;
+}
+
+.md-typeset .mira-home__points li {
+  position: relative;
+  margin-left: 0;
+  padding-left: 1.4rem;
+  list-style: none;
+  color: var(--mira-text);
+  font-size: 0.95rem;
+}
+
+.md-typeset .mira-home__points li::marker {
+  content: "";
+}
+
+.md-typeset .mira-home__points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.58rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--mira-primary), #14b8a6);
+}
+
+.mira-hero__actions,
+.mira-home__actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
