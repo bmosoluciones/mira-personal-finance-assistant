@@ -35,21 +35,15 @@ class TransactionRepository:
 
         def _cents_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
             """Return cents to decimal."""
-            ...
 
         def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
             """Return money to cents."""
-            ...
 
         def _round_money(self, value: object) -> Any:
             """Return round money."""
-            ...
 
         def _atomic(self) -> Any:
             """Return atomic."""
-            ...
-
-            ...
 
         def get_category(
             self,
@@ -59,50 +53,38 @@ class TransactionRepository:
             cat_type: str | None = None,
         ) -> dict[str, Any] | None:
             """Return get category."""
-            ...
 
         def get_category_by_name(self, name: str, cat_type: str | None = None) -> dict[str, Any] | None:
             """Return get category by name."""
 
         def get_descendant_category_names(self, cat_id: int) -> list[str]:
             """Return get descendant category names."""
-            ...
 
         def get_default_budget_for_year(self, year: int) -> dict[str, Any] | None:
             """Return get default budget for year."""
-            ...
 
         def update_account_balance(self, account_id: int, delta: MoneyLike) -> None:
             """Return update account balance."""
-            ...
 
         def _apply_savings_goal_delta_for_transaction(self, tx: dict[str, Any] | None, sign: int) -> None:
             """Return apply savings goal delta for transaction."""
-            ...
-            ...
 
         def select_best_operation_message(
             self, tx: dict[str, Any], *, source: str | None = None
         ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
             """Return select best operation message."""
-            ...
 
         def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
             """Return get accounts."""
 
         def get_account_by_id(self, account_id: int) -> dict[str, Any] | None:
             """Return get account by id."""
-            ...
 
         def get_setting(self, key: str) -> str | None:
             """Return get setting."""
-            ...
 
         def clear_reconciliation_for_transactions(self, transaction_ids: list[int]) -> int:
             """Return clear reconciliation for transactions."""
-            ...
-
-            ...
 
     _MAX_TRANSACTION_AMOUNT = 10_000_000_000
 

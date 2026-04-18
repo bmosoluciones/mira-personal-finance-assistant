@@ -22,9 +22,6 @@ class BucketRepository:
 
         def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
             """Return money to cents."""
-            ...
-
-            ...
 
     def _serialize_bucket_row(self, row: Bucket) -> dict[str, Any]:
         """Return serialize bucket row."""

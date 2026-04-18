@@ -29,45 +29,33 @@ class BudgetRepository:
 
         def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
             """Return get accounts."""
-            ...
 
         def _serialize_transaction_row(self, row: Transaction) -> dict[str, Any]:
             """Return serialize transaction row."""
-            ...
 
         def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
             """Return money to decimal."""
-            ...
 
         def _cents_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
             """Return cents to decimal."""
-            ...
 
         def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
             """Return money to cents."""
-            ...
 
         def _round_money(self, value: object) -> Any:
             """Return round money."""
-            ...
 
         def _atomic(self) -> Any:
             """Return atomic."""
-            ...
 
         def get_setting(self, key: str) -> str | None:
             """Return get setting."""
-            ...
 
         def set_setting(self, key: str, value: str) -> None:
             """Return set setting."""
-            ...
 
         def get_default_currency(self) -> str:
             """Return get default currency."""
-            ...
-
-            ...
 
     def _budget_master_totals_query(
         self,

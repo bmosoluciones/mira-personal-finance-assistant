@@ -45,37 +45,27 @@ class SavingsGoalRepository:
 
         def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
             """Return money to decimal."""
-            ...
 
         def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
             """Return money to cents."""
-            ...
 
         def _ensure_goal_linked_savings_category(self, name: str) -> dict[str, Any]:
             """Return ensure goal linked savings category."""
-            ...
 
         def get_default_currency(self) -> str:
             """Return get default currency."""
-            ...
 
         def _category_has_transaction_history(self, category_id: int) -> bool:
             """Return category has transaction history."""
-            ...
 
         def _category_is_linked_to_other_goal(self, category_id: int, *, excluding_goal_id: int) -> bool:
             """Return category is linked to other goal."""
-            ...
 
         def get_category_by_id(self, cat_id: int) -> dict[str, Any] | None:
             """Return get category by id."""
-            ...
 
         def delete_category(self, cat_id: int) -> None:
             """Return delete category."""
-            ...
-
-            ...
 
     def _serialize_goal(self, row: dict[str, Any]) -> dict[str, Any]:
         """Return serialize goal."""

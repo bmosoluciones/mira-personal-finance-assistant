@@ -31,25 +31,18 @@ class AccountRepository:
 
         def _atomic(self) -> Any:
             """Return atomic."""
-            ...
 
         def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any:
             """Return cents to money."""
-            ...
 
         def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
             """Return money to decimal."""
-            ...
 
         def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
             """Return money to cents."""
-            ...
 
         def _round_money(self, value: object) -> Any:
             """Return round money."""
-            ...
-
-            ...
 
     @staticmethod
     def _normalize_account_name(name: str) -> str:

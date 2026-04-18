@@ -68,7 +68,7 @@ class MainWindowShellMixin:
     @staticmethod
     def _qt_material_themes() -> list[str]:
         """Return qt material themes."""
-        import qt_material  # noqa: PLC0415
+        import qt_material  # type: ignore[import-untyped]  # noqa: PLC0415
 
         return qt_material.list_themes()
 
@@ -77,7 +77,7 @@ class MainWindowShellMixin:
         """Return apply theme."""
         if (app := QApplication.instance()) is None:
             return
-        import qt_material  # noqa: PLC0415
+        import qt_material  # type: ignore[import-untyped]  # noqa: PLC0415
 
         qt_material.apply_stylesheet(app, theme=theme)
 

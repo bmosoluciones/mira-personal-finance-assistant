@@ -208,6 +208,7 @@ def export_budget_comparison_excel(
 
     workbook = Workbook()
     sheet = workbook.active
+    assert sheet is not None
     sheet.title = "Real vs PPTO"
     sheet.freeze_panes = "A9"
 

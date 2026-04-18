@@ -318,7 +318,7 @@ class _LanguageThemePage(QWizardPage):
         self._theme_combo = QComboBox()
         self._theme_combo.setMaxVisibleItems(15)
         try:
-            import qt_material  # noqa: PLC0415
+            import qt_material  # type: ignore[import-untyped]  # noqa: PLC0415
 
             for theme_file in qt_material.list_themes():
                 label = theme_file.replace(".xml", "").replace("_", " ").title()

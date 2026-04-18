@@ -586,6 +586,54 @@ class TestAccounts:
         assert "General" not in accounts
 
 
+def test_seed_initial_data_empty_account_specs_creates_default(db):
+    db.setting.set("default_currency", "EUR")
+    db.setting.seed_initial_data(include_default_categories=False, account_specs=[])
+
+    names = [a["name"] for a in db.account.list()]
+    assert "Main account" in names
+    assert "General" not in names
+
+
+def test_seed_initial_data_updates_existing_savings_goal_and_tags(db):
+    db.setting.set("language", "en")
+    savings_category = db.category.create(
+        "Emergency Fund",
+        "expense",
+        color="#123456",
+        icon="diamond",
+        is_savings=True,
+    )
+    db.savings_goal.create(
+        name="Emergency Fund",
+        target_amount=500.0,
+        currency="USD",
+        category_name="Emergency Fund",
+    )
+
+    db.setting.seed_initial_data(
+        include_default_categories=True,
+        account_names=[],
+        language="en",
+        update_existing_category_metadata=True,
+    )
+
+    refreshed = db.category.get(int(savings_category["id"]))
+    assert refreshed is not None
+    assert refreshed["color"] == "#2EA043"
+    assert refreshed["icon"] == "🆘"
+    assert refreshed["parent_id"] is not None
+
+    assert db.tag.find_by_name("Fixed") is not None
+    assert db.tag.find_by_name("Variable") is not None
+    assert db.tag.find_by_name("Essential") is not None
+    assert db.tag.find_by_name("Discretionary") is not None
+
+    updated_goal = db.savings_goal.find_by_name("Emergency Fund")
+    assert updated_goal is not None
+    assert int(updated_goal["category_id"]) == int(refreshed["id"])
+
+
 # ---------------------------------------------------------------------------
 # Transactions
 # ---------------------------------------------------------------------------

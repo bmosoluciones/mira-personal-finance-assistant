@@ -25,9 +25,6 @@ class TagRepository:
 
         def _atomic(self):
             """Return atomic."""
-            ...
-
-            ...
 
     def add_tag(self, name: str, color: str = "#888888", icon: str = "") -> dict:
         """Return add tag."""

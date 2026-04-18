@@ -24,7 +24,6 @@ class SettingRepository:
 
         def _find_savings_goals_parent_category(self) -> dict[str, Any] | None:
             """Return find savings goals parent category."""
-            ...
 
     def get(self, key: str) -> str | None:
         """Return get."""

@@ -68,33 +68,24 @@ class FeedbackRepository:
 
         def set_setting(self, key: str, value: str) -> None:
             """Return set setting."""
-            ...
 
         def _database_language(self) -> str:
             """Return database language."""
-            ...
 
         def get_default_budget_for_year(self, year: int) -> dict[str, Any] | None:
             """Return get default budget for year."""
-            ...
 
         def get_savings_goals(self) -> list[dict[str, Any]]:
             """Return get savings goals."""
-            ...
 
         def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
             """Return money to cents."""
-            ...
 
         def _month_window(self, year: int, month: int) -> tuple[str, str]:
             """Return month window."""
-            ...
 
         def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any:
             """Return cents to money."""
-            ...
-
-            ...
 
         def get_categories(
             self,
@@ -103,11 +94,9 @@ class FeedbackRepository:
             include_savings: bool = True,
         ) -> list[dict[str, Any]]:
             """Return get categories."""
-            ...
 
         def build_monthly_context(self, tx: dict[str, Any]) -> dict[str, Any]:
             """Return build monthly context."""
-            ...
 
     _MAX_COUNTER_STEP = 1_000_000
 

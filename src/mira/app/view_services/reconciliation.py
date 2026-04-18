@@ -200,6 +200,7 @@ class ReconciliationViewService:
         workbook = load_workbook(filepath, read_only=True, data_only=True)
         try:
             worksheet = workbook.active
+            assert worksheet is not None
             header_cells = next(worksheet.iter_rows(min_row=1, max_row=1, values_only=True), None)
             if header_cells is None:
                 return ReconciliationImportPreview(

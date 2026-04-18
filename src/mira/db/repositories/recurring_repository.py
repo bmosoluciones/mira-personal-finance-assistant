@@ -25,57 +25,42 @@ class RecurringRepository:
 
         def get_category_by_id(self, cat_id: int) -> dict[str, Any] | None:
             """Return get category by id."""
-            ...
 
         def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any:
             """Return cents to money."""
-            ...
 
         def _enrich_recurring_rows(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             """Return enrich recurring rows."""
-            ...
 
         def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
             """Return get accounts."""
-            ...
-
-            ...
 
         def get_categories(self, cat_type: str | None = None, *, include_savings: bool = True) -> list[dict[str, Any]]:
             """Return get categories."""
-            ...
 
         def _resolve_transaction_category_id(self, tx_type: str, category: str | None) -> int | None:
             """Return resolve transaction category id."""
 
         def _normalize_tag_ids(self, tag_ids: list[int] | None) -> list[int]:
             """Return normalize tag ids."""
-            ...
 
         def _atomic(self) -> Any:
             """Return atomic."""
-            ...
 
         def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
             """Return money to cents."""
-            ...
 
         def _money_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
             """Return money to decimal."""
-            ...
 
         def _replace_recurring_tags(self, recurring_id: int, tag_ids: list[int]) -> None:
             """Return replace recurring tags."""
-            ...
 
         def get_recurring_tags(self, recurring_id: int) -> list[dict[str, Any]]:
             """Return get recurring tags."""
-            ...
 
         def get_setting(self, key: str) -> str | None:
             """Return get setting."""
-            ...
-            ...
 
         def add_transaction(
             self,
@@ -98,16 +83,12 @@ class RecurringRepository:
             source: str | None = None,
         ) -> dict[str, Any]:
             """Return add transaction."""
-            ...
 
         def set_transaction_tags(self, transaction_id: int, tag_ids: list[int]) -> None:
             """Return set transaction tags."""
 
         def set_setting(self, key: str, value: str) -> None:
             """Return set setting."""
-            ...
-
-            ...
 
     def _get_recurring_by_id(self, rec_id: int) -> dict | None:
         """Return get recurring by id."""

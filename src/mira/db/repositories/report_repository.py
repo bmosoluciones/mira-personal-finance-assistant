@@ -35,7 +35,6 @@ class ReportRepository:
             include_savings: bool = True,
         ) -> list[dict[str, Any]]:
             """Return get categories."""
-            ...
 
         def get_transactions(
             self,
@@ -54,19 +53,15 @@ class ReportRepository:
             include_children: bool = False,
         ) -> list[dict[str, Any]]:
             """Return get transactions."""
-            ...
 
         def _cents_to_money(self, value: object, *, allow_none: bool = False) -> Any:
             """Return cents to money."""
-            ...
 
         def get_category_by_name(self, name: str) -> dict[str, Any] | None:
             """Return get category by name."""
-            ...
 
         def get_descendant_category_names(self, category_id: int) -> list[str]:
             """Return get descendant category names."""
-            ...
 
     @overload
     def summarize_financials(
@@ -77,7 +72,6 @@ class ReportRepository:
         as_dict: Literal[True],
     ) -> dict[str, Any]:
         """Return summarize financials."""
-        ...
 
     @overload
     def summarize_financials(
@@ -88,7 +82,6 @@ class ReportRepository:
         as_dict: Literal[False] = ...,
     ) -> FinancialSummary:
         """Return summarize financials."""
-        ...
 
     @overload
     def summarize_financials(
@@ -99,7 +92,6 @@ class ReportRepository:
         as_dict: bool,
     ) -> FinancialSummary | dict[str, Any]:
         """Return summarize financials."""
-        ...
 
     def summarize_financials(
         self,

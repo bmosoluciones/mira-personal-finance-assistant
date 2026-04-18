@@ -51,13 +51,9 @@ class BackupRepository:
 
         def close(self) -> None:
             """Return close."""
-            ...
 
         def connect(self) -> None:
             """Return connect."""
-            ...
-
-            ...
 
     def create_backup(self, filepath: str | Path) -> Path:
         """Create a full SQLite backup of the current database file."""

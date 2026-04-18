@@ -300,3 +300,113 @@ def test_build_and_seed_budget_plan_calls_upsert_for_every_category_and_month() 
     assert db.upsert_calls[0][0] == 27
     assert db.upsert_calls[0][2] == 2026
 
+
+class FakeSeedMonthlyDB:
+    def __init__(self) -> None:
+        self.transactions: list[dict[str, Any]] = []
+        self.tag_links: list[tuple[int, int]] = []
+        self.transfer_calls: list[tuple[int, int, float, str, str]] = []
+        self._next_transaction_id = 1
+
+    def add_transaction(
+        self,
+        *,
+        account_id: int,
+        tx_type: str,
+        amount: float,
+        category: str,
+        description: str | None = None,
+        tx_date: str | None = None,
+        note: str | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        transaction = {
+            "id": self._next_transaction_id,
+            "account_id": account_id,
+            "tx_type": tx_type,
+            "amount": amount,
+            "category": category,
+            "description": description,
+            "date": tx_date,
+            "note": note,
+        }
+        self._next_transaction_id += 1
+        self.transactions.append(transaction)
+        return transaction
+
+    def add_transaction_tag(self, transaction_id: int, tag_id: int) -> None:
+        self.tag_links.append((transaction_id, tag_id))
+
+    def transfer_between_accounts(
+        self,
+        *,
+        from_account_id: int,
+        to_account_id: int,
+        amount: float,
+        note: str | None = None,
+        tx_date: str | None = None,
+        description: str | None = None,
+        **kwargs: Any,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        self.transfer_calls.append((from_account_id, to_account_id, amount, note or "", str(tx_date)))
+        self._next_transaction_id += 2
+        return ({"id": self._next_transaction_id - 2}, {"id": self._next_transaction_id - 1})
+
+
+def test_seed_monthly_transactions_creates_expected_transactions_and_tag_links() -> None:
+    db = FakeSeedMonthlyDB()
+    budget_plan = demo_seed.build_budget_plan()
+    category_rows = {key: {"id": idx + 1, "name": key} for idx, key in enumerate(budget_plan)}
+    descriptions = {
+        key: key
+        for key in {
+            "salary",
+            "freelance",
+            "bonus",
+            "item_sales",
+            "rent_income",
+            "interest_income",
+            "housing",
+            "home_maintenance",
+            "utilities",
+            "telecom",
+            "food_a",
+            "food_b",
+            "transport",
+            "public_transport",
+            "health",
+            "health_insurance",
+            "tuition",
+            "books",
+            "life_insurance",
+            "property_insurance",
+            "credit_cards",
+            "personal_loans",
+            "subscriptions",
+            "restaurants",
+            "savings",
+            "emergency_fund",
+            "retirement",
+            "transfer",
+        }
+    }
+    runtime = demo_seed.build_demo_seed_runtime(
+        year=2026,
+        budget_id=1,
+        default_account={"id": "1"},
+        reserve_account={"id": "2"},
+        seed_note="mira_cli_seed:2026",
+        category_rows=category_rows,
+        tag_rows={"fixed": {"id": 1}, "variable": {"id": 2}, "essential": {"id": 3}, "discretionary": {"id": 4}},
+        descriptions=descriptions,
+    )
+
+    tx_count, tag_links = demo_seed.seed_monthly_transactions(db, runtime, budget_plan)
+
+    assert tx_count == len(db.transactions) + 8
+    assert len(db.transfer_calls) == 4
+    assert tag_links == len(db.tag_links)
+    assert tag_links > 0
+    assert any(tx["category"] == "savings" for tx in db.transactions)
+    assert any(tx["note"] == "mira_cli_seed:2026" for tx in db.transactions)
+

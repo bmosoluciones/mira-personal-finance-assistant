@@ -64,6 +64,9 @@ target-version = ["py312"]
 [tool.ruff]
 line-length = 120
 
+[tool.ruff.lint]
+ignore = ["E501"]
+
 [tool.pylint.format]
 max-line-length = 120
 
@@ -90,16 +93,37 @@ disable = [
     "invalid-name",
     "wrong-import-position",
     "broad-exception-caught",
-    "disallowed-name"
+    "disallowed-name",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-instance-attributes",
+    "too-few-public-methods",
+    "too-many-positional-arguments",
+    "too-many-lines",
+    "too-many-statements",
+    "duplicate-code",
+    "no-member",
+    "too-many-branches",
+    "too-many-ancestors",
+    "too-many-return-statements",
+    "unnecessary-ellipsis"
+
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src", "tests"]
-addopts = "-m \"not full\""
+addopts = "-m \"not full\" --cov=src --cov-report=term --cov-report=html"
 markers = [
     "full: long-running tests for complete validation",
 ]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["src/mira/ui/*.py", "src/mira/ui/**/*.py"]
+
+[tool.coverage.report]
+omit = ["src/mira/ui/*.py", "src/mira/ui/**/*.py"]
 
 [tool.mypy]
 python_version = "3.12"

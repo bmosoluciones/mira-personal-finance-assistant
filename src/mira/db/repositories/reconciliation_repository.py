@@ -44,21 +44,15 @@ class ReconciliationRepository:
 
         def _money_to_cents(self, value: object, *, allow_none: bool = False) -> int | None:
             """Return money to cents."""
-            ...
 
         def _cents_to_decimal(self, value: object, *, allow_none: bool = False) -> Any:
             """Return cents to decimal."""
-            ...
 
         def get_account_by_id(self, account_id: int) -> dict[str, Any] | None:
             """Return get account by id."""
-            ...
 
         def get_transaction_by_id(self, tx_id: int) -> dict[str, Any] | None:
             """Return get transaction by id."""
-            ...
-
-            ...
 
     @staticmethod
     def _serialize_group(row: ReconciliationGroup) -> dict[str, Any]:
@@ -135,7 +129,14 @@ class ReconciliationRepository:
             .where(ReconciliationMatch.system_transaction.in_(unique_ids))
             .dicts()
         )
-        matched_ids = {int(row["system_transaction_id"]) for row in rows}
+        matched_ids = {
+            int(
+                row.get("system_transaction_id")
+                if row.get("system_transaction_id") is not None
+                else row["system_transaction"]
+            )
+            for row in rows
+        }
         now_value = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         for transaction_id in unique_ids:
             has_matches = transaction_id in matched_ids
@@ -236,7 +237,11 @@ class ReconciliationRepository:
         if not tx_ids:
             return 0
         group_ids = [
-            str(row["reconciliation_group_id"])
+            str(
+                row.get("reconciliation_group_id")
+                if row.get("reconciliation_group_id") is not None
+                else row["reconciliation_group"]
+            )
             for row in ReconciliationMatch.select(ReconciliationMatch.reconciliation_group)
             .where(ReconciliationMatch.system_transaction.in_(tx_ids))
             .dicts()
