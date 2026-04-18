@@ -212,3 +212,72 @@ def test_mira_analysis_view_binds_precomputed_view_state_and_keeps_drilldown(
         assert view._tag_detail_table.rowCount() == 1
     finally:
         view.close()
+
+
+@pytest.mark.skipif(
+    opengl_import_error(), reason="PySide6.QtCharts requires OpenGL (not available in headless environments)"
+)
+def test_mira_analysis_honors_theme_palette_for_waterfall_labels(
+    monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.mira_analysis")
+
+    view = views_module.MiraAnalysisView(db)
+
+    try:
+        legend_style = view._waterfall_legend.styleSheet()
+        summary_style = view._waterfall_summary.styleSheet()
+
+        assert "#D6DEE8" not in legend_style
+        assert "#D6DEE8" not in summary_style
+        assert "palette(midlight)" in legend_style
+        assert "palette(midlight)" in summary_style
+    finally:
+        view.close()
+
+
+@pytest.mark.skipif(
+    opengl_import_error(), reason="PySide6.QtCharts requires OpenGL (not available in headless environments)"
+)
+def test_mira_analysis_ytd_and_trend_chart_legends_use_theme_palette(
+    monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.mira_analysis")
+
+    view = views_module.MiraAnalysisView(db)
+
+    try:
+        view._payload = {
+            "kpis": {
+                "income": 1000.0,
+                "expense_operational": 600.0,
+                "net": 400.0,
+                "savings": 100.0,
+            },
+            "comparisons": {},
+            "budget": {"has_budget": False},
+            "metrics": {},
+            "ytd": [
+                {"month": 1, "year": 2026, "income": 1000.0, "expense_operational": 600.0, "net": 400.0, "savings": 100.0}
+            ],
+            "historical_stacked": {"income": [{"period": "2026-01", "segments": {"Salary": 1000.0}}]},
+        }
+
+        view._render_payload()
+
+        ytd_chart = view._ytd_chart.chart()
+        trend_chart = view._trend_chart.chart()
+        theme_color = view._theme_color(view.foregroundRole(), "#DDD").name()
+
+        assert ytd_chart is not None
+        assert trend_chart is not None
+        assert ytd_chart.legend().isVisible()
+        assert trend_chart.legend().isVisible()
+        assert ytd_chart.legend().labelColor().name() == theme_color
+        assert trend_chart.legend().labelColor().name() == theme_color
+    finally:
+        view.close()

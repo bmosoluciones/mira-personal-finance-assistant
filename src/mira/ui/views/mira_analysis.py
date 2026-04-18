@@ -21,7 +21,7 @@ from PySide6.QtCharts import (
     QValueAxis,
 )
 from PySide6.QtCore import QRectF, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QPaintEvent, QPainter, QPen
+from PySide6.QtGui import QColor, QFont, QPaintEvent, QPainter, QPalette, QPen
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -344,6 +344,13 @@ class MiraAnalysisView(QWidget):
         self._report_status_lbl.setText(text)
         self._report_status_lbl.setStyleSheet(f"font-size:11px;color:{color};padding:0 2px 4px 2px;")
 
+    def _theme_color(self, role: QPalette.ColorRole, fallback: str) -> QColor:
+        """Return theme color."""
+        col = self.palette().color(role)
+        if not col.isValid():
+            return QColor(fallback)
+        return col
+
     def _selected_period(self) -> tuple[int, int]:
         """Return selected period."""
         return int(self._year_spin.value()), int(self._month_combo.currentData() or 1)
@@ -430,7 +437,7 @@ class MiraAnalysisView(QWidget):
 
         self._waterfall_legend = QLabel("")
         self._waterfall_legend.setWordWrap(True)
-        self._waterfall_legend.setStyleSheet("color:#D6DEE8;font-size:11px;padding:0 2px 0 2px;")
+        self._waterfall_legend.setStyleSheet("color:palette(midlight);font-size:11px;padding:0 2px 0 2px;")
         layout.addWidget(self._waterfall_legend)
 
         self._waterfall_summary = QLabel(
@@ -440,7 +447,7 @@ class MiraAnalysisView(QWidget):
             )
         )
         self._waterfall_summary.setWordWrap(True)
-        self._waterfall_summary.setStyleSheet("color:#D6DEE8;font-size:12px;padding:4px 2px 10px 2px;")
+        self._waterfall_summary.setStyleSheet("color:palette(midlight);font-size:12px;padding:4px 2px 10px 2px;")
         layout.addWidget(self._waterfall_summary)
 
         kpi_row = QHBoxLayout()
@@ -653,6 +660,8 @@ class MiraAnalysisView(QWidget):
         chart = QChart()
         chart.setTitle(self._view_state.ytd_chart.title)
         chart.setBackgroundVisible(False)
+        chart.legend().setVisible(True)
+        chart.legend().setLabelColor(self._theme_color(self.foregroundRole(), "#DDD"))
         labels = list(self._view_state.ytd_chart.labels)
         qt_series: list[QLineSeries] = []
         for series_state in self._view_state.ytd_chart.series:
@@ -695,6 +704,8 @@ class MiraAnalysisView(QWidget):
             return
         chart.setTitle(chart_state.title)
         chart.setBackgroundVisible(False)
+        chart.legend().setVisible(True)
+        chart.legend().setLabelColor(self._theme_color(self.foregroundRole(), "#DDD"))
 
         series = QBarSeries()
         for series_state in chart_state.series:
