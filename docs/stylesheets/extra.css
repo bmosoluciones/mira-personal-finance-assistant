@@ -1,21 +1,31 @@
 :root {
-  --mira-ink: #17212b;
-  --mira-slate: #4f6272;
-  --mira-line: rgba(23, 33, 43, 0.12);
-  --mira-surface: linear-gradient(145deg, rgba(15, 118, 110, 0.08), rgba(14, 165, 166, 0.03));
-  --mira-card: #f7fbfb;
-  --mira-accent: #0f766e;
-  --mira-accent-strong: #115e59;
-  --mira-highlight: #ecfeff;
-  --mira-header: #23408e;
-  --mira-header-strong: #1a3272;
-  --mira-header-text: #f8fbff;
-  --mira-header-muted: rgba(248, 251, 255, 0.82);
+  --mira-space-1: 4px;
+  --mira-space-2: 8px;
+  --mira-space-3: 16px;
+  --mira-space-4: 24px;
+  --mira-space-5: 32px;
+  --mira-space-6: 64px;
+
+  --mira-radius-sm: 8px;
+  --mira-radius-md: 10px;
+  --mira-radius-lg: 12px;
+
+  --mira-text: #1f2937;
+  --mira-text-soft: #4b5563;
+  --mira-line: #e5e7eb;
+  --mira-bg: #ffffff;
+  --mira-bg-soft: #f7f8fb;
+  --mira-primary: #2563eb;
+  --mira-primary-strong: #1d4ed8;
+  --mira-primary-ghost: #dbeafe;
+
+  --mira-shadow-soft: 0 8px 24px rgba(17, 24, 39, 0.06);
+  --mira-shadow-card: 0 6px 18px rgba(17, 24, 39, 0.05);
 }
 
 .md-header {
-  background: linear-gradient(135deg, var(--mira-header), var(--mira-header-strong));
-  box-shadow: 0 10px 30px rgba(35, 64, 142, 0.22);
+  background: linear-gradient(120deg, #1e3a8a, #1d4ed8);
+  box-shadow: 0 8px 24px rgba(30, 58, 138, 0.2);
 }
 
 .md-header__button.md-logo {
@@ -34,169 +44,225 @@
   letter-spacing: 0.01em;
 }
 
+.md-topic,
 .md-header__topic,
 .md-search__input,
 .md-search__icon,
 .md-search-result__meta,
 .md-source__repository,
 .md-source__facts {
-  color: var(--mira-header-text);
+  color: #eef2ff;
 }
 
 .md-search__form {
+  border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .md-search__input::placeholder {
-  color: var(--mira-header-muted);
+  color: rgba(238, 242, 255, 0.85);
 }
 
 [data-md-color-scheme="default"] .md-tabs {
-  background-color: var(--mira-header-strong);
+  background-color: #1d4ed8;
 }
 
 [data-md-color-scheme="default"] .md-header__source {
+  border-radius: var(--mira-radius-md);
   background-color: rgba(255, 255, 255, 0.08);
-  border-radius: 0.85rem;
 }
 
-[data-md-color-scheme="default"] .md-sidebar--primary {
-  padding-top: 0.5rem;
+.mira-landing {
+  color: var(--mira-text);
 }
 
-/* ============================================================
-   HERO
-   ============================================================ */
+.mira-shell {
+  width: min(100%, 1160px);
+  margin-inline: auto;
+  padding-inline: var(--mira-space-4);
+}
 
-.mira-home {
+.mira-section {
+  padding-block: var(--mira-space-4);
+}
+
+.mira-section--hero {
+  padding-block: var(--mira-space-5);
+}
+
+.mira-section--surface {
+  background: var(--mira-bg-soft);
+}
+
+.mira-section--plain {
+  background: var(--mira-bg);
+}
+
+.mira-section--footer {
+  padding-block: var(--mira-space-5);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  border-top: 1px solid var(--mira-line);
+}
+
+.mira-section__head {
+  margin-bottom: var(--mira-space-4);
+}
+
+.mira-section__head h2 {
+  margin: 0;
+  color: #111827;
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  line-height: 1.2;
+}
+
+.mira-section__head p {
+  margin: var(--mira-space-2) 0 0;
+  color: var(--mira-text-soft);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.mira-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
-  gap: 2rem;
-  padding: 1.25rem 1.5rem;
-  margin: 0 0 1.5rem;
-  border: 1px solid var(--mira-line);
-  border-radius: 1.5rem;
-  background: #ffffff;
-  box-shadow: 0 24px 60px rgba(23, 33, 43, 0.08);
+  gap: var(--mira-space-3);
+  text-align: center;
+  justify-items: center;
 }
 
-.mira-home__eyebrow {
+.mira-hero__badge {
   display: inline-flex;
-  margin-bottom: 0.65rem;
-  padding: 0.3rem 0.65rem;
+  margin: 0;
+  padding: 6px 12px;
   border-radius: 999px;
-  background: var(--mira-highlight);
-  color: var(--mira-accent-strong);
-  font-size: 0.72rem;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
 }
 
-.mira-home__title {
+.mira-hero__title {
   margin: 0;
-  color: var(--mira-ink);
-  font-size: clamp(1.5rem, 3vw, 2.4rem);
-  line-height: 1.1;
+  max-width: 18ch;
+  color: #0f172a;
+  font-size: clamp(1.8rem, 3.8vw, 2.9rem);
+  line-height: 1.08;
 }
 
-.mira-home__lead {
-  margin: 0.7rem 0 0;
-  color: var(--mira-slate);
+.mira-hero__subtitle {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--mira-text-soft);
   font-size: 1rem;
-  line-height: 1.65;
-  max-width: 44rem;
+  line-height: 1.5;
 }
 
-.mira-home__points {
-  display: grid;
-  gap: 0.55rem;
-  margin: 1rem 0 1.25rem;
-  padding: 0;
-  list-style: none;
-}
-
-.mira-home__points li {
-  position: relative;
-  padding-left: 1.4rem;
-  color: var(--mira-ink);
-  font-size: 0.95rem;
-}
-
-.mira-home__points li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.58rem;
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--mira-accent), #14b8a6);
-}
-
-.mira-home__actions {
+.mira-hero__actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.8rem;
-  margin-top: 1rem;
+  justify-content: center;
+  align-items: center;
+  gap: var(--mira-space-2);
 }
 
-.mira-home__actions .md-button,
-.mira-install-dropdown__toggle {
+.mira-hero__signals {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--mira-space-2);
+}
+
+.mira-hero__signals li {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #dbeafe;
+  background: #ffffff;
+  color: #1e3a8a;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.mira-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.75rem;
+  min-height: 44px;
+  padding: 0 var(--mira-space-4);
+  border-radius: var(--mira-radius-md);
+  border: 1px solid transparent;
+  font-weight: 700;
   line-height: 1.2;
-  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    transform 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
 }
 
-/* ============================================================
-   INSTALL DROPDOWN
-   ============================================================ */
+.mira-button:hover,
+.mira-button:focus-visible {
+  transform: translateY(-1px);
+}
+
+.mira-button--primary {
+  background: var(--mira-primary);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+}
+
+.mira-button--primary:hover,
+.mira-button--primary:focus-visible {
+  background: var(--mira-primary-strong);
+  color: #ffffff;
+}
+
+.mira-button--ghost {
+  border-color: #bfdbfe;
+  background: #ffffff;
+  color: #1e40af;
+}
+
+.mira-button--ghost:hover,
+.mira-button--ghost:focus-visible {
+  border-color: #93c5fd;
+  background: var(--mira-primary-ghost);
+  color: #1e3a8a;
+}
 
 .mira-install-dropdown {
   position: relative;
-  align-self: flex-start;
 }
 
 .mira-install-dropdown__toggle {
-  gap: 0.55rem;
-  cursor: pointer;
   border: none;
-}
-
-.mira-install-dropdown.is-open .mira-install-dropdown__toggle {
-  filter: brightness(0.98);
+  cursor: pointer;
 }
 
 .mira-install-dropdown__indicator {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1rem;
+  margin-left: var(--mira-space-2);
   font-size: 1rem;
-  font-weight: 700;
   line-height: 1;
-}
-
-.mira-install-dropdown.is-open .mira-install-dropdown__indicator {
-  font-size: 1.05rem;
 }
 
 .mira-install-dropdown__menu {
   position: absolute;
-  top: calc(100% + 0.55rem);
+  top: calc(100% + var(--mira-space-2));
   left: 0;
   z-index: 20;
   display: grid;
-  min-width: 18rem;
-  padding: 0.45rem;
+  gap: var(--mira-space-1);
+  min-width: 220px;
+  padding: var(--mira-space-2);
   border: 1px solid var(--mira-line);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 20px 45px rgba(23, 33, 43, 0.12);
+  border-radius: var(--mira-radius-md);
+  background: #ffffff;
+  box-shadow: var(--mira-shadow-soft);
 }
 
 .mira-install-dropdown__menu[hidden] {
@@ -204,259 +270,385 @@
 }
 
 .mira-install-dropdown__item {
-  padding: 0.72rem 0.8rem;
-  border-radius: 0.8rem;
-  color: var(--mira-ink);
+  padding: 10px 12px;
+  border-radius: var(--mira-radius-sm);
+  color: var(--mira-text);
   font-weight: 600;
   text-decoration: none;
-  white-space: nowrap;
 }
 
 .mira-install-dropdown__item:hover,
 .mira-install-dropdown__item:focus-visible {
-  background: var(--mira-highlight);
-  color: var(--mira-accent-strong);
+  background: #eff6ff;
+  color: #1e40af;
   outline: none;
 }
 
-/* ============================================================
-   CAROUSEL — image-first with overlaid controls & subtitles
-   ============================================================ */
+.mira-quick-start {
+  display: grid;
+  gap: var(--mira-space-4);
+}
 
-.mira-home__visual {
-  display: flex;
+.mira-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--mira-space-3);
+}
+
+.mira-step {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--mira-space-3);
+  padding: var(--mira-space-3);
+  border-radius: var(--mira-radius-lg);
+  border: 1px solid var(--mira-line);
+  background: #ffffff;
+  box-shadow: var(--mira-shadow-card);
+}
+
+.mira-step__index {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-weight: 700;
+  color: #1e40af;
+  background: #eff6ff;
 }
 
-.mira-carousel {
-  position: relative;
-  width: 100%;
-  border-radius: 0.85rem;
-  overflow: hidden;
-  box-shadow:
-    0 2px 0 rgba(255, 255, 255, 0.6) inset,
-    0 8px 32px rgba(23, 33, 43, 0.18);
-}
-
-.mira-carousel__viewport {
-  overflow: hidden;
-}
-
-.mira-carousel__track {
-  display: flex;
-  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
-}
-
-.mira-carousel__slide {
-  position: relative;
-  flex: 0 0 100%;
+.mira-step__content h3 {
   margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
 }
 
-.mira-carousel__img-link {
+.mira-step__action {
+  padding: 10px 12px;
+  border-radius: var(--mira-radius-sm);
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.mira-step__action:hover,
+.mira-step__action:focus-visible {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  outline: none;
+}
+
+.mira-preview {
+  display: grid;
+  gap: var(--mira-space-4);
+}
+
+.mira-preview__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+  gap: var(--mira-space-4);
+  align-items: start;
+}
+
+.mira-preview__frame {
+  margin: 0;
+  border-radius: var(--mira-radius-lg);
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid var(--mira-line);
+  box-shadow: var(--mira-shadow-soft);
+}
+
+.mira-preview__frame a {
   display: block;
-  cursor: zoom-in;
 }
 
-.mira-carousel__img-link img {
+.mira-preview__frame img {
   display: block;
   width: 100%;
   height: auto;
-  transition: opacity 150ms ease;
 }
 
-.mira-carousel__img-link:hover img {
-  opacity: 0.92;
-}
-
-.mira-carousel__slide figcaption {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 2.5rem 4rem 0.85rem;
-  background: linear-gradient(to top, rgba(8, 16, 24, 0.75) 0%, transparent 100%);
-  color: #ffffff;
-  font-size: 0.85rem;
-  font-weight: 500;
+.mira-preview__frame figcaption {
+  padding: var(--mira-space-3) var(--mira-space-4);
+  border-top: 1px solid var(--mira-line);
+  color: var(--mira-text-soft);
+  font-size: 0.95rem;
   line-height: 1.5;
-  text-align: center;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
 }
 
-/* Overlay navigation arrows */
-.mira-carousel__control {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--mira-accent-strong);
-  font-size: 1.5rem;
-  font-weight: 400;
-  line-height: 1;
-  cursor: pointer;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  transition:
-    background-color 150ms ease,
-    box-shadow 150ms ease;
-}
-
-.mira-carousel__control:hover,
-.mira-carousel__control:focus-visible {
-  background: #ffffff;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.26);
-  outline: none;
-}
-
-.mira-carousel__control[data-direction="-1"] {
-  left: 0.65rem;
-}
-
-.mira-carousel__control[data-direction="1"] {
-  right: 0.65rem;
-}
-
-/* Overlay indicator dots */
-.mira-carousel__dots {
-  position: absolute;
-  bottom: 0.55rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.mira-carousel__dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition:
-    width 200ms ease,
-    background-color 200ms ease;
-}
-
-.mira-carousel__dot.is-active {
-  width: 1.25rem;
-  background: #ffffff;
-}
-
-.mira-carousel__dot:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.65);
-  outline-offset: 2px;
-}
-
-/* ============================================================
-   FEATURE CARDS
-   ============================================================ */
-
-.mira-home__cards {
+.mira-preview__details {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  margin: 0 0 2rem;
-}
-
-.mira-home__card {
-  padding: 1.25rem 1.2rem 1.1rem;
+  gap: var(--mira-space-3);
+  padding: var(--mira-space-3);
+  border-radius: var(--mira-radius-md);
   border: 1px solid var(--mira-line);
-  border-top: 3px solid var(--mira-accent);
-  border-radius: 1rem;
-  background: var(--mira-card);
-  transition:
-    box-shadow 200ms ease,
-    transform 200ms ease;
+  background: var(--mira-bg-soft);
 }
 
-.mira-home__card:hover {
-  box-shadow: 0 8px 28px rgba(15, 118, 110, 0.13);
-  transform: translateY(-2px);
+.mira-preview__details ul {
+  margin: 0;
+  padding-left: var(--mira-space-3);
+  display: grid;
+  gap: var(--mira-space-2);
 }
 
-.mira-home__card-icon {
-  font-size: 1.5rem;
-  margin-bottom: 0.6rem;
-  line-height: 1;
+.mira-preview__details li {
+  color: var(--mira-text-soft);
+  line-height: 1.45;
 }
 
-.mira-home__card h3 {
-  margin-top: 0;
-  margin-bottom: 0.4rem;
-  color: var(--mira-ink);
-  font-size: 1rem;
-}
-
-.mira-home__card p {
-  margin: 0 0 0.85rem;
-  color: var(--mira-slate);
-  font-size: 0.92rem;
-  line-height: 1.55;
-}
-
-.mira-home__card a {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--mira-accent-strong);
+.mira-preview__details a {
+  color: #1e40af;
+  font-weight: 700;
   text-decoration: none;
 }
 
-.mira-home__card a:hover {
+.mira-preview__details a:hover,
+.mira-preview__details a:focus-visible {
+  color: #1d4ed8;
   text-decoration: underline;
+  outline: none;
 }
 
-/* ============================================================
-   PAGE CONTENT BELOW CARDS
-   ============================================================ */
-
-.mira-home__content {
-  padding-top: 0.5rem;
+.mira-why-guides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mira-space-5);
 }
 
-.mira-home__content h1:first-child {
-  display: none;
+.mira-panel {
+  padding: var(--mira-space-4);
+  border-radius: var(--mira-radius-lg);
+  background: #ffffff;
+  border: 1px solid var(--mira-line);
+  box-shadow: var(--mira-shadow-card);
 }
 
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
+.mira-panel .mira-section__head {
+  margin-bottom: var(--mira-space-4);
+}
 
-@media screen and (max-width: 900px) {
-  .mira-home {
-    grid-template-columns: 1fr;
-    padding: 1.1rem;
+.mira-value-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--mira-space-3);
+}
+
+.mira-value-list li {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: var(--mira-space-2);
+  align-items: start;
+  color: var(--mira-text);
+  line-height: 1.5;
+}
+
+.mira-value-list__icon {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+  position: relative;
+}
+
+.mira-value-list__icon::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.mira-guides-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--mira-space-3);
+}
+
+.mira-guide-card {
+  display: grid;
+  gap: var(--mira-space-2);
+  padding: var(--mira-space-3);
+  border-radius: var(--mira-radius-md);
+  border: 1px solid var(--mira-line);
+  background: #ffffff;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+
+.mira-guide-card:hover,
+.mira-guide-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: #bfdbfe;
+  box-shadow: var(--mira-shadow-card);
+  outline: none;
+}
+
+.mira-guide-card h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.mira-guide-card p {
+  margin: 0;
+  color: var(--mira-text-soft);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.mira-guide-card__cta {
+  color: #1e40af;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.mira-resources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--mira-space-3);
+}
+
+.mira-resource {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 var(--mira-space-3);
+  border-radius: var(--mira-radius-md);
+  border: 1px solid var(--mira-line);
+  background: #ffffff;
+  color: var(--mira-text);
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.mira-resource:hover,
+.mira-resource:focus-visible {
+  border-color: #93c5fd;
+  color: #1e40af;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.mira-footer {
+  display: grid;
+  gap: var(--mira-space-3);
+  justify-items: center;
+  text-align: center;
+}
+
+.mira-footer__blurb {
+  margin: 0;
+  color: var(--mira-text-soft);
+  line-height: 1.5;
+}
+
+.mira-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--mira-space-3);
+}
+
+.mira-footer__links a {
+  color: #1e40af;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mira-footer__links a:hover,
+.mira-footer__links a:focus-visible {
+  color: #1d4ed8;
+  text-decoration: underline;
+  outline: none;
+}
+
+@media screen and (max-width: 1100px) {
+  .mira-shell {
+    padding-inline: var(--mira-space-3);
   }
 
-  .mira-install-dropdown {
+  .mira-guides-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mira-resources {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media screen and (max-width: 900px) {
+  .mira-section {
+    padding-block: var(--mira-space-4);
+  }
+
+  .mira-hero__title {
+    font-size: clamp(1.8rem, 9vw, 2.4rem);
+  }
+
+  .mira-hero__subtitle {
+    font-size: 1rem;
+  }
+
+  .mira-hero__actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .mira-hero__signals {
+    justify-content: flex-start;
+  }
+
+  .mira-install-dropdown,
+  .mira-button {
     width: 100%;
   }
 
   .mira-install-dropdown__toggle {
     width: 100%;
-    justify-content: space-between;
   }
 
   .mira-install-dropdown__menu {
     min-width: 100%;
   }
 
-  .mira-home__cards {
+  .mira-step {
+    grid-template-columns: auto 1fr;
+  }
+
+  .mira-step__action {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+
+  .mira-preview__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mira-why-guides {
     grid-template-columns: 1fr;
   }
 }

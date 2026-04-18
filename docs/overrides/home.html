@@ -7,191 +7,292 @@
   {% set flatpak_link = install_links.get("flatpak") %}
   {% set snap_link = install_links.get("snap") %}
   {% set has_install_links = exe_link or zip_link or flatpak_link or snap_link %}
+
   {% if i18n_page_locale == "es" %}
-    {% set eyebrow = "DOCUMENTACIÓN" %}
-    {% set title = "MIRA: finanzas personales locales, claras y trazables" %}
-    {% set lead = "Configura la app, registra movimientos, controla presupuestos y entiende el flujo real de tu dinero desde un manual simple en español e inglés." %}
-    {% set points = [
-      "Instalacion y setup inicial listos para Windows y Linux.",
-      "Flujos concretos para cuentas, ahorro, presupuestos y tarjetas.",
-      "Referencia tecnica del parser financiero incluida en la misma docs."
+    {% set hero_badge = "ASISTENTE LOCAL-FIRST" %}
+    {% set hero_title = "Controla tu dinero de forma local" %}
+    {% set hero_subtitle = "Registra movimientos y entiende tus finanzas sin enviar tus datos a terceros." %}
+    {% set cta_primary = "Descargar MIRA" %}
+    {% set cta_secondary = "Guia de inicio" %}
+    {% set hero_signals = [
+      "100% local y privado",
+      "Setup inicial en minutos",
+      "Reportes claros para decidir"
     ] %}
-    {% set primary = "Empezar instalacion" %}
-    {% set card_a_title = "Configura rapido" %}
-    {% set card_a_body = "Todo lo necesario para levantar MIRA, elegir idioma y completar el onboarding inicial." %}
-    {% set card_a_link = "Abrir instalacion" %}
-    {% set card_b_title = "Aprende el flujo" %}
-    {% set card_b_body = "Usa recorridos practicos para registrar gastos, ejecutar recurrentes y cerrar el mes con orden." %}
-    {% set card_b_link = "Ver flujos practicos" %}
-    {% set card_c_title = "Resuelve dudas" %}
-    {% set card_c_body = "Encuentra respuestas rapidas sobre backup, IA local, lenguaje natural y solucion de problemas." %}
-    {% set card_c_link = "Ir a FAQ" %}
-    {% set install_primary = "Descargar MIRA" %}
-    {% set install_exe = "Instalador para Windows (.exe)" %}
-    {% set install_zip = "Paquete portable (.zip)" %}
-    {% set install_flatpak = "Paquete Flatpak (.flatpak)" %}
-    {% set install_snap = "Paquete Snap (.snap)" %}
-    {% set carousel_label = "Galeria de capturas de MIRA" %}
-    {% set previous_label = "Captura anterior" %}
-    {% set next_label = "Captura siguiente" %}
-    {% set screenshots = [
+    {% set quick_start_title = "Quick Start" %}
+    {% set quick_start_subtitle = "Empieza en 3 pasos" %}
+    {% set steps = [
+      {"title": "Instala MIRA", "action": "Instalacion", "href": "installation/"},
+      {"title": "Configura tu primera cuenta", "action": "Primeros pasos", "href": "first_steps/"},
+      {"title": "Registra tu primera transaccion", "action": "Flujo ejemplo", "href": "practical_workflows/"}
+    ] %}
+    {% set preview_title = "Product Preview" %}
+    {% set preview_caption = "Panel principal con saldos, actividad reciente y acceso rapido a reportes." %}
+    {% set preview_points = [
+      "Vista consolidada de saldos por cuenta y movimientos recientes.",
+      "Acceso rapido a transacciones, presupuestos y analisis MIRA.",
+      "Navegacion directa a flujos guiados para registrar operaciones."
+    ] %}
+    {% set preview_link_text = "Abrir guia de interfaz" %}
+    {% set why_title = "Why MIRA" %}
+    {% set why_points = [
+      "Agrega ingresos y gastos en segundos con lenguaje natural o formulario.",
+      "Trabaja 100% local con base SQLite y sin telemetria externa.",
+      "Compara presupuesto vs real para detectar desbalances temprano.",
+      "Analiza tendencias mensuales con reportes claros y accionables."
+    ] %}
+    {% set guides_title = "Guides" %}
+    {% set guides = [
       {
-        "src": "images/mira_dashboard.png",
-        "alt": "Panel principal de MIRA",
-        "caption": "Dashboard con resumen financiero y actividad reciente."
+        "title": "Getting Started",
+        "desc": "Instalacion, primera cuenta y primer registro.",
+        "href": "first_steps/",
+        "cta": "Abrir"
       },
       {
-        "src": "images/mira_budget.png",
-        "alt": "Vista de presupuesto de MIRA",
-        "caption": "Presupuesto anual con seguimiento visual por categoria."
+        "title": "Managing Money",
+        "desc": "Presupuestos, categorias, cuentas y conciliacion.",
+        "href": "practical_workflows/",
+        "cta": "Explorar"
       },
       {
-        "src": "images/mira_main_report.png",
-        "alt": "Reporte principal de MIRA",
-        "caption": "Reporte consolidado para revisar tendencias y balances."
+        "title": "Advanced Usage",
+        "desc": "Analisis MIRA, IA local opcional y troubleshooting.",
+        "href": "mira_analysis/",
+        "cta": "Ver mas"
       }
     ] %}
+    {% set resources_title = "Resources" %}
+    {% set resources = [
+      {"label": "FAQ", "href": "faq/"},
+      {"label": "Troubleshooting", "href": "troubleshooting/"},
+      {"label": "AI JSON Contract", "href": "ai_json_contract/"}
+    ] %}
+    {% set footer_blurb = "MIRA te ayuda a gestionar tus finanzas personales con privacidad por defecto." %}
+    {% set footer_docs = "Documentacion" %}
+    {% set footer_repo = "Repositorio" %}
+    {% set footer_releases = "Releases" %}
+    {% set install_exe = "Instalador Windows (.exe)" %}
+    {% set install_zip = "Portable (.zip)" %}
+    {% set install_flatpak = "Flatpak" %}
+    {% set install_snap = "Snap" %}
+    {% set dropdown_aria = "Opciones de descarga de MIRA" %}
   {% else %}
-    {% set eyebrow = "DOCUMENTATION" %}
-    {% set title = "MIRA: local personal finance, clear workflows, reliable tracking" %}
-    {% set lead = "Set up the app, record transactions, control annual budgets, and understand how your money moves through a simple manual available in English and Spanish." %}
-    {% set points = [
-      "Installation and first-run setup for Windows and Linux.",
-      "Practical workflows for accounts, savings, budgets, and credit cards.",
-      "Technical reference for the financial parser in the same documentation site."
+    {% set hero_badge = "LOCAL-FIRST ASSISTANT" %}
+    {% set hero_title = "Manage your money fully local" %}
+    {% set hero_subtitle = "Track transactions and understand your finances without sending your data to third parties." %}
+    {% set cta_primary = "Download MIRA" %}
+    {% set cta_secondary = "Get Started Guide" %}
+    {% set hero_signals = [
+      "100% local and private",
+      "First setup in minutes",
+      "Clear reports for decisions"
     ] %}
-    {% set primary = "Start installation" %}
-    {% set card_a_title = "Set up fast" %}
-    {% set card_a_body = "Everything you need to install MIRA, pick a language, and complete the initial onboarding flow." %}
-    {% set card_a_link = "Open installation guide" %}
-    {% set card_b_title = "Learn the flow" %}
-    {% set card_b_body = "Use practical walkthroughs to record expenses, run recurring items, and close the month with confidence." %}
-    {% set card_b_link = "Open workflows" %}
-    {% set card_c_title = "Solve questions" %}
-    {% set card_c_body = "Find quick answers about backup, local AI, natural language, and troubleshooting." %}
-    {% set card_c_link = "Open FAQ" %}
-    {% set install_primary = "Download MIRA" %}
-    {% set install_exe = "Windows installer (.exe)" %}
-    {% set install_zip = "Portable package (.zip)" %}
-    {% set install_flatpak = "Flatpak package (.flatpak)" %}
-    {% set install_snap = "Snap package (.snap)" %}
-    {% set carousel_label = "MIRA screenshot gallery" %}
-    {% set previous_label = "Previous screenshot" %}
-    {% set next_label = "Next screenshot" %}
-    {% set screenshots = [
+    {% set quick_start_title = "Quick Start" %}
+    {% set quick_start_subtitle = "Get started in 3 steps" %}
+    {% set steps = [
+      {"title": "Install MIRA", "action": "Installation", "href": "installation/"},
+      {"title": "Set up your first account", "action": "First steps", "href": "first_steps/"},
+      {"title": "Record your first transaction", "action": "Example workflow", "href": "practical_workflows/"}
+    ] %}
+    {% set preview_title = "Product Preview" %}
+    {% set preview_caption = "Main dashboard with balances, recent activity, and quick access to reports." %}
+    {% set preview_points = [
+      "Consolidated balances and recent transactions in one view.",
+      "Quick access to transactions, budgets, and MIRA analysis.",
+      "Direct navigation to guided workflows for daily operations."
+    ] %}
+    {% set preview_link_text = "Open interface guide" %}
+    {% set why_title = "Why MIRA" %}
+    {% set why_points = [
+      "Add income and expenses in seconds using natural language or forms.",
+      "Run 100% locally with SQLite and no external telemetry.",
+      "Compare budget versus actual to catch drift early.",
+      "Review monthly trends with focused, actionable reports."
+    ] %}
+    {% set guides_title = "Guides" %}
+    {% set guides = [
       {
-        "src": "images/mira_dashboard.png",
-        "alt": "MIRA dashboard",
-        "caption": "Dashboard overview with financial totals and recent activity."
+        "title": "Getting Started",
+        "desc": "Install, set your first account, and create first records.",
+        "href": "first_steps/",
+        "cta": "Open"
       },
       {
-        "src": "images/mira_budget.png",
-        "alt": "MIRA budget view",
-        "caption": "Annual budget planning with visual category tracking."
+        "title": "Managing Money",
+        "desc": "Budgets, categories, accounts, and reconciliation flows.",
+        "href": "practical_workflows/",
+        "cta": "Explore"
       },
       {
-        "src": "images/mira_main_report.png",
-        "alt": "MIRA main report view",
-        "caption": "Main report for trends, balances, and monthly review."
+        "title": "Advanced Usage",
+        "desc": "MIRA Analysis, optional local AI, and troubleshooting.",
+        "href": "mira_analysis/",
+        "cta": "See more"
       }
     ] %}
+    {% set resources_title = "Resources" %}
+    {% set resources = [
+      {"label": "FAQ", "href": "faq/"},
+      {"label": "Troubleshooting", "href": "troubleshooting/"},
+      {"label": "AI JSON Contract", "href": "ai_json_contract/"}
+    ] %}
+    {% set footer_blurb = "MIRA helps you run personal finance with privacy by default." %}
+    {% set footer_docs = "Documentation" %}
+    {% set footer_repo = "Repository" %}
+    {% set footer_releases = "Releases" %}
+    {% set install_exe = "Windows installer (.exe)" %}
+    {% set install_zip = "Portable (.zip)" %}
+    {% set install_flatpak = "Flatpak" %}
+    {% set install_snap = "Snap" %}
+    {% set dropdown_aria = "MIRA download options" %}
   {% endif %}
 
-  <section class="mira-home">
-    <div class="mira-home__copy">
-      <span class="mira-home__eyebrow">{{ eyebrow }}</span>
-      <h1 class="mira-home__title">{{ title }}</h1>
-      <p class="mira-home__lead">{{ lead }}</p>
-      <ul class="mira-home__points">
-        {% for item in points %}
-          <li>{{ item }}</li>
-        {% endfor %}
-      </ul>
-      <div class="mira-home__actions">
-        {% if has_install_links %}
-          <div class="mira-install-dropdown" data-mira-install-dropdown>
-            <button
-              class="md-button md-button--primary mira-install-dropdown__toggle"
-              type="button"
-              aria-expanded="false"
-            >
-              <span>{{ install_primary }}</span>
-              <span class="mira-install-dropdown__indicator" aria-hidden="true">+</span>
-            </button>
-            <div class="mira-install-dropdown__menu" hidden>
-              {% if exe_link %}
-                <a class="mira-install-dropdown__item" href="{{ exe_link }}">{{ install_exe }}</a>
-              {% endif %}
-              {% if zip_link %}
-                <a class="mira-install-dropdown__item" href="{{ zip_link }}">{{ install_zip }}</a>
-              {% endif %}
-              {% if flatpak_link %}
-                <a class="mira-install-dropdown__item" href="{{ flatpak_link }}">{{ install_flatpak }}</a>
-              {% endif %}
-              {% if snap_link %}
-                <a class="mira-install-dropdown__item" href="{{ snap_link }}">{{ install_snap }}</a>
-              {% endif %}
+  <div class="mira-landing">
+    <section class="mira-section mira-section--hero">
+      <div class="mira-shell mira-hero">
+        <p class="mira-hero__badge">{{ hero_badge }}</p>
+        <h1 class="mira-hero__title">{{ hero_title }}</h1>
+        <p class="mira-hero__subtitle">{{ hero_subtitle }}</p>
+        <div class="mira-hero__actions">
+          {% if has_install_links %}
+            <div class="mira-install-dropdown" data-mira-install-dropdown>
+              <button class="mira-button mira-button--primary mira-install-dropdown__toggle" type="button" aria-expanded="false" aria-label="{{ dropdown_aria }}">
+                <span>{{ cta_primary }}</span>
+                <span class="mira-install-dropdown__indicator" aria-hidden="true">+</span>
+              </button>
+              <div class="mira-install-dropdown__menu" hidden>
+                {% if exe_link %}
+                  <a class="mira-install-dropdown__item" href="{{ exe_link }}">{{ install_exe }}</a>
+                {% endif %}
+                {% if zip_link %}
+                  <a class="mira-install-dropdown__item" href="{{ zip_link }}">{{ install_zip }}</a>
+                {% endif %}
+                {% if flatpak_link %}
+                  <a class="mira-install-dropdown__item" href="{{ flatpak_link }}">{{ install_flatpak }}</a>
+                {% endif %}
+                {% if snap_link %}
+                  <a class="mira-install-dropdown__item" href="{{ snap_link }}">{{ install_snap }}</a>
+                {% endif %}
+              </div>
             </div>
-          </div>
-        {% else %}
-          <a class="md-button md-button--primary" href="{{ 'instalacion/' | url }}">{{ primary }}</a>
-        {% endif %}
+          {% else %}
+            <a class="mira-button mira-button--primary" href="{{ 'installation/' | url }}">{{ cta_primary }}</a>
+          {% endif %}
+          <a class="mira-button mira-button--ghost" href="{{ 'first_steps/' | url }}">{{ cta_secondary }}</a>
+        </div>
+        <ul class="mira-hero__signals">
+          {% for signal in hero_signals %}
+            <li>{{ signal }}</li>
+          {% endfor %}
+        </ul>
       </div>
-    </div>
-    <div class="mira-home__visual">
-      <div class="mira-carousel" data-mira-carousel aria-roledescription="carousel" aria-label="{{ carousel_label }}">
-        <div class="mira-carousel__viewport">
-          <div class="mira-carousel__track">
-            {% for screenshot in screenshots %}
-              <figure class="mira-carousel__slide{% if loop.first %} is-active{% endif %}"{% if not loop.first %} aria-hidden="true"{% endif %}>
-                <a href="{{ screenshot.src | url }}" target="_blank" rel="noopener" class="mira-carousel__img-link" aria-label="{{ screenshot.alt }}">
-                  <img src="{{ screenshot.src | url }}" alt="{{ screenshot.alt }}" loading="lazy">
-                </a>
-                <figcaption>{{ screenshot.caption }}</figcaption>
-              </figure>
+    </section>
+
+    <section class="mira-section mira-section--surface">
+      <div class="mira-shell mira-quick-start">
+        <div class="mira-section__head">
+          <h2>{{ quick_start_title }}</h2>
+          <p>{{ quick_start_subtitle }}</p>
+        </div>
+        <ol class="mira-steps">
+          {% for step in steps %}
+            <li class="mira-step">
+              <span class="mira-step__index">{{ loop.index }}</span>
+              <div class="mira-step__content">
+                <h3>{{ step.title }}</h3>
+              </div>
+              <a class="mira-step__action" href="{{ step.href | url }}">{{ step.action }}</a>
+            </li>
+          {% endfor %}
+        </ol>
+      </div>
+    </section>
+
+    <section class="mira-section mira-section--plain">
+      <div class="mira-shell mira-preview">
+        <div class="mira-section__head">
+          <h2>{{ preview_title }}</h2>
+          <p>{{ preview_caption }}</p>
+        </div>
+        <div class="mira-preview__grid">
+          <figure class="mira-preview__frame">
+            <a href="{{ 'images/mira_dashboard.png' | url }}" target="_blank" rel="noopener">
+              <img src="{{ 'images/mira_dashboard.png' | url }}" alt="MIRA dashboard" loading="lazy">
+            </a>
+            <figcaption>{{ preview_caption }}</figcaption>
+          </figure>
+          <aside class="mira-preview__details">
+            <ul>
+              {% for point in preview_points %}
+                <li>{{ point }}</li>
+              {% endfor %}
+            </ul>
+            <a href="{{ 'interface_guide/' | url }}">{{ preview_link_text }}</a>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="mira-section mira-section--surface">
+      <div class="mira-shell mira-why-guides">
+        <article class="mira-panel">
+          <div class="mira-section__head">
+            <h2>{{ why_title }}</h2>
+          </div>
+          <ul class="mira-value-list">
+            {% for item in why_points %}
+              <li>
+                <span class="mira-value-list__icon" aria-hidden="true"></span>
+                <span>{{ item }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </article>
+
+        <article class="mira-panel">
+          <div class="mira-section__head">
+            <h2>{{ guides_title }}</h2>
+          </div>
+          <div class="mira-guides-grid">
+            {% for guide in guides %}
+              <a class="mira-guide-card" href="{{ guide.href | url }}">
+                <h3>{{ guide.title }}</h3>
+                <p>{{ guide.desc }}</p>
+                <span class="mira-guide-card__cta">{{ guide.cta }}</span>
+              </a>
             {% endfor %}
           </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="mira-section mira-section--plain">
+      <div class="mira-shell">
+        <div class="mira-section__head">
+          <h2>{{ resources_title }}</h2>
         </div>
-        <button class="mira-carousel__control" type="button" data-direction="-1" aria-label="{{ previous_label }}">&#8249;</button>
-        <button class="mira-carousel__control" type="button" data-direction="1" aria-label="{{ next_label }}">&#8250;</button>
-        <div class="mira-carousel__dots" aria-label="{{ carousel_label }}">
-          {% for screenshot in screenshots %}
-            <button
-              class="mira-carousel__dot{% if loop.first %} is-active{% endif %}"
-              type="button"
-              aria-label="{{ screenshot.alt }}"
-              {% if loop.first %}aria-current="true"{% endif %}
-            ></button>
+        <div class="mira-resources">
+          {% for resource in resources %}
+            <a class="mira-resource" href="{{ resource.href | url }}">{{ resource.label }}</a>
           {% endfor %}
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="mira-home__cards">
-    <article class="mira-home__card">
-      <div class="mira-home__card-icon">⚙️</div>
-      <h3>{{ card_a_title }}</h3>
-      <p>{{ card_a_body }}</p>
-      <a href="{{ 'instalacion/' | url }}">{{ card_a_link }}</a>
-    </article>
-    <article class="mira-home__card">
-      <div class="mira-home__card-icon">📋</div>
-      <h3>{{ card_b_title }}</h3>
-      <p>{{ card_b_body }}</p>
-      <a href="{{ 'flujos_practicos/' | url }}">{{ card_b_link }}</a>
-    </article>
-    <article class="mira-home__card">
-      <div class="mira-home__card-icon">💬</div>
-      <h3>{{ card_c_title }}</h3>
-      <p>{{ card_c_body }}</p>
-      <a href="{{ 'faq/' | url }}">{{ card_c_link }}</a>
-    </article>
-  </section>
-
-  <section class="mira-home__content">
-    {{ page.content }}
-  </section>
+    <footer class="mira-section mira-section--footer">
+      <div class="mira-shell mira-footer">
+        <p class="mira-footer__blurb">{{ footer_blurb }}</p>
+        <nav class="mira-footer__links" aria-label="Footer links">
+          <a href="{{ 'index/' | url }}">{{ footer_docs }}</a>
+          <a href="{{ config.repo_url }}" target="_blank" rel="noopener">{{ footer_repo }}</a>
+          {% if exe_link %}
+            <a href="{{ exe_link }}" target="_blank" rel="noopener">{{ footer_releases }}</a>
+          {% endif %}
+        </nav>
+      </div>
+    </footer>
+  </div>
 
   <script>
     (() => {
@@ -270,58 +371,8 @@
         });
       };
 
-      const initCarousel = (carousel) => {
-        if (carousel.dataset.miraCarouselReady === "true") {
-          return;
-        }
-
-        carousel.dataset.miraCarouselReady = "true";
-
-        const track = carousel.querySelector(".mira-carousel__track");
-        const slides = Array.from(carousel.querySelectorAll(".mira-carousel__slide"));
-        const dots = Array.from(carousel.querySelectorAll(".mira-carousel__dot"));
-        const controls = Array.from(carousel.querySelectorAll(".mira-carousel__control"));
-        let activeIndex = 0;
-
-        const showSlide = (nextIndex) => {
-          activeIndex = (nextIndex + slides.length) % slides.length;
-          track.style.transform = `translateX(-${activeIndex * 100}%)`;
-
-          slides.forEach((slide, index) => {
-            const isActive = index === activeIndex;
-            slide.classList.toggle("is-active", isActive);
-            slide.setAttribute("aria-hidden", String(!isActive));
-          });
-
-          dots.forEach((dot, index) => {
-            const isActive = index === activeIndex;
-            dot.classList.toggle("is-active", isActive);
-            if (isActive) {
-              dot.setAttribute("aria-current", "true");
-            } else {
-              dot.removeAttribute("aria-current");
-            }
-          });
-        };
-
-        controls.forEach((control) => {
-          control.addEventListener("click", () => {
-            showSlide(activeIndex + Number(control.dataset.direction));
-          });
-        });
-
-        dots.forEach((dot, index) => {
-          dot.addEventListener("click", () => {
-            showSlide(index);
-          });
-        });
-
-        showSlide(0);
-      };
-
       const start = () => {
         document.querySelectorAll("[data-mira-install-dropdown]").forEach(initInstallDropdown);
-        document.querySelectorAll("[data-mira-carousel]").forEach(initCarousel);
       };
 
       if (document.readyState === "loading") {
