@@ -81,7 +81,7 @@ Regla especial para ahorro:
 ### Campos específicos para `report` y `data_analysis`
 
 Estos campos responden explícitamente a:
-1) ¿Qué vista/acción analítica? 2) ¿Qué periodo? 3) ¿Algún filtro?
+1) ¿Qué vista/acción analítica? 2) ¿Qué período? 3) ¿Algún filtro?
 
 - `report_type` *(string, requerido cuando `action=report`)*
   - Tipo de reporte solicitado.
@@ -188,7 +188,7 @@ Estos campos responden explícitamente a:
 }
 ```
 
-### Ejemplo C: Reporte con tipo, periodo y filtro
+### Ejemplo C: Reporte con tipo, período y filtro
 
 **Prompt IA:**
 
@@ -259,7 +259,7 @@ Estos campos responden explícitamente a:
 ```
 
 
-### Ejemplo E: Análisis de datos por categoría y periodo
+### Ejemplo E: Análisis de datos por categoría y período
 
 **Prompt IA:**
 

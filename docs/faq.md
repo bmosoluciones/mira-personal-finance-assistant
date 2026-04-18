@@ -1,36 +1,36 @@
 # FAQ
 
-## Does MIRA need internet access to work
+## Does MIRA need internet access to work?
 
 No. MIRA works offline for its main financial operations.
 
-## Does my data leave my device
+## Does my data leave my device?
 
-No under the normal usage model. The database is local and the main processing can run without network access.
+No. By design, the database is local and the main processing runs entirely on your machine.
 
-## Can I use MIRA without AI models
+## Can I use MIRA without AI models?
 
-Yes. It includes a deterministic parser for natural language input.
+Yes. MIRA includes a built-in deterministic parser that allows you to use natural language without requiring a Large Language Model (LLM).
 
-## What is the difference between Assistant and Chat
+## What is the difference between Assistant and Chat?
 
-- `Assistant` executes structured financial actions.
-- `Chat` is free conversation and needs a ready local LLM.
+- **Assistant**: Interprets and executes structured financial actions (e.g., adding expenses).
+- **Chat**: A free-form conversation mode that requires an optional local GGUF model to be active.
 
-## Where is my database stored
+## Where is my database stored?
 
-Default path: the platform/XDG application-data directory, for example `~/.local/share/mira/mira.db` on Linux.
+The default path follows standard platform conventions (XDG on Linux). For example:
+- Linux: `~/.local/share/mira/mira.db`
+- Windows: `%LOCALAPPDATA%\mira\mira.db`
 
-You can change it with `--db` when launching the app.
+You can specify a custom path using the `--db PATH` flag.
 
-As of `0.0.1a2`, MIRA no longer scans or copies databases from the legacy `~/.mira/` location during startup.
+## How do I avoid losing information?
 
-## How do I avoid losing information
+1. Use the **Backup** tool in the File menu regularly.
+2. Export your transactions to **CSV** for external records.
+3. Always verify a backup file before performing a **Restore**.
 
-1. Create SQLite backups regularly.
-2. Export CSV periodically.
-3. Verify the file before restoring.
+## Can I use MIRA on Windows?
 
-## Can I use MIRA on Windows
-
-Yes. There is a GUI launcher (`mira`) and a CLI entry point (`mira-cli`).
+Yes. MIRA provides a standard `.exe` installer and a portable `.zip` version for Windows.

@@ -507,6 +507,8 @@ def test_chat_keeps_focus_on_first_message_of_new_batch(
 
         def _clear_pending_chat_batch(self) -> None:
             self._chat_state.reset_pending_batch()
+    prompt_module = importlib.import_module("mira.ui.main_window_prompt")
+    monkeypatch.setattr(prompt_module, "QTimer", FakeTimer)
 
     monkeypatch.setattr(main_window_module, "QTimer", FakeTimer)
 

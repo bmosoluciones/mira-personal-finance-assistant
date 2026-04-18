@@ -44,12 +44,18 @@ plugins:
             Practical Workflows: Flujos Practicos
             Income-Expense Category Associations: Asociacion de Categorias
             Credit Cards: Tarjetas de Credito
+            Account Reconciliation: Conciliacion de Cuentas
+            MIRA Analysis: Analisis MIRA
             Natural Language: Lenguaje Natural
             Import, Export and Backup: Importacion, Exportacion y Respaldo
             Optional Local AI: IA Local Opcional
             Troubleshooting: Solucion de Problemas
+            FAQ: Preguntas Frecuentes
             Appendices: Anexos
             AI JSON Contract: Contrato JSON IA
+            Manual Linux install (hidden venv): Instalacion manual en Linux (venv oculto)
+            Portable Windows .zip (advanced): Windows portable .zip (avanzado)
+            Remote GUI over SSH (X11): GUI remota sobre SSH (X11)
 
 markdown_extensions:
   - admonition
@@ -70,16 +76,21 @@ extra:
 
 nav:
   - Home: index.md
-  - Installation and Launch: instalacion.md
-  - First Steps: primeros_pasos.md
-  - Interface Guide: guia_interfaz.md
-  - Practical Workflows: flujos_practicos.md
+  - Installation and Launch: installation.md
+  - First Steps: first_steps.md
+  - Interface Guide: interface_guide.md
+  - Practical Workflows: practical_workflows.md
   - Income-Expense Category Associations: income_expense_relations.md
-  - Credit Cards: tarjetas_credito.md
-  - Natural Language: entrada_lenguaje_natural.md
-  - Import, Export and Backup: importar_exportar_respaldo.md
-  - Optional Local AI: modelos_ia_opcional.md
-  - Troubleshooting: solucion_problemas.md
+  - Credit Cards: credit_cards.md
+  - Account Reconciliation: reconciliation.md
+  - MIRA Analysis: mira_analysis.md
+  - Natural Language: natural_language.md
+  - Import, Export and Backup: import_export_backup.md
+  - Optional Local AI: optional_local_ai.md
+  - Troubleshooting: troubleshooting.md
   - FAQ: faq.md
   - Appendices:
-      - AI JSON Contract: ia_json_format.md
+      - AI JSON Contract: ai_json_contract.md
+      - Manual Linux install (hidden venv): manual_install_hidden_venv_linux.md
+      - Portable Windows .zip (advanced): portable_windows_zip_advanced.md
+      - Remote GUI over SSH (X11): remote_gui_ssh_x11.md

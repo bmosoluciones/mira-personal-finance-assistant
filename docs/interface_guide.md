@@ -135,31 +135,38 @@ Currency:
 
 ## Categories view
 
-Categories are used to organize transactions by:
+Organize your financial movements through a logical category structure.
 
-- income or expense type
-- color
-- parent and child hierarchy
-- optional merge and cleanup flows
+- **Type**: Classify as Income or Expense.
+- **Hierarchy**: Supports two levels (Parent and Child). The parent selector only shows categories of the same type.
+- **Personalization**: Assign colors and Unicode emojis/icons for quick visual identification.
+- **Merge**: Consolidate two categories into one, automatically moving all transactions and history. Useful for data cleanup.
+- **Advanced Linking**: Using the **🔗 Link** button, you can associate income categories with specific expenses for profitability analysis in the Master Report.
 
 ### Hierarchy and icons
 
-- MIRA exposes a two-level hierarchy in the UI: a category can have one optional parent, but not grandchildren in the interface.
-- When creating or editing a category, you can select an emoji or Unicode icon for the `Icon` field.
-- The parent selector only shows categories of the same type and excludes the current category.
-- Tables and selectors display both icon and parent-child relationship.
+- MIRA restricts the UI to two levels to maintain clarity, even if the engine supports more depth.
+- Icons are displayed in all tables, reports, and the transaction selector to facilitate rapid entry.
 
 ## Recurring view
 
-Recurring transactions are templates for monthly movements.
+Recurring transactions are templates for recurring monthly movements such as rent, subscriptions, or salaries.
 
-- day of month
-- transaction type
-- account, amount, and category
+- **Day of month**: The day the transaction usually occurs.
+- **Transaction type**: Income or Expense.
+- **Details**: Account, amount, category, and tags.
 
 Key action:
 
-- `Apply recurring`: applies the rules for the current month only once per period.
+- **Apply recurring**: Scans all active recurring templates and generates real transactions for the current month. MIRA prevents duplicates by checking if a recurring template has already been applied in the current period.
+
+## Tags view
+
+Tags allow for cross-categorical organization of transactions (e.g., #vacation, #business).
+
+- **Create and Manage**: Add tags with custom colors and icons.
+- **Usage**: Assign multiple tags to a single transaction to enable multi-dimensional filtering.
+- **Analysis**: Use tags in reports to see spending patterns that span multiple categories.
 
 ## Reports view
 
@@ -192,25 +199,25 @@ Calculation rule:
 
 ## Goals view
 
-Savings goals allow you to:
+Savings goals allow you to plan for specific financial objectives with real-time progress tracking.
 
-- create a goal with target amount and date
-- record contributions
-- track progress and remaining amount
+- **Configuration**: Define a name, target amount, and deadline.
+- **Automatic Link**: Each goal is linked to a technical "savings outflow" category.
+- **Contributions**: Use the **💰 Contribute** button to record deposits toward the goal.
+- **Traceability**: Shows completion percentage, amount saved, and remaining balance.
 
-Functional behavior:
+### Business rules for goals
 
-- When savings are captured through natural language, MIRA records a technical outflow in a savings category.
-- That movement updates the goal progress.
-- The same movement is excluded from operating-expense reports and budget comparisons.
+- Movements toward goals (technical outflows) update the goal progress.
+- These movements are excluded from operating expense reports and real-vs-budget comparisons to avoid distorting real consumption.
 
 ## Financial tools
 
 From the `Tools` menu you can open calculators that run in memory without saving data automatically:
 
-- `Compound Interest Calculator`
-- `Loan Calculator`
-- `Savings Goal Simulator`
+- **Compound Interest Calculator** to project capital growth.
+- **Loan Calculator** for amortization using French and German methods.
+- **Savings Goal Simulator** to test scenarios and optionally pre-fill the goal creation form.
 
 ## Settings view
 

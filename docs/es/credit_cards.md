@@ -2,14 +2,14 @@
 
 ## Que soporta MIRA
 
-MIRA maneja una tarjeta de credito como una cuenta de tipo `credit`.
+MIRA maneja una tarjeta de crédito como una cuenta de tipo `credit`.
 
 Esto significa:
 
 - Cada compra con tarjeta se registra como un gasto normal en esa cuenta.
 - Cada pago de tarjeta se registra como un traslado interno desde una cuenta `bank` o `cash` hacia la cuenta `credit`.
 - Los pagos de tarjeta no deben inflar los KPI de ingresos ni de gastos.
-- Reembolsos, cashback aplicados como credito y ajustes a favor del usuario pueden registrarse como ingresos en la cuenta `credit`.
+- Reembolsos, cashback aplicados como crédito y ajustes a favor del usuario pueden registrarse como ingresos en la cuenta `credit`.
 
 ## Como registrar movimientos
 
@@ -24,7 +24,7 @@ Resultado esperado:
 
 ### Pago de tarjeta
 
-Usa la opcion `Credit Card Payment` en Transacciones.
+Usa la opción `Credit Card Payment` en Transacciones.
 
 Reglas:
 
@@ -40,11 +40,11 @@ Resultado esperado:
 
 ### Reembolso, cashback o ajuste a favor
 
-Si el banco aplica un credito monetario a la tarjeta, registralo como ingreso en la cuenta `credit`.
+Si el banco aplica un crédito monetario a la tarjeta, registralo como ingreso en la cuenta `credit`.
 
 Resultado esperado:
 
-- La deuda disminuye o la cuenta queda con saldo positivo si el credito supera lo adeudado.
+- La deuda disminuye o la cuenta queda con saldo positivo si el crédito supera lo adeudado.
 - El ingreso si cuenta en KPI de ingresos.
 
 ## Reporte recomendado
@@ -59,13 +59,13 @@ Usa el reporte `Account and Credit Card Balance` para revisar:
 
 Este reporte sirve para validar rapidamente si la suma de bancos, efectivo y tarjetas coincide con tu posicion financiera actual.
 
-## Conciliacion con el saldo del banco
+## Conciliación con el saldo del banco
 
-MIRA no hace conciliacion automatica de tarjetas de credito. La conciliacion es manual y debe hacerse comparando tus registros con el estado de cuenta o con el saldo publicado por el banco.
+MIRA no hace conciliación automatica de tarjetas de crédito. La conciliación es manual y debe hacerse comparando tus registros con el estado de cuenta o con el saldo publicado por el banco.
 
-### Regla base de conciliacion
+### Regla base de conciliación
 
-Si el banco muestra una deuda de corte de `12,350.00`, en MIRA la cuenta `credit` deberia mostrar aproximadamente `-12,350.00` para esa misma fecha, salvo que exista un credito a favor del usuario.
+Si el banco muestra una deuda de corte de `12,350.00`, en MIRA la cuenta `credit` deberia mostrar aproximadamente `-12,350.00` para esa misma fecha, salvo que exista un crédito a favor del usuario.
 
 Si el banco muestra un saldo a favor, en MIRA la cuenta puede quedar positiva.
 
@@ -78,16 +78,16 @@ Si el banco muestra un saldo a favor, en MIRA la cuenta puede quedar positiva.
 5. Luego busca cargos faltantes, cargos duplicados, pagos mal fechados, intereses, comisiones y reembolsos no capturados.
 6. Corrige los faltantes y vuelve a comparar hasta que la diferencia sea cero o explicable.
 
-### Orden practico para conciliar
+### Orden práctico para conciliar
 
 Usa este orden porque reduce errores:
 
-1. Compras del periodo.
+1. Compras del período.
 2. Pagos aplicados antes o en la fecha de corte.
 3. Cargos automaticos.
-4. Intereses.
+4. Interés.
 5. Comisiones y cargos similares.
-6. Reembolsos, cashback y notas de credito.
+6. Reembolsos, cashback y notas de crédito.
 
 ### Diferencias tipicas entre banco y sistema
 
@@ -98,7 +98,7 @@ Las diferencias mas comunes son:
 - El pago se registro con fecha distinta a la fecha real de aplicacion.
 - El pago se registro en la cuenta equivocada.
 - Un mismo cargo fue capturado dos veces.
-- Falta registrar un reembolso o una nota de credito.
+- Falta registrar un reembolso o una nota de crédito.
 - Faltan intereses o comisiones del cierre.
 
 ## Como identificar cargos automaticos
@@ -123,18 +123,18 @@ Ejemplos comunes:
 Como registrarlos:
 
 - Siempre como gasto en la cuenta `credit`.
-- Idealmente con una descripcion clara del comercio.
-- Si son recurrentes, usa categoria consistente y, si te ayuda, una etiqueta como `automatico`.
+- Idealmente con una descripción clara del comercio.
+- Si son recurrentes, usa categoría consistente y, si te ayuda, una etiqueta como `automatico`.
 
 Si un cargo automatico aparece todos los meses y siempre debe registrarse, puedes apoyarte en recurrentes. Si el banco lo mueve de fecha con frecuencia, conviene registrarlo cuando realmente aparezca en el estado de cuenta.
 
-## Intereses
+## Interés
 
 Los intereses no son pagos de tarjeta. Son un costo financiero y deben registrarse como gasto en la cuenta `credit`.
 
 Buenas practicas:
 
-- Usa una categoria dedicada como `intereses`, `finance_charges` o similar.
+- Usa una categoría dedicada como `intereses`, `finance_charges` o similar.
 - Registra el monto exacto que el banco cargo.
 - Usa la fecha de aplicacion del estado de cuenta o del movimiento bancario.
 
@@ -156,8 +156,8 @@ Incluye en este grupo:
 
 Recomendacion:
 
-- Usa una categoria separada como `comisiones_tarjeta` o `bank_fees`.
-- Si quieres distinguirlas mas, usa subcategoria o nota.
+- Usa una categoría separada como `comisiones_tarjeta` o `bank_fees`.
+- Si quieres distinguirlas mas, usa subcategoría o nota.
 
 ## Rutina de cierre mensual sugerida
 
@@ -178,7 +178,7 @@ Conviene revisar inmediatamente si ves alguna de estas situaciones:
 - saldo del banco y saldo de MIRA divergen todos los meses
 - la diferencia es siempre el mismo monto
 - el pago de tarjeta reduce KPI de gasto o ingreso
-- la tarjeta aparece con saldo positivo sin que exista credito a favor
+- la tarjeta aparece con saldo positivo sin que exista crédito a favor
 - hay cargos del banco que no logras ubicar en el audit trail
 
 Cuando eso ocurra, revisa primero cargos automaticos, intereses, comisiones, reembolsos y fechas de pago.

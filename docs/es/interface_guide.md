@@ -141,34 +141,40 @@ Moneda:
 - Cada presupuesto tiene su propia moneda.
 - Si una transacción real no puede reconciliarse con la moneda del presupuesto, se excluye de la comparación y se informa en pantalla.
 
-## Vista Categories
+## Vista de Categorías (Categories)
 
-Organiza categorías:
+Organiza tus movimientos financieros mediante una estructura lógica de categorías.
 
-- Tipo ingreso o gasto.
-- Color.
-- Jerarquía (categoría padre e hijas).
-- Posibilidad de consolidar categorías en flujos de limpieza.
+- **Tipo**: Clasifica como Ingreso o Gasto.
+- **Jerarquía**: Soporta dos niveles (Padre e Hija). El selector de padre solo muestra categorías del mismo tipo.
+- **Personalización**: Asigna colores y emojis/iconos Unicode para identificación visual rápida.
+- **Fusión (Merge)**: Permite consolidar dos categorías en una sola, moviendo todas las transacciones e historial automáticamente. Útil para limpieza de datos.
+- **Vinculación Avanzada**: A través del botón **🔗 Vincular**, puedes asociar categorías de ingresos con gastos específicos para análisis de rentabilidad en el Reporte Maestro.
 
-### Jerarquía y emoji/icono en categorías
+### Jerarquía y iconos
 
-- MIRA permite organizar categorías en jerarquía de dos niveles: cada categoría puede tener un padre (opcional), pero no nietos ni más profundidad en la interfaz. El backend soporta jerarquía recursiva, pero la UI solo permite padre/hijo.
-- Al crear o editar una categoría, puedes elegir un emoji o icono Unicode (campo "Icon"). Este emoji se muestra junto al nombre en las tablas y selectores.
-- El selector de padre solo muestra categorías del mismo tipo (ingreso/gasto) y excluye la propia categoría.
-- En las tablas de categorías y en los selectores de transacción, se muestra el emoji y la relación padre/hijo.
-- Esta restricción de dos niveles facilita la navegación y evita confusión visual, pero permite suficiente flexibilidad para la mayoría de los casos de uso.
+- MIRA restringe la UI a dos niveles para mantener la claridad, aunque el motor soporte más profundidad.
+- Los iconos se muestran en todas las tablas, reportes y en el selector de transacciones para facilitar la captura rápida.
 
-## Vista Recurring
+## Vista de Recurrentes (Recurring)
 
-Plantillas para movimientos mensuales.
+Las transacciones recurrentes son plantillas para movimientos mensuales fijos como alquiler, suscripciones o salarios.
 
-- Día del mes.
-- Tipo de transacción.
-- Cuenta, monto y categoría.
+- **Día del mes**: El día en que ocurre normalmente el movimiento.
+- **Tipo de transacción**: Ingreso o Gasto.
+- **Detalles**: Cuenta, monto, categoría y etiquetas.
 
 Acción clave:
 
-- Apply recurring: aplica reglas del mes actual una sola vez por período.
+- **Aplicar Recurrentes**: Escanea todas las plantillas activas y genera transacciones reales para el mes actual. MIRA evita duplicados verificando si una plantilla ya fue aplicada en el período actual.
+
+## Vista de Etiquetas (Tags)
+
+Las etiquetas permiten organizar transacciones de forma transversal a las categorías (ej. #vacaciones, #negocios).
+
+- **Gestión**: Agrega etiquetas con colores e iconos personalizados.
+- **Uso**: Asigna múltiples etiquetas a una sola transacción para habilitar filtrado multidimensional.
+- **Análisis**: Usa etiquetas en los reportes para ver patrones de gasto que abarcan varias categorías.
 
 ## Vista Reports
 
@@ -200,27 +206,27 @@ Regla de cálculo:
 - Ahorro se calcula por separado usando categorías marcadas internamente como ahorro.
 - Gasto representa consumo operativo y no incorpora egresos técnicos de ahorro.
 
-## Vista Goals
+## Vista de Metas (Goals)
 
-Metas de ahorro:
+Las metas de ahorro permiten planificar objetivos financieros específicos con seguimiento de progreso en tiempo real.
 
-- Crear meta con monto objetivo y fecha.
-- Registrar aportes.
-- Ver progreso y monto restante.
+- **Configuración**: Define un nombre, monto objetivo y fecha límite.
+- **Vínculo Automático**: Cada meta se vincula a una categoría técnica de "egreso de ahorro".
+- **Aportes**: Usa el botón **💰 Contribuir** para registrar depósitos hacia la meta.
+- **Trazabilidad**: Muestra porcentaje de avance, monto ahorrado y restante.
 
-Implementación funcional:
+### Reglas de negocio para metas
 
-- Cuando una meta usa lenguaje natural de ahorro, MIRA registra un egreso técnico en una categoría marcada como ahorro.
-- Ese movimiento sí actualiza el avance de la meta.
-- Ese mismo movimiento no entra en reportes de gasto real ni en presupuestos.
+- Los movimientos hacia metas (egresos técnicos) actualizan el progreso de la meta.
+- Estos movimientos se excluyen de los reportes de gasto operativo y de la comparación real vs presupuesto para evitar distorsionar el consumo real.
 
 ## Herramientas financieras
 
 Desde el menú **Herramientas** se pueden abrir simuladores que calculan en memoria (sin guardar datos automáticamente):
 
-- **Calculadora de Interés Compuesto** para proyectar crecimiento de capital.
-- **Calculadora de Préstamos** para amortización con método francés y alemán.
-- **Simulador de Metas de Ahorro** para probar escenarios y proponer abrir el formulario de creación de meta con monto/plazo prellenados (sin guardado automático).
+- **Calculadora de Interés Compuesto** para proyectar el crecimiento de capital.
+- **Calculadora de Préstamos** para amortización con métodos Francés y Alemán.
+- **Simulador de Metas de Ahorro** para probar escenarios y, opcionalmente, pre-llenar el formulario de creación de metas.
 
 ## Vista Settings
 

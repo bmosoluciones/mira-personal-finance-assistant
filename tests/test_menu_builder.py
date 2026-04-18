@@ -50,6 +50,9 @@ def test_menu_builder_creates_expected_menus_and_actions(monkeypatch: pytest.Mon
         def _menu_open_accounts(self) -> None:
             return None
 
+        def _menu_open_reconciliation(self) -> None:
+            return None
+
         def _menu_add_transaction(self) -> None:
             return None
 

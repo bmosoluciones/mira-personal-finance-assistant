@@ -47,5 +47,5 @@ Después de capturar datos:
 
 1. Registrar movimientos diarios.
 2. Aplicar transacciones recurrentes al iniciar mes.
-3. Revisar el presupuesto anual y comparar real vs ppto una vez por semana.
+3. Revisar el presupuesto anual y comparar real vs PPTO una vez por semana.
 4. Exportar CSV o crear backup regularmente.

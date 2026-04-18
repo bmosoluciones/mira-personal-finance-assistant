@@ -6,7 +6,13 @@
 
 MIRA is a personal finance desktop app focused on privacy, fast local workflows, and deterministic transaction parsing.
 
-MIRA includes a built-in deterministic parser that lets you register transactions in plain language.
+### Key Features
+
+- **Local-First Privacy**: Your data stays on your device.
+- **Natural Language Parsing**: Register transactions using plain English or Spanish commands.
+- **Account Reconciliation**: Match your internal records against bank statements.
+- **MIRA Analysis**: Advanced financial insights.
+- **Bilingual Support**: Full interface and documentation in English and Spanish.
 
 ## Screenshots
 
@@ -34,7 +40,7 @@ Base runtime:
 - `PySide6==6.10.2`
 - `qt-material==2.14`
 
-Optional local chat:
+Optional local chat (experimental):
 
 - `llama-cpp-python==0.2.0`
 
@@ -76,7 +82,7 @@ For local development with the full test/tooling stack:
 pip install ".[dev]"
 ```
 
-Optional local chat support for source builds:
+Optional local chat support (experimental) for source builds:
 
 ```bash
 pip install ".[chat]"
@@ -86,7 +92,6 @@ CLI and source-installed entry points:
 
 ```bash
 mira
-mira --model /path/to/model.gguf
 mira-cli
 ```
 
@@ -95,12 +100,6 @@ Useful flags:
 - `--db PATH`: custom SQLite database path
 - `--model PATH`: optional GGUF model path for chat mode
 - `--debug`: verbose logging
-
-### Database internals note for RC builds
-
-- Runtime repositories in `src/mira/db/` now use Peewee as the only query layer for categories, reports, and feedback.
-- `_DatabaseBackend._cursor()` is no longer a supported internal seam for runtime code.
-- `message_events` cooldown and deduplication context now lives in typed columns: `reference_date`, `context_category_id`, `context_amount`, and `context_source`.
 
 ## Product flow
 
@@ -127,14 +126,14 @@ Assistant mode does not depend on an LLM.
 
 The flow is:
 
-1. normalize user text
-2. parse it with `TransactionParserEngine`
-3. validate against the schema contract
-4. execute the action against the database
+1. **Normalize**: User text is cleaned and standardized.
+2. **Parse**: The `TransactionParserEngine` extracts amounts, dates, and categories.
+3. **Validate**: Results are checked against the schema contract.
+4. **Execute**: The action is applied to the local database.
 
 The curated prompt catalog used to pressure-test the parser lives in:
 
-- `src/mira/ai/nl_examples.cvs`
+- `src/mira/ai/nl_examples.csv`
 
 ## Architecture snapshot
 
@@ -170,15 +169,8 @@ packaging/
 ├── flatpak/          # Flatpak submodule: manifest, metadata, icons, GitHub Actions CI
 ├── scripts/          # project-level build entry points for wheel/sdist and Windows packaging
 └── windows/          # Windows launcher, NSIS installer, PyInstaller spec
+└── snap/             # Snap packaging manifest.
 ```
-
-Official end-user distributions:
-
-- Release site: https://mira.bmogroup.solutions/releases/
-- `.exe`: recommended installer for Windows.
-- `.zip`: portable Windows distribution.
-- `.whl`: artifact published to build the Flatpak distribution.
-- `.tar.gz`: source release published to comply with the GPL license.
 
 Common local packaging commands:
 
@@ -213,6 +205,34 @@ flatpak-builder --user --install-deps-from=flathub --install --force-clean build
 
 ```bash
 flatpak run solutions.bmogroup.MIRA
+```
+
+### Snap
+
+The Snap packaging definition lives in `packaging/snap`.
+
+Prerequisites (Ubuntu host):
+
+- `snapd` active
+- `snapcraft` installed in classic mode
+
+Install Snapcraft if needed:
+
+```bash
+sudo snap install snapcraft --classic
+```
+
+Build the snap package from the repository root:
+
+```bash
+cd packaging/snap
+snapcraft pack --use-lxd --verbosity=verbose
+```
+
+Install the generated snap locally for testing:
+
+```bash
+sudo snap install --dangerous ./mira-personal-finance-assistant_*.snap
 ```
 
 ### Windows (`.exe` with PyInstaller)

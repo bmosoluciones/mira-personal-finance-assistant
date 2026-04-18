@@ -68,6 +68,6 @@ Comportamiento:
 
 ## Estrategia recomendada de continuidad
 
-1. Backup antes de importaciones grandes.
+1. Backup antes de importaciónes grandes.
 2. Export CSV mensual para auditoría.
 3. Backup adicional antes de actualizar versión de MIRA.
