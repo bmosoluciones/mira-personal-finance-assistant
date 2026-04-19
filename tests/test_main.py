@@ -507,6 +507,7 @@ def test_chat_keeps_focus_on_first_message_of_new_batch(
 
         def _clear_pending_chat_batch(self) -> None:
             self._chat_state.reset_pending_batch()
+
     prompt_module = importlib.import_module("mira.ui.main_window_prompt")
     monkeypatch.setattr(prompt_module, "QTimer", FakeTimer)
 
@@ -551,7 +552,9 @@ def test_main_window_support_import_does_not_import_main_window(monkeypatch: pyt
     assert support_module is not None
 
 
-def test_main_window_prompt_append_assistant_uses_qtimer_without_importing_main_window(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_window_prompt_append_assistant_uses_qtimer_without_importing_main_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import importlib
     import sys
 

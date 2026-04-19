@@ -6,23 +6,16 @@
 from __future__ import annotations
 
 import hashlib
-import unicodedata
 from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from openpyxl import load_workbook
 
 from mira.db.database import Database
+from mira.db.io_csv_excel import normalize_header
 from mira.transaction_kinds import is_balance_adjustment_transaction
-
-
-def _normalize_header(value: object) -> str:
-    """Return normalize header."""
-    text = unicodedata.normalize("NFKD", str(value or "").strip())
-    folded = "".join(char for char in text if not unicodedata.combining(char))
-    return folded.casefold()
 
 
 def _parse_excel_date(value: object) -> str:
@@ -180,11 +173,14 @@ class ReconciliationViewService:
     """Represent the ReconciliationViewService class."""
 
     _REQUIRED_COLUMNS = {
-        "fecha": "Fecha",
-        "referencia": "Referencia",
-        "descripcion": "Descripción",
-        "ingreso": "Ingreso",
-        "gastos": "Gastos",
+        "date": ("fecha", "date"),
+        "reference": ("referencia", "reference"),
+        "description": ("descripcion", "description"),
+        "income": ("ingreso", "income"),
+        "expense": ("gastos", "expenses", "expense"),
+    }
+    _REQUIRED_COLUMN_LOOKUP = {
+        normalize_header(alias): canonical for canonical, aliases in _REQUIRED_COLUMNS.items() for alias in aliases
     }
 
     def __init__(self, db: Database) -> None:
@@ -199,21 +195,23 @@ class ReconciliationViewService:
         """Return parse excel."""
         workbook = load_workbook(filepath, read_only=True, data_only=True)
         try:
-            worksheet = workbook.active
-            assert worksheet is not None
+            worksheet = cast(Any, workbook.active)
             header_cells = next(worksheet.iter_rows(min_row=1, max_row=1, values_only=True), None)
             if header_cells is None:
                 return ReconciliationImportPreview(
                     filepath=filepath,
                     valid_rows=(),
                     invalid_rows=(),
-                    missing_columns=tuple(self._REQUIRED_COLUMNS.values()),
+                    missing_columns=tuple(self._REQUIRED_COLUMNS),
                 )
-            header_map = {_normalize_header(value): index for index, value in enumerate(header_cells)}
+            header_map: dict[str, int] = {}
+            for index, value in enumerate(header_cells):
+                canonical = self._REQUIRED_COLUMN_LOOKUP.get(normalize_header(value))
+                if canonical is None or canonical in header_map:
+                    continue
+                header_map[canonical] = index
             missing_columns = tuple(
-                display_name
-                for normalized_name, display_name in self._REQUIRED_COLUMNS.items()
-                if normalized_name not in header_map
+                canonical_name for canonical_name in self._REQUIRED_COLUMNS if canonical_name not in header_map
             )
             if missing_columns:
                 return ReconciliationImportPreview(
@@ -227,11 +225,11 @@ class ReconciliationViewService:
             invalid_rows: list[ReconciliationPreviewIssue] = []
             occurrence_counter: Counter[str] = Counter()
             for row_number, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
-                raw_date = row[header_map["fecha"]]
-                raw_reference = row[header_map["referencia"]]
-                raw_description = row[header_map["descripcion"]]
-                raw_income = row[header_map["ingreso"]]
-                raw_expense = row[header_map["gastos"]]
+                raw_date = row[header_map["date"]]
+                raw_reference = row[header_map["reference"]]
+                raw_description = row[header_map["description"]]
+                raw_income = row[header_map["income"]]
+                raw_expense = row[header_map["expense"]]
                 try:
                     tx_date = _parse_excel_date(raw_date)
                     reference = str(raw_reference or "").strip()

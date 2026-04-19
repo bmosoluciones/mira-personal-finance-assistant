@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import csv
 import logging
+import re
+import unicodedata
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
@@ -19,6 +21,342 @@ from mira.db.money import MONEY_ZERO, MoneyLike, money_to_decimal
 logger = logging.getLogger(__name__)
 
 _CSV_IMPORT_ROW_ERRORS = (KeyError, TypeError, ValueError, OverflowError)
+_TRANSACTION_SHEET_NAME = "Transactions"
+_TRANSACTION_COLUMNS = (
+    "id",
+    "date",
+    "type",
+    "amount",
+    "account_name",
+    "category",
+    "subcategory",
+    "payment_method",
+    "description",
+    "note",
+    "receipt_path",
+    "tags",
+)
+_TRANSACTION_REQUIRED_COLUMNS = ("type", "amount")
+_TRANSACTION_HEADER_ALIASES = {
+    "id": ("id",),
+    "date": ("date", "fecha"),
+    "type": ("type", "tipo"),
+    "amount": ("amount", "monto"),
+    "account_name": ("account_name", "account", "cuenta", "nombre_cuenta"),
+    "category": ("category", "categoria"),
+    "subcategory": ("subcategory", "subcategoria"),
+    "payment_method": ("payment_method", "metodo_pago", "medio_pago"),
+    "description": ("description", "descripcion"),
+    "note": ("note", "nota"),
+    "receipt_path": ("receipt_path", "ruta_recibo", "ruta_comprobante", "comprobante"),
+    "tags": ("tags", "etiquetas"),
+}
+
+
+def normalize_header(value: object) -> str:
+    """Normalize a user-provided header into a canonical comparison key."""
+    text = unicodedata.normalize("NFKD", str(value or "").strip())
+    folded = "".join(char for char in text if not unicodedata.combining(char)).casefold()
+    separated = re.sub(r"[\s\-\/]+", "_", folded)
+    cleaned = re.sub(r"[^0-9a-z_]", "", separated)
+    return re.sub(r"_+", "_", cleaned).strip("_")
+
+
+def _build_header_alias_lookup(aliases: dict[str, tuple[str, ...]]) -> dict[str, str]:
+    """Build a normalized alias lookup keyed by header synonym."""
+    lookup: dict[str, str] = {}
+    for canonical, names in aliases.items():
+        for name in names:
+            lookup[normalize_header(name)] = canonical
+    return lookup
+
+
+_TRANSACTION_HEADER_ALIAS_LOOKUP = _build_header_alias_lookup(_TRANSACTION_HEADER_ALIASES)
+
+
+def _unsupported_transaction_extension(filepath: str | Path) -> ValueError:
+    """Build a consistent unsupported-extension error for transaction files."""
+    suffix = Path(filepath).suffix or "<none>"
+    return ValueError(f"Unsupported transaction file extension: {suffix}. Supported extensions are .csv and .xlsx.")
+
+
+def _resolve_canonical_headers(
+    headers: list[object],
+    *,
+    alias_lookup: dict[str, str],
+    required_columns: tuple[str, ...],
+    label: str,
+) -> dict[str, int]:
+    """Resolve source headers into canonical column names and detect collisions."""
+    column_indexes: dict[str, int] = {}
+    column_sources: dict[str, str] = {}
+    for index, raw_header in enumerate(headers):
+        normalized = normalize_header(raw_header)
+        if not normalized:
+            continue
+        canonical = alias_lookup.get(normalized)
+        if canonical is None:
+            continue
+        source_name = str(raw_header or "").strip() or normalized
+        if canonical in column_indexes:
+            previous = column_sources[canonical]
+            raise ValueError(f"Ambiguous {label} headers for '{canonical}': {previous!r} and {source_name!r}.")
+        column_indexes[canonical] = index
+        column_sources[canonical] = source_name
+    missing = [column for column in required_columns if column not in column_indexes]
+    if missing:
+        missing_list = ", ".join(missing)
+        raise ValueError(f"Missing required {label} columns: {missing_list}.")
+    return column_indexes
+
+
+def _row_to_canonical_mapping(row: list[object], column_indexes: dict[str, int]) -> dict[str, object]:
+    """Project a source row onto the canonical transaction schema."""
+    canonical_row: dict[str, object] = {}
+    for canonical, index in column_indexes.items():
+        canonical_row[canonical] = row[index] if index < len(row) else None
+    return canonical_row
+
+
+def _transaction_export_rows(
+    db: _DatabaseIOProtocol,
+    *,
+    tx_type: str | None = None,
+    account_id: int | None = None,
+    since_date: str | None = None,
+    until_date: str | None = None,
+    category: str | None = None,
+    search: str | None = None,
+) -> list[dict[str, object]]:
+    """Collect transaction export rows including joined tag labels."""
+    txs = db.get_transactions(
+        limit=1_000_000,
+        tx_type=tx_type,
+        account_id=account_id,
+        since_date=since_date,
+        until_date=until_date,
+        category=category,
+        search=search,
+    )
+    tx_ids = [tx["id"] for tx in txs]
+    tags_map = db.get_transactions_tags_bulk(tx_ids) if tx_ids else {}
+    export_rows: list[dict[str, Any]] = []
+    for tx in txs:
+        row = {column: tx.get(column) for column in _TRANSACTION_COLUMNS}
+        tag_list = tags_map.get(tx["id"], [])
+        row["tags"] = ", ".join(t["name"] for t in tag_list)
+        export_rows.append(row)
+    return export_rows
+
+
+def _import_transaction_row(db: _DatabaseIOProtocol, row: dict[str, object]) -> None:
+    """Validate and insert a transaction row using canonical transaction fields."""
+    account_name = str(row.get("account_name") or "General").strip() or "General"
+    account = db.get_or_create_account(account_name)
+    tx_type = str(row["type"] or "").strip().lower()
+    if tx_type not in ("income", "expense"):
+        raise ValueError(f"Invalid type: {tx_type}")
+    amount = money_to_decimal(row["amount"])
+    if amount is None:
+        raise ValueError("Amount is required")
+    if amount <= MONEY_ZERO:
+        raise ValueError("Amount must be positive")
+    tx = db.add_transaction(
+        account_id=account["id"],
+        tx_type=tx_type,
+        amount=amount,
+        description=str(row.get("description") or "").strip() or None,
+        category=str(row.get("category") or "").strip() or None,
+        subcategory=str(row.get("subcategory") or "").strip() or None,
+        payment_method=str(row.get("payment_method") or "cash").strip() or "cash",
+        tx_date=str(row.get("date") or "").strip() or None,
+        note=str(row.get("note") or "").strip() or None,
+        receipt_path=str(row.get("receipt_path") or "").strip() or None,
+    )
+    tags_str = str(row.get("tags") or "").strip()
+    if not tags_str:
+        return
+    tag_ids: list[int] = []
+    for tag_name in tags_str.split(","):
+        normalized_tag_name = tag_name.strip()
+        if not normalized_tag_name:
+            continue
+        tag = db.get_tag_by_name(normalized_tag_name)
+        if tag is None:
+            tag = db.add_tag(normalized_tag_name)
+        tag_ids.append(int(tag["id"]))
+    if tag_ids:
+        db.set_transaction_tags(int(tx["id"]), tag_ids)
+
+
+def _export_transactions_csv(
+    db: _DatabaseIOProtocol,
+    filepath: str,
+    *,
+    tx_type: str | None = None,
+    account_id: int | None = None,
+    since_date: str | None = None,
+    until_date: str | None = None,
+    category: str | None = None,
+    search: str | None = None,
+) -> int:
+    """Export filtered transactions to CSV using canonical transaction columns."""
+    rows = _transaction_export_rows(
+        db,
+        tx_type=tx_type,
+        account_id=account_id,
+        since_date=since_date,
+        until_date=until_date,
+        category=category,
+        search=search,
+    )
+    with open(filepath, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=list(_TRANSACTION_COLUMNS), extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(cast(Any, rows))
+    return len(rows)
+
+
+def _export_transactions_xlsx(
+    db: _DatabaseIOProtocol,
+    filepath: str | Path,
+    *,
+    tx_type: str | None = None,
+    account_id: int | None = None,
+    since_date: str | None = None,
+    until_date: str | None = None,
+    category: str | None = None,
+    search: str | None = None,
+) -> int:
+    """Export filtered transactions to an XLSX workbook."""
+    from openpyxl import Workbook
+
+    rows = _transaction_export_rows(
+        db,
+        tx_type=tx_type,
+        account_id=account_id,
+        since_date=since_date,
+        until_date=until_date,
+        category=category,
+        search=search,
+    )
+    target = Path(filepath).expanduser()
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = _TRANSACTION_SHEET_NAME
+    sheet.append(list(_TRANSACTION_COLUMNS))
+    for row in rows:
+        sheet.append([row.get(column) for column in _TRANSACTION_COLUMNS])
+    workbook.save(target)
+    return len(rows)
+
+
+def _import_transactions_csv(db: _DatabaseIOProtocol, filepath: str) -> tuple[int, int]:
+    """Import transactions from CSV using canonical header aliases."""
+    imported = 0
+    errors = 0
+    with open(filepath, newline="", encoding="utf-8") as fh:
+        reader = csv.reader(fh)
+        header_row = next(reader, None)
+        if header_row is None:
+            raise ValueError("Transaction file is empty.")
+        column_indexes = _resolve_canonical_headers(
+            list(header_row),
+            alias_lookup=_TRANSACTION_HEADER_ALIAS_LOOKUP,
+            required_columns=_TRANSACTION_REQUIRED_COLUMNS,
+            label="transaction",
+        )
+        for row in reader:
+            try:
+                _import_transaction_row(db, _row_to_canonical_mapping(list(row), column_indexes))
+                imported += 1
+            except _CSV_IMPORT_ROW_ERRORS as exc:
+                logger.warning("CSV import error on row %r: %s", row, exc)
+                errors += 1
+    return imported, errors
+
+
+def _import_transactions_xlsx(db: _DatabaseIOProtocol, filepath: str) -> tuple[int, int]:
+    """Import transactions from XLSX using canonical header aliases."""
+    from openpyxl import load_workbook
+
+    imported = 0
+    errors = 0
+    workbook = load_workbook(filepath, read_only=True, data_only=True)
+    try:
+        worksheet = cast(
+            Any,
+            workbook[_TRANSACTION_SHEET_NAME] if _TRANSACTION_SHEET_NAME in workbook.sheetnames else workbook.active,
+        )
+        header_row = next(worksheet.iter_rows(min_row=1, max_row=1, values_only=True), None)
+        if header_row is None:
+            raise ValueError("Transaction file is empty.")
+        column_indexes = _resolve_canonical_headers(
+            list(header_row),
+            alias_lookup=_TRANSACTION_HEADER_ALIAS_LOOKUP,
+            required_columns=_TRANSACTION_REQUIRED_COLUMNS,
+            label="transaction",
+        )
+        for row in worksheet.iter_rows(min_row=2, values_only=True):
+            try:
+                _import_transaction_row(db, _row_to_canonical_mapping(list(row), column_indexes))
+                imported += 1
+            except _CSV_IMPORT_ROW_ERRORS as exc:
+                logger.warning("XLSX import error on row %r: %s", row, exc)
+                errors += 1
+    finally:
+        workbook.close()
+    return imported, errors
+
+
+def import_transactions_file(db: _DatabaseIOProtocol, filepath: str) -> tuple[int, int]:
+    """Import transactions from CSV or XLSX based on the file extension."""
+    suffix = Path(filepath).suffix.casefold()
+    if suffix == ".csv":
+        return _import_transactions_csv(db, filepath)
+    if suffix == ".xlsx":
+        return _import_transactions_xlsx(db, filepath)
+    raise _unsupported_transaction_extension(filepath)
+
+
+def export_transactions_file(
+    db: _DatabaseIOProtocol,
+    filepath: str,
+    *,
+    tx_type: str | None = None,
+    account_id: int | None = None,
+    since_date: str | None = None,
+    until_date: str | None = None,
+    category: str | None = None,
+    search: str | None = None,
+) -> int:
+    """Export transactions to CSV or XLSX based on the file extension."""
+    suffix = Path(filepath).suffix.casefold()
+    if suffix == ".csv":
+        return _export_transactions_csv(
+            db,
+            filepath,
+            tx_type=tx_type,
+            account_id=account_id,
+            since_date=since_date,
+            until_date=until_date,
+            category=category,
+            search=search,
+        )
+    if suffix == ".xlsx":
+        return _export_transactions_xlsx(
+            db,
+            filepath,
+            tx_type=tx_type,
+            account_id=account_id,
+            since_date=since_date,
+            until_date=until_date,
+            category=category,
+            search=search,
+        )
+    raise _unsupported_transaction_extension(filepath)
 
 
 class _DatabaseIOProtocol(Protocol):
@@ -115,8 +453,9 @@ def export_transactions_csv(
     search: str | None = None,
 ) -> int:
     """Export filtered transactions to a CSV file. Returns row count."""
-    txs = db.get_transactions(
-        limit=1_000_000,
+    return _export_transactions_csv(
+        db,
+        filepath,
         tx_type=tx_type,
         account_id=account_id,
         since_date=since_date,
@@ -124,30 +463,6 @@ def export_transactions_csv(
         category=category,
         search=search,
     )
-    columns = [
-        "id",
-        "date",
-        "type",
-        "amount",
-        "account_name",
-        "category",
-        "subcategory",
-        "payment_method",
-        "description",
-        "note",
-        "receipt_path",
-        "tags",
-    ]
-    tx_ids = [tx["id"] for tx in txs]
-    tags_map = db.get_transactions_tags_bulk(tx_ids) if tx_ids else {}
-    for tx in txs:
-        tag_list = tags_map.get(tx["id"], [])
-        tx["tags"] = ", ".join(t["name"] for t in tag_list)
-    with open(filepath, "w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=columns, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(txs)
-    return len(txs)
 
 
 def _variance_signal(section: str, variance: float) -> str:
@@ -208,9 +523,8 @@ def export_budget_comparison_excel(
 
     workbook = Workbook()
     sheet = workbook.active
-    assert sheet is not None
     sheet.title = "Real vs PPTO"
-    sheet.freeze_panes = "A9"
+    sheet.freeze_panes = cast(Any, "A9")
 
     title = f"Reporte Real vs Presupuesto | {budget['code']} | {budget['year']} | {budget['currency']}"
     sheet.cell(1, 1, title)
@@ -393,49 +707,4 @@ def export_budget_comparison_excel(
 
 def import_transactions_csv(db: _DatabaseIOProtocol, filepath: str) -> tuple[int, int]:
     """Import transactions from a CSV file. Returns (imported, errors)."""
-    imported = 0
-    errors = 0
-    with open(filepath, newline="", encoding="utf-8") as fh:
-        reader = csv.DictReader(fh)
-        for row in reader:
-            try:
-                account_name = (row.get("account_name") or "General").strip() or "General"
-                account = db.get_or_create_account(account_name)
-                tx_type = row["type"].strip().lower()
-                if tx_type not in ("income", "expense"):
-                    raise ValueError(f"Invalid type: {tx_type}")
-                amount = money_to_decimal(row["amount"])
-                if amount is None:
-                    raise ValueError("Amount is required")
-                if amount <= MONEY_ZERO:
-                    raise ValueError("Amount must be positive")
-                tx = db.add_transaction(
-                    account_id=account["id"],
-                    tx_type=tx_type,
-                    amount=amount,
-                    description=row.get("description") or None,
-                    category=row.get("category") or None,
-                    subcategory=row.get("subcategory") or None,
-                    payment_method=(row.get("payment_method") or "cash"),
-                    tx_date=row.get("date") or None,
-                    note=row.get("note") or None,
-                    receipt_path=row.get("receipt_path") or None,
-                )
-                tags_str = (row.get("tags") or "").strip()
-                if tags_str:
-                    tag_ids: list[int] = []
-                    for tag_name in tags_str.split(","):
-                        tag_name = tag_name.strip()
-                        if not tag_name:
-                            continue
-                        tag = db.get_tag_by_name(tag_name)
-                        if tag is None:
-                            tag = db.add_tag(tag_name)
-                        tag_ids.append(int(tag["id"]))
-                    if tag_ids:
-                        db.set_transaction_tags(int(tx["id"]), tag_ids)
-                imported += 1
-            except _CSV_IMPORT_ROW_ERRORS as exc:
-                logger.warning("CSV import error on row %r: %s", row, exc)
-                errors += 1
-    return imported, errors
+    return _import_transactions_csv(db, filepath)

@@ -8,13 +8,11 @@ import sqlite3
 import pytest
 
 from mira.db import migrations as db_migrations
-from mira.db import model as db_model
 from mira.db.errors import DatabaseSchemaError
 
 
 def _create_minimum_v3_schema(conn: sqlite3.Connection) -> None:
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE accounts (
             id INTEGER PRIMARY KEY,
             name TEXT,
@@ -24,10 +22,8 @@ def _create_minimum_v3_schema(conn: sqlite3.Connection) -> None:
             is_default INTEGER NOT NULL DEFAULT 0,
             created_at TIMESTAMP
         )
-        """
-    )
-    conn.execute(
-        """
+        """)
+    conn.execute("""
         CREATE TABLE transactions (
             id INTEGER PRIMARY KEY,
             account_id INTEGER,
@@ -37,8 +33,7 @@ def _create_minimum_v3_schema(conn: sqlite3.Connection) -> None:
             category_id INTEGER,
             date DATE
         )
-        """
-    )
+        """)
 
 
 def test_migrate_v3_to_v4_creates_reconciliation_tables_and_columns() -> None:
@@ -48,16 +43,10 @@ def test_migrate_v3_to_v4_creates_reconciliation_tables_and_columns() -> None:
 
         db_migrations._migrate_v3_to_v4(conn)
 
-        transaction_columns = {
-            str(row[1]) for row in conn.execute("PRAGMA table_info(transactions)").fetchall()
-        }
-        tables = {
-            str(row[0])
-            for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
-        }
+        transaction_columns = {str(row[1]) for row in conn.execute("PRAGMA table_info(transactions)").fetchall()}
+        tables = {str(row[0]) for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()}
         indexes = {
-            str(row[0])
-            for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'index'").fetchall()
+            str(row[0]) for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'index'").fetchall()
         }
         schema_rows = conn.execute("SELECT version, status FROM schema_version").fetchall()
 
@@ -76,17 +65,11 @@ def test_migrate_v3_to_v4_creates_reconciliation_tables_and_columns() -> None:
 
 def _create_minimum_v1_schema(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE TABLE accounts (id INTEGER PRIMARY KEY, balance REAL, currency TEXT)")
-    conn.execute(
-        "CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL, converted_amount REAL)"
-    )
-    conn.execute(
-        "CREATE TABLE buckets (id INTEGER PRIMARY KEY, budget_amount REAL, spent_amount REAL)"
-    )
+    conn.execute("CREATE TABLE transactions (id INTEGER PRIMARY KEY, amount REAL, converted_amount REAL)")
+    conn.execute("CREATE TABLE buckets (id INTEGER PRIMARY KEY, budget_amount REAL, spent_amount REAL)")
     conn.execute("CREATE TABLE recurring_transactions (id INTEGER PRIMARY KEY, amount REAL)")
     conn.execute("CREATE TABLE budget_detail (id INTEGER PRIMARY KEY, amount REAL)")
-    conn.execute(
-        "CREATE TABLE savings_goals (id INTEGER PRIMARY KEY, target_amount REAL, current_amount REAL)"
-    )
+    conn.execute("CREATE TABLE savings_goals (id INTEGER PRIMARY KEY, target_amount REAL, current_amount REAL)")
     conn.execute("CREATE TABLE message_events (id INTEGER PRIMARY KEY, context_amount REAL)")
     conn.commit()
 
@@ -119,15 +102,11 @@ def test_migrate_v1_to_v2_converts_legacy_cents_columns() -> None:
         account_row = conn.execute("SELECT balance_cents FROM accounts WHERE id = 1").fetchone()
         assert account_row[0] == 12345
 
-        tx_row = conn.execute(
-            "SELECT amount_cents, converted_amount_cents FROM transactions WHERE id = 1"
-        ).fetchone()
+        tx_row = conn.execute("SELECT amount_cents, converted_amount_cents FROM transactions WHERE id = 1").fetchone()
         assert tx_row[0] == 1000
         assert tx_row[1] is None
 
-        bucket_row = conn.execute(
-            "SELECT budget_amount_cents, spent_amount_cents FROM buckets WHERE id = 1"
-        ).fetchone()
+        bucket_row = conn.execute("SELECT budget_amount_cents, spent_amount_cents FROM buckets WHERE id = 1").fetchone()
         assert bucket_row == (4025, 1575)
 
         savings_goal_row = conn.execute(
@@ -135,9 +114,7 @@ def test_migrate_v1_to_v2_converts_legacy_cents_columns() -> None:
         ).fetchone()
         assert savings_goal_row == (50000, 12525)
 
-        message_event_row = conn.execute(
-            "SELECT context_amount_cents FROM message_events WHERE id = 1"
-        ).fetchone()
+        message_event_row = conn.execute("SELECT context_amount_cents FROM message_events WHERE id = 1").fetchone()
         assert message_event_row[0] is None
     finally:
         conn.close()
@@ -149,16 +126,14 @@ def test_migrate_v2_to_v3_sanitizes_duplicate_default_accounts_and_creates_relat
         conn.execute(
             "CREATE TABLE accounts (id INTEGER PRIMARY KEY, name TEXT, balance_cents INTEGER NOT NULL DEFAULT 0, account_type TEXT, currency TEXT, is_default INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP)"
         )
+        conn.execute("CREATE TABLE categories (id INTEGER PRIMARY KEY)")
         conn.execute(
-            "CREATE TABLE categories (id INTEGER PRIMARY KEY)"
+            "INSERT INTO accounts (name, balance_cents, account_type, currency, is_default) VALUES (?, ?, ?, ?, ?)",
+            ("General", 0, "bank", "USD", 1),
         )
         conn.execute(
-            "INSERT INTO accounts (name, balance_cents, account_type, currency, is_default) VALUES (?, ?, ?, ?, ?)"
-            , ("General", 0, "bank", "USD", 1)
-        )
-        conn.execute(
-            "INSERT INTO accounts (name, balance_cents, account_type, currency, is_default) VALUES (?, ?, ?, ?, ?)"
-            , ("Second Default", 0, "bank", "USD", 1)
+            "INSERT INTO accounts (name, balance_cents, account_type, currency, is_default) VALUES (?, ?, ?, ?, ?)",
+            ("Second Default", 0, "bank", "USD", 1),
         )
         conn.commit()
 
@@ -216,8 +191,7 @@ def test_migrate_database_records_from_and_target_versions_in_schema_audit() -> 
         migration_applied = db_migrations.migrate_database(conn, 3, 4)
 
         schema_versions = [
-            int(row[0])
-            for row in conn.execute("SELECT version FROM schema_version ORDER BY version").fetchall()
+            int(row[0]) for row in conn.execute("SELECT version FROM schema_version ORDER BY version").fetchall()
         ]
         user_version = int(conn.execute("PRAGMA user_version").fetchone()[0])
 

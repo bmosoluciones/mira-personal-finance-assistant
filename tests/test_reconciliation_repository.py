@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from datetime import date
 from pathlib import Path
 
 import pytest
@@ -49,7 +48,15 @@ def test_reconciliation_rejects_empty_selection_lists(db: Database) -> None:
             date_from="2026-01-01",
             date_to="2026-01-31",
             system_transaction_ids=[],
-            external_rows=[{"reference": "ext", "date": "2026-01-05", "description": "External", "amount": 100.0, "external_item_key": "ext"}],
+            external_rows=[
+                {
+                    "reference": "ext",
+                    "date": "2026-01-05",
+                    "description": "External",
+                    "amount": 100.0,
+                    "external_item_key": "ext",
+                }
+            ],
         )
 
     tx = db.transaction.create(
@@ -136,7 +143,9 @@ def test_reconciliation_creates_group_and_clears_matches(db: Database) -> None:
 
     cleared = db.reconciliation.clear_for_transactions([int(tx["id"])])
     assert cleared == 1
-    assert db.reconciliation.list_groups(account_id=int(account["id"]), date_from="2026-01-01", date_to="2026-01-31") == []
+    assert (
+        db.reconciliation.list_groups(account_id=int(account["id"]), date_from="2026-01-01", date_to="2026-01-31") == []
+    )
 
     group_id = result["group"]["id"]
     deleted = db.reconciliation.clear_groups([group_id])

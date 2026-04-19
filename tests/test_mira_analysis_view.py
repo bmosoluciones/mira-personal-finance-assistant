@@ -262,7 +262,14 @@ def test_mira_analysis_ytd_and_trend_chart_legends_use_theme_palette(
             "budget": {"has_budget": False},
             "metrics": {},
             "ytd": [
-                {"month": 1, "year": 2026, "income": 1000.0, "expense_operational": 600.0, "net": 400.0, "savings": 100.0}
+                {
+                    "month": 1,
+                    "year": 2026,
+                    "income": 1000.0,
+                    "expense_operational": 600.0,
+                    "net": 400.0,
+                    "savings": 100.0,
+                }
             ],
             "historical_stacked": {"income": [{"period": "2026-01", "segments": {"Salary": 1000.0}}]},
         }

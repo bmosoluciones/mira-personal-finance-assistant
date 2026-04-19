@@ -46,7 +46,12 @@ class FakeDemoSeedDB:
         self.default_set_account_id = account_id
 
     def add_account(self, name: str, account_type: str, opening_balance: float, currency: str) -> dict[str, Any]:
-        account = {"id": len(self.created_accounts) + 1, "name": name, "account_type": account_type, "currency": currency}
+        account = {
+            "id": len(self.created_accounts) + 1,
+            "name": name,
+            "account_type": account_type,
+            "currency": currency,
+        }
         self.created_accounts.append(account)
         self._accounts_by_name[name] = account
         return account
@@ -409,4 +414,3 @@ def test_seed_monthly_transactions_creates_expected_transactions_and_tag_links()
     assert tag_links > 0
     assert any(tx["category"] == "savings" for tx in db.transactions)
     assert any(tx["note"] == "mira_cli_seed:2026" for tx in db.transactions)
-

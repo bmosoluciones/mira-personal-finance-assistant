@@ -120,7 +120,9 @@ def test_credit_card_helper_resolve_targets_and_sources(db: Database) -> None:
     )
 
     assert helper.resolve_credit_payment_target({"account": "Visa", "description": None})["id"] == int(visa["id"])
-    assert helper.resolve_credit_payment_target({"account": None, "description": "paid to visa"})["id"] == int(visa["id"])
+    assert helper.resolve_credit_payment_target({"account": None, "description": "paid to visa"})["id"] == int(
+        visa["id"]
+    )
     assert helper.resolve_credit_payment_source("from BAC")["name"] == "BAC"
 
 
@@ -257,9 +259,7 @@ def test_credit_card_helper_unique_credit_purchase_resolves_card(db: Database) -
         format_money=str,
     )
 
-    result = helper.resolve_expense_account(
-        {"account": None, "description": "bought with tarjeta"}
-    )
+    result = helper.resolve_expense_account({"account": None, "description": "bought with tarjeta"})
     assert isinstance(result, tuple)
     assert result[0] == "Visa"
 
@@ -282,9 +282,7 @@ def test_credit_card_helper_purchase_requires_specific_card_when_multiple(db: Da
         format_money=str,
     )
 
-    result = helper.resolve_expense_account(
-        {"account": None, "description": "bought with tarjeta"}
-    )
+    result = helper.resolve_expense_account({"account": None, "description": "bought with tarjeta"})
     assert isinstance(result, ActionResult)
     assert result.action == "none"
     assert "which credit card" in result.message
@@ -298,7 +296,9 @@ def test_report_builder_period_range_presets() -> None:
     assert components.ExecutorReportBuilder.period_range({"preset": "last_3_months"})[2] == "last_3_months"
     assert components.ExecutorReportBuilder.period_range({"preset": "last_6_months"})[2] == "last_6_months"
     assert components.ExecutorReportBuilder.period_range({"preset": "all_time"})[2] == "all_time"
-    assert components.ExecutorReportBuilder.period_range({"preset": "custom", "from": "2026-01-01", "to": "2026-01-31"}) == ("2026-01-01", "2026-01-31", "custom")
+    assert components.ExecutorReportBuilder.period_range(
+        {"preset": "custom", "from": "2026-01-01", "to": "2026-01-31"}
+    ) == ("2026-01-01", "2026-01-31", "custom")
 
 
 def test_transaction_recorder_add_income_uses_amount_when_converted_missing() -> None:
@@ -310,12 +310,19 @@ def test_transaction_recorder_add_income_uses_amount_when_converted_missing() ->
         db=fake_db,
         action_result_cls=ActionResult,
         format_money=lambda amount: f"{amount:.2f}",
-        account_resolver=SimpleNamespace(resolve_account=lambda requested, raw_text=None: ("Wallet", {"id": 1, "name": "Wallet"})),
+        account_resolver=SimpleNamespace(
+            resolve_account=lambda requested, raw_text=None: ("Wallet", {"id": 1, "name": "Wallet"})
+        ),
         category_resolver=SimpleNamespace(resolve_category=lambda action, cat_type: "Food"),
-        credit_card_helper=SimpleNamespace(maybe_record_credit_card_payment=lambda action: None, resolve_expense_account=lambda action: ("Wallet", {"id": 1, "name": "Wallet"})),
+        credit_card_helper=SimpleNamespace(
+            maybe_record_credit_card_payment=lambda action: None,
+            resolve_expense_account=lambda action: ("Wallet", {"id": 1, "name": "Wallet"}),
+        ),
     )
 
-    result = recorder.add_income({"amount": 100.0, "converted_amount": None, "description": "salary", "base_currency": "USD"})
+    result = recorder.add_income(
+        {"amount": 100.0, "converted_amount": None, "description": "salary", "base_currency": "USD"}
+    )
     assert result.success is True
     assert result.data["transaction"]["amount"] == 100.0
     assert result.data["transaction"]["category"] == "Food"
@@ -330,9 +337,14 @@ def test_transaction_recorder_add_income_raises_when_amount_missing() -> None:
         db=fake_db,
         action_result_cls=ActionResult,
         format_money=lambda amount: f"{amount:.2f}",
-        account_resolver=SimpleNamespace(resolve_account=lambda requested, raw_text=None: ("Wallet", {"id": 1, "name": "Wallet"})),
+        account_resolver=SimpleNamespace(
+            resolve_account=lambda requested, raw_text=None: ("Wallet", {"id": 1, "name": "Wallet"})
+        ),
         category_resolver=SimpleNamespace(resolve_category=lambda action, cat_type: "Food"),
-        credit_card_helper=SimpleNamespace(maybe_record_credit_card_payment=lambda action: None, resolve_expense_account=lambda action: ("Wallet", {"id": 1, "name": "Wallet"})),
+        credit_card_helper=SimpleNamespace(
+            maybe_record_credit_card_payment=lambda action: None,
+            resolve_expense_account=lambda action: ("Wallet", {"id": 1, "name": "Wallet"}),
+        ),
     )
 
     with pytest.raises(ValueError, match="income amount is required"):
@@ -348,12 +360,19 @@ def test_transaction_recorder_add_expense_uses_amount_when_converted_missing() -
         db=fake_db,
         action_result_cls=ActionResult,
         format_money=lambda amount: f"{amount:.2f}",
-        account_resolver=SimpleNamespace(resolve_account=lambda requested, raw_text=None: ("Wallet", {"id": 1, "name": "Wallet"})),
+        account_resolver=SimpleNamespace(
+            resolve_account=lambda requested, raw_text=None: ("Wallet", {"id": 1, "name": "Wallet"})
+        ),
         category_resolver=SimpleNamespace(resolve_category=lambda action, cat_type: "Food"),
-        credit_card_helper=SimpleNamespace(maybe_record_credit_card_payment=lambda action: None, resolve_expense_account=lambda action: ("Wallet", {"id": 1, "name": "Wallet"})),
+        credit_card_helper=SimpleNamespace(
+            maybe_record_credit_card_payment=lambda action: None,
+            resolve_expense_account=lambda action: ("Wallet", {"id": 1, "name": "Wallet"}),
+        ),
     )
 
-    result = recorder.add_expense({"amount": 60.0, "converted_amount": None, "description": "coffee", "base_currency": "USD"})
+    result = recorder.add_expense(
+        {"amount": 60.0, "converted_amount": None, "description": "coffee", "base_currency": "USD"}
+    )
     assert result.success is True
     assert result.data["transaction"]["amount"] == 60.0
     assert result.data["transaction"]["category"] == "Food"
@@ -368,9 +387,14 @@ def test_transaction_recorder_add_expense_raises_when_amount_missing() -> None:
         db=fake_db,
         action_result_cls=ActionResult,
         format_money=lambda amount: f"{amount:.2f}",
-        account_resolver=SimpleNamespace(resolve_account=lambda requested, raw_text=None: ("Wallet", {"id": 1, "name": "Wallet"})),
+        account_resolver=SimpleNamespace(
+            resolve_account=lambda requested, raw_text=None: ("Wallet", {"id": 1, "name": "Wallet"})
+        ),
         category_resolver=SimpleNamespace(resolve_category=lambda action, cat_type: "Food"),
-        credit_card_helper=SimpleNamespace(maybe_record_credit_card_payment=lambda action: None, resolve_expense_account=lambda action: ("Wallet", {"id": 1, "name": "Wallet"})),
+        credit_card_helper=SimpleNamespace(
+            maybe_record_credit_card_payment=lambda action: None,
+            resolve_expense_account=lambda action: ("Wallet", {"id": 1, "name": "Wallet"}),
+        ),
     )
 
     with pytest.raises(ValueError, match="expense amount is required"):
@@ -387,7 +411,9 @@ def test_summary_tools_all_presets() -> None:
     assert components.ExecutorSummaryTools.period_range({"preset": "last_6_months"}, today=today)[2] == "last_6_months"
     assert components.ExecutorSummaryTools.period_range({"preset": "this_year"}, today=today)[2] == "this_year"
     assert components.ExecutorSummaryTools.period_range({"preset": "all_time"}, today=today)[2] == "all_time"
-    assert components.ExecutorSummaryTools.period_range({"preset": "custom", "from": "2026-01-01", "to": "2026-01-31"}, today=today) == ("2026-01-01", "2026-01-31", "custom")
+    assert components.ExecutorSummaryTools.period_range(
+        {"preset": "custom", "from": "2026-01-01", "to": "2026-01-31"}, today=today
+    ) == ("2026-01-01", "2026-01-31", "custom")
 
 
 def test_resolve_expense_account_branches(db: Database) -> None:
@@ -415,15 +441,11 @@ def test_resolve_expense_account_branches(db: Database) -> None:
     name, account = helper.resolve_expense_account({"account": None, "description": "charged with Visa"})
     assert name == "Visa"
 
-    result = helper.resolve_expense_account(
-        {"account": None, "description": "charged with Visa Mastercard"}
-    )
+    result = helper.resolve_expense_account({"account": None, "description": "charged with Visa Mastercard"})
     assert isinstance(result, ActionResult)
     assert result.action == "none"
 
-    result = helper.resolve_expense_account(
-        {"account": None, "description": "bought using Visa"}
-    )
+    result = helper.resolve_expense_account({"account": None, "description": "bought using Visa"})
     assert isinstance(result, tuple)
     assert result[0] == "Visa"
 
@@ -436,7 +458,9 @@ def test_report_builder_period_range_and_filters(monkeypatch) -> None:
 
     monkeypatch.setattr(components, "date", FakeDate)
 
-    def fake_transaction_list(limit, tx_type, account_id, since_date, until_date, category, search, min_amount, max_amount):
+    def fake_transaction_list(
+        limit, tx_type, account_id, since_date, until_date, category, search, min_amount, max_amount
+    ):
         transactions = [
             {"id": 1, "type": "income", "account_id": 1, "category": "food", "amount": 20, "description": "groceries"},
             {"id": 2, "type": "income", "account_id": 2, "category": "transport", "amount": 10, "description": "uber"},
@@ -506,7 +530,9 @@ def test_report_builder_period_range_defaults_and_summary_tools() -> None:
     assert components.ExecutorReportBuilder.period_range(None)[2] == "this_month"
     assert components.ExecutorReportBuilder.period_range({"preset": "this_year"})[2] == "this_year"
 
-    start, end, preset = components.ExecutorSummaryTools.period_range({"preset": "unsupported"}, today=date(2026, 4, 15))
+    start, end, preset = components.ExecutorSummaryTools.period_range(
+        {"preset": "unsupported"}, today=date(2026, 4, 15)
+    )
     assert preset == "this_month"
     assert start == "2026-04-01"
     assert end == "2026-04-15"
