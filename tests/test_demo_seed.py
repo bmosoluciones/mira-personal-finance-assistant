@@ -307,7 +307,6 @@ def test_build_and_seed_budget_plan_calls_upsert_for_every_category_and_month() 
     assert len(db.upsert_calls) == 12 * len(budget_plan)
     assert db.upsert_calls[0][0] == 27
     assert db.upsert_calls[0][2] == 2026
-<<<<<<< HEAD
 
 
 class FakeSeedMonthlyDB:
@@ -418,5 +417,3 @@ def test_seed_monthly_transactions_creates_expected_transactions_and_tag_links()
     assert tag_links > 0
     assert any(tx["category"] == "savings" for tx in db.transactions)
     assert any(tx["note"] == "mira_cli_seed:2026" for tx in db.transactions)
-=======
->>>>>>> 4bd787f (feact(core): Support import/export with xlsx or csv files)
