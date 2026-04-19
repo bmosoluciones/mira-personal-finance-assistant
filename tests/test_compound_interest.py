@@ -72,3 +72,37 @@ def test_all_frequencies_produce_correct_periods_per_year() -> None:
         )
         assert projection.periods_per_year == int(freq)
         assert projection.total_periods == int(freq)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ("initial_fund", "initial_fund must be greater than or equal to 0"),
+        ("annual_rate_percent", "annual_rate_percent must be greater than or equal to 0"),
+        ("years_zero", "years must be greater than 0"),
+        ("years_large", "years must be less than or equal to 100"),
+        ("periodic_contribution", "periodic_contribution must be greater than or equal to 0"),
+    ],
+)
+def test_projection_raises_for_invalid_parameters(kwargs: str, message: str) -> None:
+    params = {
+        "initial_fund": 1000,
+        "annual_rate_percent": 5,
+        "capitalization": PaymentFrequency.ANNUAL,
+        "years": 1,
+        "periodic_contribution": 0,
+    }
+
+    if kwargs == "initial_fund":
+        params["initial_fund"] = -1
+    elif kwargs == "annual_rate_percent":
+        params["annual_rate_percent"] = -0.1
+    elif kwargs == "years_zero":
+        params["years"] = 0
+    elif kwargs == "years_large":
+        params["years"] = 101
+    elif kwargs == "periodic_contribution":
+        params["periodic_contribution"] = -10
+
+    with pytest.raises(ValueError, match=message):
+        calculate_compound_interest_projection(CompoundInterestInput(**params))

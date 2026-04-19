@@ -6,6 +6,10 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 
 ## [Unreleased]
 
+### Changed
+
+- Updated coverage configuration to include `src/mira/ui` so future UI module refactors can be measured by unit tests.
+
 ## [0.0.1b3] - 2026-04-17
 
 ### Added

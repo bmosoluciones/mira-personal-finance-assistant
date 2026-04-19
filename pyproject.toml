@@ -120,10 +120,8 @@ markers = [
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["src/mira/ui/*.py", "src/mira/ui/**/*.py"]
 
 [tool.coverage.report]
-omit = ["src/mira/ui/*.py", "src/mira/ui/**/*.py"]
 
 [tool.mypy]
 python_version = "3.12"
