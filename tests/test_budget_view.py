@@ -160,8 +160,12 @@ def test_budget_view_tables_enable_horizontal_scroll_and_responsive_resize_modes
         app.processEvents()
 
         budget_header = view._budget_table.horizontalHeader()
-        assert budget_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.Stretch
-        assert budget_header.sectionResizeMode(1) == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
+        assert budget_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
+        assert budget_header.sectionResizeMode(1) == qtwidgets.QHeaderView.ResizeMode.Stretch
+        assert (
+            budget_header.sectionResizeMode(view._budget_table.columnCount() - 1)
+            == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
+        )
         assert view._budget_table.horizontalScrollBarPolicy() == qtcore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
 
         view._btn_compare.click()

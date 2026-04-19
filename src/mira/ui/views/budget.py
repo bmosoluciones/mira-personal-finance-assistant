@@ -384,12 +384,18 @@ class BudgetView(QWidget):
                 self._t("budget.table.total", "Total anual"),
             ]
         )
-        self._budget_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        for column_idx in range(1, self._budget_table.columnCount()):
+        self._budget_table.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.ResizeToContents
+        )
+        for column_idx in range(1, self._budget_table.columnCount() - 1):
             self._budget_table.horizontalHeader().setSectionResizeMode(
                 column_idx,
-                QHeaderView.ResizeMode.ResizeToContents,
+                QHeaderView.ResizeMode.Stretch,
             )
+        self._budget_table.horizontalHeader().setSectionResizeMode(
+            self._budget_table.columnCount() - 1,
+            QHeaderView.ResizeMode.ResizeToContents,
+        )
         self._budget_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._budget_table.verticalHeader().setVisible(False)
         self._budget_table.setMinimumHeight(240)
