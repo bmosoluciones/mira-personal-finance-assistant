@@ -56,6 +56,8 @@ from mira.ui.widgets.cards import CardWidget
 from mira.ui.delegates.cell_delegates import _SignalCellDelegate
 
 _BUDGET_AMOUNT_ROLE = int(Qt.ItemDataRole.UserRole) + 1
+_CATEGORY_COLUMN_WIDTH_RATIO = 0.2
+_CATEGORY_COLUMN_MIN_WIDTH = 160
 
 
 @dataclass
@@ -93,6 +95,11 @@ class BudgetView(QWidget):
         super().__init__(parent)
         self._db = db
         self._state = BudgetViewState()
+        self._budget_category_row_by_id: dict[int, int] = {}
+        self._budget_category_type_by_id: dict[int, str] = {}
+        self._budget_total_income_row: int | None = None
+        self._budget_total_expense_row: int | None = None
+        self._budget_balance_row: int | None = None
         self._build_ui()
 
     @property
@@ -384,12 +391,17 @@ class BudgetView(QWidget):
                 self._t("budget.table.total", "Total anual"),
             ]
         )
-        self._budget_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        for column_idx in range(1, self._budget_table.columnCount()):
+        self._budget_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        self._budget_table.setColumnWidth(0, _CATEGORY_COLUMN_MIN_WIDTH)
+        for column_idx in range(1, self._budget_table.columnCount() - 1):
             self._budget_table.horizontalHeader().setSectionResizeMode(
                 column_idx,
-                QHeaderView.ResizeMode.ResizeToContents,
+                QHeaderView.ResizeMode.Stretch,
             )
+        self._budget_table.horizontalHeader().setSectionResizeMode(
+            self._budget_table.columnCount() - 1,
+            QHeaderView.ResizeMode.ResizeToContents,
+        )
         self._budget_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._budget_table.verticalHeader().setVisible(False)
         self._budget_table.setMinimumHeight(240)
@@ -479,7 +491,8 @@ class BudgetView(QWidget):
                 self._t("budget.status", "Estado"),
             ]
         )
-        self._monthly_tracking_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self._monthly_tracking_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        self._monthly_tracking_table.setColumnWidth(0, _CATEGORY_COLUMN_MIN_WIDTH)
         for column_idx in range(1, self._monthly_tracking_table.columnCount()):
             self._monthly_tracking_table.horizontalHeader().setSectionResizeMode(
                 column_idx,
@@ -661,6 +674,104 @@ class BudgetView(QWidget):
         if index.isValid():
             self._budget_table.scrollTo(index)
 
+    def _refresh_budget_row_and_summaries(
+        self,
+        row: int,
+        column: int,
+        amount: float,
+    ) -> None:
+        """Return refresh only the edited budget row and summary rows."""
+        self._budget_table.blockSignals(True)
+        value_item = self._budget_table.item(row, column)
+        if value_item is not None:
+            value_item.setText(_fmt_amount(self._db, amount))
+            value_item.setData(_BUDGET_AMOUNT_ROLE, float(amount))
+            value_item.setToolTip("")
+        self._update_category_annual_total(row)
+        self._update_summary_rows_from_table()
+        self._budget_table.blockSignals(False)
+
+    def _update_category_annual_total(self, row: int) -> None:
+        """Return refresh the category annual total for the edited row."""
+        annual_total = round(
+            sum(self._table_amount(self._budget_table.item(row, month_idx)) for month_idx in range(1, 13)),
+            2,
+        )
+        annual_item = self._budget_table.item(row, 13)
+        if annual_item is not None:
+            annual_item.setText(_fmt_amount(self._db, annual_total))
+            annual_item.setData(_BUDGET_AMOUNT_ROLE, annual_total)
+
+    def _update_summary_rows_from_table(self) -> None:
+        """Return refresh totals and balance summary rows using visible items only."""
+        income_totals = [0.0 for _ in range(12)]
+        expense_totals = [0.0 for _ in range(12)]
+
+        for category_id, row_idx in self._budget_category_row_by_id.items():
+            category_type = self._budget_category_type_by_id.get(category_id)
+            for month_idx in range(1, 13):
+                amount = self._table_amount(self._budget_table.item(row_idx, month_idx))
+                if category_type == "income":
+                    income_totals[month_idx - 1] = round(income_totals[month_idx - 1] + amount, 2)
+                elif category_type == "expense":
+                    expense_totals[month_idx - 1] = round(expense_totals[month_idx - 1] + amount, 2)
+
+        balance_totals = [round(income_totals[idx] - expense_totals[idx], 2) for idx in range(12)]
+        income_annual = round(sum(income_totals), 2)
+        expense_annual = round(sum(expense_totals), 2)
+        balance_annual = round(income_annual - expense_annual, 2)
+
+        if self._budget_total_income_row is not None:
+            self._set_row_totals(self._budget_total_income_row, income_totals, income_annual, "#4EC9B0")
+        if self._budget_total_expense_row is not None:
+            self._set_row_totals(self._budget_total_expense_row, expense_totals, expense_annual, "#F48771")
+        if self._budget_balance_row is not None:
+            self._set_row_totals(self._budget_balance_row, balance_totals, balance_annual)
+
+        self._update_budget_cards_from_totals(income_annual, expense_annual, balance_annual)
+
+    def _update_budget_cards_from_totals(self, income_total: float, expense_total: float, balance_total: float) -> None:
+        """Return refresh the budget KPI cards after inline edits."""
+        budget = self._selected_budget()
+        if budget is None:
+            return
+        currency = str(budget["currency"])
+        self._income_card.set_value(self._format_budget_amount(income_total, currency))
+        self._expense_card.set_value(self._format_budget_amount(expense_total, currency))
+        self._balance_card.set_value(self._format_budget_amount(balance_total, currency))
+        self._balance_card.set_color("#4EC9B0" if balance_total >= 0 else "#F48771")
+        self._warning_lbl.setText(
+            self._t(
+                "budget.warning.deficit",
+                "Precaución: los gastos superan los ingresos esperados. Esto no bloquea el presupuesto y puede representar ahorro o deuda.",
+            )
+            if expense_total > income_total
+            else ""
+        )
+
+    def _table_amount(self, item: QTableWidgetItem | None) -> float:
+        """Return the numeric value stored on a table item."""
+        if item is None:
+            return 0.0
+        amount = item.data(_BUDGET_AMOUNT_ROLE)
+        return float(amount) if amount is not None else 0.0
+
+    def _set_row_totals(self, row: int, values: list[float], annual_value: float, color: str | None = None) -> None:
+        """Return set monthly and annual totals for a summary row."""
+        for month_idx, amount in enumerate(values, start=1):
+            item = self._budget_table.item(row, month_idx)
+            if item is not None:
+                item.setText(_fmt_amount(self._db, float(amount)))
+                item.setData(_BUDGET_AMOUNT_ROLE, float(amount))
+        annual_item = self._budget_table.item(row, 13)
+        if annual_item is not None:
+            annual_item.setText(_fmt_amount(self._db, float(annual_value)))
+            annual_item.setData(_BUDGET_AMOUNT_ROLE, float(annual_value))
+            if color:
+                font = annual_item.font()
+                font.setWeight(QFont.Weight.DemiBold)
+                annual_item.setFont(font)
+
     def _style_row(self, row: int, color: str) -> None:
         """Return style row."""
         for col in range(self._budget_table.columnCount()):
@@ -668,6 +779,38 @@ class BudgetView(QWidget):
             if item is None:
                 continue
             item.setBackground(QColor(color))
+
+    def resizeEvent(self, event) -> None:
+        """Keep budget tables responsive when the view is resized."""
+        super().resizeEvent(event)
+        self._adjust_budget_category_column_width()
+        self._adjust_monthly_tracking_category_column_width()
+
+    def _adjust_budget_category_column_width(self) -> None:
+        """Return adjust the category column width proportionally."""
+        if self._budget_table.columnCount() == 0:
+            return
+        table_width = self._budget_table.viewport().width()
+        if table_width <= 0:
+            return
+        category_width = max(_CATEGORY_COLUMN_MIN_WIDTH, int(table_width * _CATEGORY_COLUMN_WIDTH_RATIO))
+        self._budget_table.setColumnWidth(0, category_width)
+
+    def _adjust_monthly_tracking_category_column_width(self) -> None:
+        """Return adjust the tracking category column width proportionally."""
+        if self._monthly_tracking_table.columnCount() == 0:
+            return
+        table_width = self._monthly_tracking_table.viewport().width()
+        if table_width <= 0:
+            return
+        category_width = max(_CATEGORY_COLUMN_MIN_WIDTH, int(table_width * _CATEGORY_COLUMN_WIDTH_RATIO))
+        self._monthly_tracking_table.setColumnWidth(0, category_width)
+
+    def _display_budget_row_name(self, row: dict[str, Any]) -> str:
+        """Return the visible name for budget comparison and tracking rows."""
+        if bool(row.get("is_uncategorized")):
+            return self._t(str(row.get("label_key") or "budget.uncategorized"), "Sin Categoria")
+        return str(row.get("name") or "")
 
     def _style_comparison_row(self, row: int, color: str) -> None:
         """Return style comparison row."""
@@ -824,6 +967,7 @@ class BudgetView(QWidget):
         self._loaded_budget_id = self._current_budget_id
         self._current_monthly_tracking = None
         self._budget_table_stack.setCurrentWidget(self._budget_table)
+        self._adjust_budget_category_column_width()
         self._comparison_hint.setText(
             self._t(
                 "budget.compare.pending",
@@ -864,6 +1008,11 @@ class BudgetView(QWidget):
         self._budget_table.blockSignals(True)
         self._budget_table.clearContents()
         self._budget_table.setRowCount(len(structure))
+        self._budget_category_row_by_id = {}
+        self._budget_category_type_by_id = {}
+        self._budget_total_income_row = None
+        self._budget_total_expense_row = None
+        self._budget_balance_row = None
 
         for row_idx, (kind, payload) in enumerate(structure):
             if kind == "section":
@@ -877,10 +1026,13 @@ class BudgetView(QWidget):
 
             if kind == "category":
                 category = dict(payload)
+                category_id = int(category["category_id"])
+                self._budget_category_row_by_id[category_id] = row_idx
+                self._budget_category_type_by_id[category_id] = str(category["type"])
                 self._budget_table.setItem(
                     row_idx,
                     0,
-                    self._make_text_item(str(category["name"]), user_data=int(category["category_id"])),
+                    self._make_text_item(str(category["name"]), user_data=category_id),
                 )
                 for month_idx, amount in enumerate(list(category["months"]), start=1):
                     self._budget_table.setItem(
@@ -892,6 +1044,7 @@ class BudgetView(QWidget):
                 continue
 
             if kind == "total_income":
+                self._budget_total_income_row = row_idx
                 self._budget_table.setItem(
                     row_idx,
                     0,
@@ -912,6 +1065,7 @@ class BudgetView(QWidget):
                 continue
 
             if kind == "total_expense":
+                self._budget_total_expense_row = row_idx
                 self._budget_table.setItem(
                     row_idx,
                     0,
@@ -931,6 +1085,7 @@ class BudgetView(QWidget):
                 self._style_row(row_idx, "#352826")
                 continue
 
+            self._budget_balance_row = row_idx
             self._budget_table.setItem(
                 row_idx,
                 0,
@@ -994,7 +1149,7 @@ class BudgetView(QWidget):
             column,
             amount,
         )
-        self._load_budget()
+        self._refresh_budget_row_and_summaries(row, column, amount)
 
     def _on_propose_budget(self) -> None:
         """Return on propose budget."""
@@ -1242,7 +1397,7 @@ class BudgetView(QWidget):
 
         self._monthly_tracking_table.setRowCount(len(rows))
         for row_idx, row in enumerate(rows):
-            self._monthly_tracking_table.setItem(row_idx, 0, self._make_text_item(str(row["name"])))
+            self._monthly_tracking_table.setItem(row_idx, 0, self._make_text_item(self._display_budget_row_name(row)))
             self._monthly_tracking_table.setItem(row_idx, 1, self._make_amount_item(float(row["assigned"])))
             self._monthly_tracking_table.setItem(row_idx, 2, self._make_amount_item(float(row["executed"])))
             available = float(row["available"])
@@ -1253,16 +1408,22 @@ class BudgetView(QWidget):
             status_item.setForeground(QColor(status_color))
             self._monthly_tracking_table.setItem(row_idx, 4, status_item)
 
+        self._adjust_monthly_tracking_category_column_width()
+
         self._reassign_source_combo.blockSignals(True)
         self._reassign_source_combo.clear()
         for row in rows:
+            if bool(row.get("is_uncategorized")):
+                continue
             if float(row["available"]) > 0:
-                self._reassign_source_combo.addItem(str(row["name"]), int(row["category_id"]))
+                self._reassign_source_combo.addItem(self._display_budget_row_name(row), int(row["category_id"]))
         self._reassign_source_combo.blockSignals(False)
 
         self._reassign_target_combo.clear()
         for row in rows:
-            self._reassign_target_combo.addItem(str(row["name"]), int(row["category_id"]))
+            if bool(row.get("is_uncategorized")):
+                continue
+            self._reassign_target_combo.addItem(self._display_budget_row_name(row), int(row["category_id"]))
         self._on_reassign_source_changed()
 
         can_reassign = bool(validations.get("has_defined_budget")) and self._reassign_source_combo.count() > 0
@@ -1397,7 +1558,9 @@ class BudgetView(QWidget):
             if kind == "category":
                 category = dict(payload)
                 section = str(category["type"])
-                self._comparison_table.setItem(row_idx, 0, self._make_text_item(str(category["name"])))
+                self._comparison_table.setItem(
+                    row_idx, 0, self._make_text_item(self._display_budget_row_name(category))
+                )
                 col_idx = 1
                 for period in list(category["periods"]):
                     variance = float(period["variance"])

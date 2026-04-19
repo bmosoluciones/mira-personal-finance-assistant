@@ -24,6 +24,7 @@ from mira.db.errors import (
 )
 from mira.db.model import SCHEMA_INDEX_SPECS, SCHEMA_VERSION, Setting, inspect_database_schema
 from mira.db.repositories import tag_repository as tag_repository_module
+from mira.ui.i18n import normalize_language, tr
 from tests.db_inspection import (
     backend_connection_state,
     break_backend_connection_for_test,
@@ -1556,6 +1557,60 @@ class TestAnnualBudgets:
         _assert_money(rows["Salario SQL"]["periods"][0]["real"], 1200.0)
         _assert_money(rows["Comida SQL"]["periods"][0]["real"], 300.0)
 
+    def test_budget_comparison_includes_uncategorized_real_row(self, db):
+        food = db.category.create("Comida", "expense")
+        acc = db.account.create("Cuenta sin categoria", currency="USD")
+        budget = db.budget.create("ppto_uncategorized_compare", 2026, "USD")
+        db.budget.upsert_amount(int(budget["id"]), int(food["id"]), 2026, 1, 100.0)
+
+        db.transaction.create(
+            account_id=acc["id"],
+            tx_type="expense",
+            amount=35.0,
+            tx_date="2026-01-05",
+        )
+
+        comparison = db.budget.compare(int(budget["id"]), granularity="quarterly")
+        uncategorized_row = next(
+            row for row in comparison["rows"] if bool(row.get("is_uncategorized")) and row["type"] == "expense"
+        )
+
+        assert uncategorized_row["label_key"] == "budget.uncategorized"
+        _assert_money(uncategorized_row["periods"][0]["budget"], 0.0)
+        _assert_money(uncategorized_row["periods"][0]["real"], 35.0)
+        _assert_money(uncategorized_row["annual_variance"], 35.0)
+        _assert_money(comparison["totals"]["expense"][0]["real"], 35.0)
+
+    def test_export_budget_comparison_excel_renders_translated_uncategorized_row(self, db, tmp_path):
+        acc = db.account.create("Cuenta export sin categoria", currency="USD")
+        budget = db.budget.create("ppto_excel_uncategorized", 2026, "USD")
+
+        db.transaction.create(
+            account_id=acc["id"],
+            tx_type="expense",
+            amount=35.0,
+            tx_date="2026-01-05",
+        )
+
+        output = tmp_path / "real-vs-ppto-uncategorized.xlsx"
+        db.budget.export_comparison_excel(output, int(budget["id"]), granularity="quarterly")
+
+        workbook = load_workbook(output)
+        sheet = workbook["Real vs PPTO"]
+
+        exported_labels = [
+            sheet.cell(row_idx, 1).value
+            for row_idx in range(9, sheet.max_row + 1)
+            if sheet.cell(row_idx, 1).value is not None
+        ]
+
+        expected_label = tr(
+            "budget.uncategorized",
+            normalize_language(db.setting.get("language")),
+            default="Sin Categoria",
+        )
+        assert expected_label in exported_labels
+
     def test_export_budget_comparison_excel_creates_workbook_with_expected_headers(self, db, tmp_path):
         salary = db.category.create("Salario", "income")
         food = db.category.create("Comida", "expense")
@@ -1671,6 +1726,31 @@ class TestAnnualBudgets:
         _assert_money(tracking["totals"]["executed"], 180.0)
         _assert_money(rows["Comida SQL tracking"]["executed"], 70.0)
         _assert_money(rows["Transporte SQL tracking"]["executed"], 110.0)
+
+    def test_monthly_budget_tracking_includes_uncategorized_row(self, db):
+        food = db.category.create("Comida", "expense")
+        acc = db.account.create("Cuenta tracking sin categoria", currency="USD")
+        year = date.today().year
+        month = date.today().month
+        budget = db.budget.create("ppto_uncategorized_tracking", year, "USD")
+        db.budget.upsert_amount(int(budget["id"]), int(food["id"]), year, month, 120.0)
+
+        db.transaction.create(
+            account_id=acc["id"],
+            tx_type="expense",
+            amount=45.0,
+            tx_date=f"{year:04d}-{month:02d}-06",
+        )
+
+        tracking = db.budget.get_monthly_tracking(int(budget["id"]), year, month)
+        uncategorized_row = next(row for row in tracking["rows"] if bool(row.get("is_uncategorized")))
+
+        assert uncategorized_row["label_key"] == "budget.uncategorized"
+        _assert_money(uncategorized_row["assigned"], 0.0)
+        _assert_money(uncategorized_row["executed"], 45.0)
+        _assert_money(uncategorized_row["available"], -45.0)
+        assert uncategorized_row["status"] == "over"
+        _assert_money(tracking["totals"]["executed"], 45.0)
 
     def test_monthly_budget_tracking_allows_past_and_future_months_in_budget_year(self, db):
         food = db.category.create("Comida", "expense")

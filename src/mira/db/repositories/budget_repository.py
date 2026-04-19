@@ -18,6 +18,10 @@ from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.db.model import Account, BudgetDetail, BudgetMaster, Category, Transaction
 from mira.transaction_kinds import analytics_included_expr, is_analytics_excluded_transaction
 
+_UNCATEGORIZED_INCOME_CATEGORY_ID = -1
+_UNCATEGORIZED_EXPENSE_CATEGORY_ID = -2
+_UNCATEGORIZED_LABEL_KEY = "budget.uncategorized"
+
 
 class BudgetRepository:
     """Represent the BudgetRepository class."""
@@ -242,20 +246,21 @@ class BudgetRepository:
         category_ids: set[int],
         tx_types: tuple[str, ...],
         month: int | None = None,
-    ) -> tuple[dict[tuple[int, int], Any], int]:
+    ) -> tuple[dict[tuple[int, int], Any], dict[str, dict[int, Any]], int]:
         """Return get budget execution totals."""
-        if not category_ids:
-            return {}, 0
-
         tx = Transaction.alias()
         account = Account.alias()
         linked_category = Category.alias()
         normalized_category_ids = sorted(int(category_id) for category_id in category_ids)
         start_date = date(year, month or 1, 1)
         end_date = date(year, month or 12, calendar.monthrange(year, month or 12)[1])
+        category_scope = tx.category_id.is_null(True)
+        if normalized_category_ids:
+            category_scope = category_scope | (tx.category_id << normalized_category_ids)
 
         query = (
             tx.select(
+                tx.type.alias("tx_type"),
                 linked_category.id.alias("resolved_category_id"),
                 fn.strftime("%m", tx.date).alias("month_key"),
                 fn.COALESCE(account.currency, "").alias("account_currency"),
@@ -270,10 +275,11 @@ class BudgetRepository:
                 & (tx.date >= start_date)
                 & (tx.date <= end_date)
                 & (tx.type << list(tx_types))
-                & (tx.category_id << normalized_category_ids)
+                & category_scope
                 & ((tx.type != "expense") | (fn.COALESCE(linked_category.is_savings, 0) == 0))
             )
             .group_by(
+                tx.type,
                 linked_category.id,
                 fn.strftime("%m", tx.date),
                 fn.COALESCE(account.currency, ""),
@@ -282,22 +288,30 @@ class BudgetRepository:
         )
 
         totals: dict[tuple[int, int], Any] = defaultdict(lambda: MONEY_ZERO)
+        uncategorized_totals: dict[str, dict[int, Any]] = {
+            tx_type: defaultdict(lambda: MONEY_ZERO) for tx_type in tx_types
+        }
         excluded_transactions = 0
         normalized_budget_currency = budget_currency.strip().upper()
         for row in query:
             category_id = row.get("resolved_category_id")
+            tx_type = str(row.get("tx_type") or "").strip()
             month_key = str(row.get("month_key") or "").strip()
-            if category_id is None or not month_key:
+            if not month_key:
                 continue
             account_currency = str(row.get("account_currency") or "").strip().upper()
             if account_currency != normalized_budget_currency:
                 excluded_transactions += int(row.get("tx_count") or 0)
                 continue
-            totals[(int(category_id), int(month_key))] += (
-                self._cents_to_decimal(row["amount_total_cents"]) or MONEY_ZERO
-            )
+            amount_total = self._cents_to_decimal(row["amount_total_cents"]) or MONEY_ZERO
+            month_number = int(month_key)
+            if category_id is None:
+                if tx_type in uncategorized_totals:
+                    uncategorized_totals[tx_type][month_number] += amount_total
+                continue
+            totals[(int(category_id), month_number)] += amount_total
 
-        return dict(totals), excluded_transactions
+        return dict(totals), {key: dict(value) for key, value in uncategorized_totals.items()}, excluded_transactions
 
     def _find_budget_source_year(self, budget_year: int) -> int | None:
         """Return find budget source year."""
@@ -669,7 +683,7 @@ class BudgetRepository:
             rows.append(row)
             category_ids.add(int(source_row["category_id"]))
 
-        actuals_by_category_month, excluded_transactions = self._get_budget_execution_totals(
+        actuals_by_category_month, uncategorized_actuals, excluded_transactions = self._get_budget_execution_totals(
             year=int(budget["year"]),
             budget_currency=str(budget["currency"]),
             category_ids=category_ids,
@@ -696,6 +710,46 @@ class BudgetRepository:
                 )
                 row_periods[period_idx]["real"] = period_real
             row["annual_real"] = annual_real
+
+        for row_type, uncategorized_category_id in (
+            ("income", _UNCATEGORIZED_INCOME_CATEGORY_ID),
+            ("expense", _UNCATEGORIZED_EXPENSE_CATEGORY_ID),
+        ):
+            monthly_actuals = cast(dict[int, Any], uncategorized_actuals.get(row_type) or {})
+            annual_real = self._round_money(
+                sum((monthly_actuals.get(month_number, MONEY_ZERO) for month_number in range(1, 13)), MONEY_ZERO)
+            )
+            if annual_real <= MONEY_ZERO:
+                continue
+            uncategorized_period_values: list[dict[str, Any]] = []
+            for period in periods:
+                period_real = self._round_money(
+                    sum(
+                        (monthly_actuals.get(int(month_number), MONEY_ZERO) for month_number in period["months"]),
+                        MONEY_ZERO,
+                    )
+                )
+                uncategorized_period_values.append(
+                    {
+                        "label": period["label"],
+                        "budget": MONEY_ZERO,
+                        "real": period_real,
+                        "variance": MONEY_ZERO,
+                    }
+                )
+            rows.append(
+                {
+                    "category_id": uncategorized_category_id,
+                    "name": "",
+                    "label_key": _UNCATEGORIZED_LABEL_KEY,
+                    "type": row_type,
+                    "periods": uncategorized_period_values,
+                    "annual_budget": MONEY_ZERO,
+                    "annual_real": annual_real,
+                    "annual_variance": MONEY_ZERO,
+                    "is_uncategorized": True,
+                }
+            )
 
         totals: dict[str, Any] = {
             "income": [
@@ -799,7 +853,7 @@ class BudgetRepository:
                 continue
             expense_category_ids.add(int(row["category_id"]))
 
-        execution_by_category, excluded_transactions = self._get_budget_execution_totals(
+        execution_by_category, uncategorized_actuals, excluded_transactions = self._get_budget_execution_totals(
             year=year,
             budget_currency=str(budget["currency"]),
             category_ids=expense_category_ids,
@@ -832,7 +886,25 @@ class BudgetRepository:
                     "status": status,
                 }
             )
-        rows.sort(key=lambda item: str(item["name"]).casefold())
+
+        uncategorized_executed = self._round_money(
+            cast(dict[int, Any], uncategorized_actuals.get("expense") or {}).get(month, MONEY_ZERO)
+        )
+        if uncategorized_executed > MONEY_ZERO:
+            rows.append(
+                {
+                    "category_id": _UNCATEGORIZED_EXPENSE_CATEGORY_ID,
+                    "name": "",
+                    "label_key": _UNCATEGORIZED_LABEL_KEY,
+                    "assigned": MONEY_ZERO,
+                    "executed": uncategorized_executed,
+                    "available": self._round_money(-uncategorized_executed),
+                    "status": "over",
+                    "is_uncategorized": True,
+                }
+            )
+
+        rows.sort(key=lambda item: (bool(item.get("is_uncategorized")), str(item["name"]).casefold()))
 
         total_assigned = self._round_money(sum((row["assigned"] for row in rows), MONEY_ZERO))
         total_executed = self._round_money(sum((row["executed"] for row in rows), MONEY_ZERO))

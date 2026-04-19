@@ -155,13 +155,21 @@ def test_budget_view_tables_enable_horizontal_scroll_and_responsive_resize_modes
 
     try:
         view.show()
+        view.resize(1600, 900)
         view.refresh()
         view._load_budget()
         app.processEvents()
+        view._adjust_budget_category_column_width()
 
         budget_header = view._budget_table.horizontalHeader()
-        assert budget_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.Stretch
-        assert budget_header.sectionResizeMode(1) == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
+        assert budget_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.Interactive
+        assert view._budget_table.columnWidth(0) >= 160
+        assert view._budget_table.columnWidth(0) <= int(view._budget_table.viewport().width() * 0.21) + 1
+        assert budget_header.sectionResizeMode(1) == qtwidgets.QHeaderView.ResizeMode.Stretch
+        assert (
+            budget_header.sectionResizeMode(view._budget_table.columnCount() - 1)
+            == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
+        )
         assert view._budget_table.horizontalScrollBarPolicy() == qtcore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
 
         view._btn_compare.click()
@@ -175,11 +183,110 @@ def test_budget_view_tables_enable_horizontal_scroll_and_responsive_resize_modes
 
         view._btn_monthly_tracking.click()
         app.processEvents()
+        view._adjust_monthly_tracking_category_column_width()
 
         monthly_header = view._monthly_tracking_table.horizontalHeader()
-        assert monthly_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.Stretch
+        assert monthly_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.Interactive
+        assert view._monthly_tracking_table.columnWidth(0) >= 160
+        assert view._monthly_tracking_table.columnWidth(0) <= int(view._monthly_tracking_table.viewport().width() * 0.21) + 1
         assert monthly_header.sectionResizeMode(1) == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
         assert view._monthly_tracking_table.horizontalScrollBarPolicy() == qtcore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
+    finally:
+        view.close()
+
+
+def test_budget_view_cell_edit_updates_summaries_without_reloading(
+    monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.budget")
+
+    income = db.category.create("Honorarios Profesionales Extensos", "income")
+    budget = db.budget.create("PRESUPUESTO_EDITOR_2026", 2026, "USD")
+    db.budget.upsert_amount(int(budget["id"]), int(income["id"]), 2026, 1, 1000.0)
+
+    view = views_module.BudgetView(db)
+    try:
+        view.show()
+        view.refresh()
+        view._load_budget()
+        app.processEvents()
+
+        def fail_load() -> None:
+            raise AssertionError("Full budget reload should not happen during cell edit")
+
+        def fail_get_matrix(_budget_id: int):
+            raise AssertionError("Full budget matrix recalculation should not happen during cell edit")
+
+        monkeypatch.setattr(view, "_load_budget", fail_load)
+        monkeypatch.setattr(view._db.budget, "get_matrix", fail_get_matrix)
+
+        row = _find_row_by_text(view._budget_table, "Honorarios Profesionales Extensos")
+        assert row >= 0
+        value_item = view._budget_table.item(row, 1)
+        assert value_item is not None
+
+        value_item.setText("2000")
+        view._on_budget_cell_changed(row, 1)
+        app.processEvents()
+
+        expected_text = "USD 2,000.00"
+        assert value_item.text() == expected_text
+        assert view._budget_table.item(row, 13).text() == expected_text
+
+        total_income_row = _find_row_by_text(view._budget_table, "Subtotal ingresos")
+        assert total_income_row >= 0
+        total_income_item = view._budget_table.item(total_income_row, 1)
+        assert total_income_item is not None
+        assert total_income_item.text() == expected_text
+        assert view._income_card._value_lbl.text() == expected_text
+    finally:
+        view.close()
+
+
+def test_budget_view_shows_uncategorized_rows_in_comparison_and_monthly_tracking(
+    monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+) -> None:
+    app = _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.budget")
+
+    today = date.today()
+    food = db.category.create("Comida", "expense")
+    account = db.account.create("Cuenta presupuesto", currency="USD")
+    budget = db.budget.create("PRESUPUESTO_SIN_CATEGORIA", today.year, "USD")
+    db.budget.upsert_amount(int(budget["id"]), int(food["id"]), today.year, today.month, 120.0)
+    db.transaction.create(
+        account_id=account["id"],
+        tx_type="expense",
+        amount=45.0,
+        tx_date=f"{today.year:04d}-{today.month:02d}-08",
+    )
+
+    view = views_module.BudgetView(db)
+    try:
+        view.show()
+        view.refresh()
+        view._load_budget()
+        app.processEvents()
+        uncategorized_label = view._t("budget.uncategorized", "Sin Categoria")
+
+        view._btn_compare.click()
+        app.processEvents()
+
+        comparison_row = _find_row_by_text(view._comparison_table, uncategorized_label)
+        assert comparison_row >= 0
+
+        view._btn_monthly_tracking.click()
+        app.processEvents()
+
+        tracking_row = _find_row_by_text(view._monthly_tracking_table, uncategorized_label)
+        assert tracking_row >= 0
+        assert view._monthly_tracking_table.item(tracking_row, 1).text() == "0.00"
+        assert view._monthly_tracking_table.item(tracking_row, 2).text() == "45.00"
+        assert view._reassign_source_combo.findText(uncategorized_label) == -1
+        assert view._reassign_target_combo.findText(uncategorized_label) == -1
     finally:
         view.close()
 

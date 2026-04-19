@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from openpyxl.cell.cell import Cell as _OpenpyxlCell
 
 from mira.db.money import MONEY_ZERO, MoneyLike, money_to_decimal
+from mira.ui.i18n import normalize_language, tr
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,15 @@ def _build_header_alias_lookup(aliases: dict[str, tuple[str, ...]]) -> dict[str,
         for name in names:
             lookup[normalize_header(name)] = canonical
     return lookup
+
+
+def _budget_row_label(db: _DatabaseIOProtocol, row: dict[str, Any]) -> str:
+    """Return a translated display label for budget exports."""
+    if bool(row.get("is_uncategorized")):
+        language = normalize_language(db.get_setting("language"))
+        label_key = str(row.get("label_key") or "budget.uncategorized")
+        return tr(label_key, language, default="Sin Categoria")
+    return str(row.get("name") or "")
 
 
 _TRANSACTION_HEADER_ALIAS_LOOKUP = _build_header_alias_lookup(_TRANSACTION_HEADER_ALIASES)
@@ -603,7 +613,7 @@ def export_budget_comparison_excel(
         if kind == "category":
             category = cast(dict[str, Any], payload)
             section = str(category["type"])
-            sheet.cell(row_idx, 1, str(category["name"]))
+            sheet.cell(row_idx, 1, _budget_row_label(db, category))
             col_idx = 2
             for period in cast(list[dict[str, Any]], category["periods"]):
                 sheet.cell(row_idx, col_idx, float(period["real"]))

@@ -6,6 +6,11 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 
 ## [Unreleased]
 
+### Changed
+
+- Updated coverage configuration to include `src/mira/ui` so future UI module refactors can be measured by unit tests.
+- Budget editor and monthly budget tracking now keep the category column constrained to a responsive share of the table width, budget cell edits update visible totals without recalculating the full matrix on each keystroke, and both real-vs-budget and monthly tracking expose a `Sin Categoria` row for uncategorized transactions.
+
 ## [0.0.1b3] - 2026-04-17
 
 ### Added

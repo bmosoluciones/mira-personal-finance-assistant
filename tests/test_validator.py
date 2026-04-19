@@ -185,6 +185,110 @@ class TestValidator:
         assert result.valid is True
         assert result.action["action"] == "data_analysis"
 
+    def test_validate_rejects_non_object(self):
+        result = validate("not-a-json-object")
+        assert result.valid is False
+        assert "output is not a json object" in result.error.lower()
+
+    def test_validate_rejects_invalid_action(self):
+        result = validate(_valid_action(action="unsupported"))
+        assert result.valid is False
+        assert "invalid action" in result.error.lower()
+
+    def test_validate_rejects_missing_amount_for_income(self):
+        result = validate(_valid_action(action="add_income", amount=None))
+        assert result.valid is False
+        assert "requires a non-null 'amount'" in result.error
+
+    def test_validate_rejects_negative_amount(self):
+        result = validate(_valid_action(amount=-10.0))
+        assert result.valid is False
+        assert "must be positive" in result.error
+
+    def test_validate_rejects_non_numeric_exchange_rate_or_converted_amount(self):
+        result = validate(_valid_action(exchange_rate="abc"))
+        assert result.valid is False
+        assert "could not convert string to float" in result.error.lower()
+
+        result = validate(_valid_action(converted_amount="abc"))
+        assert result.valid is False
+        assert "'converted_amount' must be numeric" in result.error
+
+    def test_validate_rejects_zero_exchange_rate(self):
+        result = validate(_valid_action(exchange_rate=0))
+        assert result.valid is False
+        assert "must be positive" in result.error
+
+    def test_validate_rejects_report_with_non_dict_period(self):
+        result = validate(
+            _valid_action(
+                action="report",
+                amount=None,
+                exchange_rate=None,
+                converted_amount=None,
+                report_type="expenses",
+                period="not-a-dict",
+            )
+        )
+        assert result.valid is False
+        assert "'period' must be an object" in result.error
+
+    def test_validate_rejects_unknown_period_preset(self):
+        result = validate(
+            _valid_action(
+                action="data_analysis",
+                amount=None,
+                exchange_rate=None,
+                converted_amount=None,
+                period={"preset": "unsupported", "from": None, "to": None},
+            )
+        )
+        assert result.valid is False
+        assert "'period.preset' must be one of" in result.error
+
+    def test_validate_rejects_period_from_after_to(self):
+        result = validate(
+            _valid_action(
+                action="report",
+                amount=None,
+                exchange_rate=None,
+                converted_amount=None,
+                report_type="expenses",
+                period={"preset": "custom", "from": "2025-03-01", "to": "2025-02-01"},
+            )
+        )
+        assert result.valid is False
+        assert "must be <= 'period.to'" in result.error
+
+    def test_validate_rejects_filters_not_object(self):
+        result = validate(
+            _valid_action(
+                action="data_analysis",
+                amount=None,
+                exchange_rate=None,
+                converted_amount=None,
+                period={"preset": "this_month", "from": None, "to": None},
+                filters="not-an-object",
+            )
+        )
+        assert result.valid is False
+        assert "'filters' must be an object or null" in result.error
+
+    def test_validate_rejects_invalid_filter_amounts(self):
+        result = validate(
+            _valid_action(
+                action="report",
+                amount=None,
+                exchange_rate=None,
+                converted_amount=None,
+                report_type="expenses",
+                period={"preset": "this_year", "from": None, "to": None},
+                filters={"min_amount": "px", "max_amount": None},
+            )
+        )
+        assert result.valid is False
+        assert "invalid money value" in result.error.lower()
+
     def test_valid_actions_constant(self):
         assert "add_income" in VALID_ACTIONS
         assert "add_expense" in VALID_ACTIONS
