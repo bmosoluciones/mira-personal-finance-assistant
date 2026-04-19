@@ -93,9 +93,6 @@ class FakeDemoSeedDB:
     def upsert_budget_amount(
         self,
         budget_id: int,
-    
-    
-    
         category_id: int,
         year: int,
         month: int,
