@@ -36,3 +36,7 @@ class DuplicateTagNameError(TagError):
 
 class DatabaseSchemaError(RuntimeError):
     """Raised when a database file uses an incompatible on-disk schema."""
+
+
+class MasterDataSyncConflictError(RuntimeError):
+    """Raised when optimistic master-data versioning cannot be reconciled."""

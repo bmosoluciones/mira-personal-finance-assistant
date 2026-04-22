@@ -22,8 +22,9 @@ from mira import __version__ as APP_VERSION
 from mira.app import ApplicationController, ModelDownloadService
 from mira.ai.pipeline import Pipeline
 from mira.db.database import Database
-from mira.services import ModelLifecycle
+from mira.services import MobileSyncServer, ModelLifecycle
 from mira.ui.dialogs import InitialSetupDialog
+from mira.ui.dialogs.mobile_sync import MobileSyncSessionDialog
 from mira.ui.dialogs.financial.compound_interest import CompoundInterestDialog as _CompoundInterestDialog
 from mira.ui.dialogs.financial.goal_simulator import GoalScenarioDialog as _GoalScenarioDialog
 from mira.ui.dialogs.financial.loan_amortization import LoanAmortizationDialog as _LoanAmortizationDialog
@@ -152,6 +153,9 @@ class MainWindow(
         self._model_download_coordinator = ModelDownloadCoordinator()
         self._controller = ApplicationController(self._db, self._pipeline)
         self._model_lifecycle = ModelLifecycle(self._db, self._pipeline)
+        self._mobile_sync_server = MobileSyncServer(self._db)
+        self._mobile_sync_dialog: MobileSyncSessionDialog | None = None
+        self._mobile_sync_event_timer = QTimer(self)
         self._model_download_service = ModelDownloadService(self._db, self._model_lifecycle)
         self._language = normalize_language(self._db.setting.get("language"))
         self._theme = self._normalize_theme(self._db.setting.get("theme"))
@@ -168,6 +172,9 @@ class MainWindow(
         self._build_menu()
         self._build_ui()
         self._notification_service = NotificationService(self)
+        self._mobile_sync_event_timer.setInterval(500)
+        self._mobile_sync_event_timer.timeout.connect(self._flush_mobile_sync_events)
+        self._mobile_sync_event_timer.start()
         self._chat_presenter = MainWindowChatPresenter(self)
         self._notification_proxy = MainWindowNotificationProxy(self)
         self._file_actions = MainWindowFileActions(self)
@@ -303,3 +310,62 @@ class MainWindow(
                 params={"parser": parser_type, "chat": chat_type},
             ),
         )
+
+    def _on_mobile_sync(self) -> None:
+        try:
+            status = self._mobile_sync_server.start()
+        except Exception as exc:  # noqa: BLE001
+            self._notify_exception(
+                tr("mobile.sync.error.title", self._language, default="Mobile sync error"),
+                exc,
+                prefix=tr(
+                    "mobile.sync.error.body",
+                    self._language,
+                    default="The local mobile sync service could not be started.",
+                ),
+            )
+            return
+        self._mobile_sync_session_dialog().set_status(status)
+        self._mobile_sync_session_dialog().show()
+        self._mobile_sync_session_dialog().raise_()
+        self._mobile_sync_session_dialog().activateWindow()
+        self._flush_mobile_sync_events()
+
+    def _mobile_sync_session_dialog(self) -> MobileSyncSessionDialog:
+        dialog = self._mobile_sync_dialog
+        if dialog is None:
+            dialog = MobileSyncSessionDialog(language=self._language, parent=self)
+            dialog.refresh_button.clicked.connect(self._restart_mobile_sync_session)
+            dialog.stop_button.clicked.connect(self._stop_mobile_sync_session)
+            self._mobile_sync_dialog = dialog
+        return dialog
+
+    def _restart_mobile_sync_session(self) -> None:
+        self._on_mobile_sync()
+
+    def _stop_mobile_sync_session(self) -> None:
+        self._mobile_sync_server.stop()
+        if self._mobile_sync_dialog is not None:
+            self._mobile_sync_dialog.set_status(None)
+        self.notify_user_info(
+            self,
+            tr("app.name", self._language, default="MIRA"),
+            tr(
+                "mobile.sync.stopped",
+                self._language,
+                default="The local mobile sync service was stopped.",
+            ),
+        )
+
+    def _flush_mobile_sync_events(self) -> None:
+        dialog = self._mobile_sync_dialog
+        if dialog is not None:
+            dialog.set_status(self._mobile_sync_server.status)
+        for event in self._mobile_sync_server.drain_events():
+            match event.level:
+                case "warning":
+                    self.notify_user_warning(self, event.title, event.message)
+                case "error":
+                    self.notify_user_error(self, event.title, event.message)
+                case _:
+                    self.notify_user_info(self, event.title, event.message)

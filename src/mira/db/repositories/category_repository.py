@@ -6,10 +6,12 @@
 from __future__ import annotations
 
 
+from datetime import datetime as _datetime
 from typing import TYPE_CHECKING, Any, cast
 
 from peewee import IntegrityError as PeeweeIntegrityError, fn
 
+from mira.sync_utils import utc_now_iso as _utc_now_iso
 from mira.db.errors import DuplicateCategoryNameError
 from mira.db.helpers import (
     _ICON_MAX_LENGTH,
@@ -54,22 +56,27 @@ class CategoryRepository:
             query = query.where(Category.type == cat_type)
         if not include_savings:
             query = query.where(Category.is_savings == False)  # noqa: E712
-        return [
-            {
-                "id": row.id,
-                "name": row.name,
-                "type": row.type,
-                "color": row.color,
-                "icon": row.icon,
-                "is_savings": int(bool(row.is_savings)),
-                "parent_id": row.parent_id,
-            }
-            for row in query.order_by(Category.name)
-        ]
+        return [self._serialize_category_row(row) for row in query.order_by(Category.name)]
 
     @staticmethod
     def _serialize_category_row(row: Category) -> dict[str, Any]:
         """Return serialize category row."""
+        updated_at = row.updated_at
+        if isinstance(updated_at, _datetime):
+            updated_at_str: str | None = updated_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+        elif isinstance(updated_at, str) and updated_at:
+            s = updated_at.replace(" ", "T")
+            if not s.endswith("Z") and "+" not in s:
+                s = s + "Z"
+            updated_at_str = s
+        else:
+            updated_at_str = None
+        # Resolve parent_global_id
+        parent_global_id: str | None = None
+        if row.parent_id is not None:
+            parent_row = Category.get_or_none(Category.id == row.parent_id)
+            if parent_row is not None:
+                parent_global_id = parent_row.global_id
         return {
             "id": row.id,
             "name": row.name,
@@ -78,6 +85,11 @@ class CategoryRepository:
             "icon": row.icon,
             "is_savings": int(bool(row.is_savings)),
             "parent_id": row.parent_id,
+            "parent_global_id": parent_global_id,
+            "global_id": row.global_id,
+            "updated_at": updated_at_str,
+            "sync_version": row.sync_version,
+            "last_modified_by_device_id": row.last_modified_by_device_id,
         }
 
     def get_category(
@@ -110,6 +122,14 @@ class CategoryRepository:
         """Return get category by name."""
         return self.get_category(name=name, cat_type=cat_type)
 
+    def get_category_by_global_id(self, global_id: str) -> dict | None:
+        """Return the category with the given global_id, or None."""
+        normalized = str(global_id or "").strip()
+        if not normalized:
+            return None
+        row = Category.get_or_none(Category.global_id == normalized)
+        return None if row is None else self._serialize_category_row(row)
+
     def add_category(
         self,
         name: str,
@@ -118,6 +138,8 @@ class CategoryRepository:
         parent_id: int | None = None,
         is_savings: bool = False,
         icon: str = "",
+        global_id: str | None = None,
+        device_id: str | None = None,
     ) -> dict:
         """Return add category."""
         normalized_name = name.strip()
@@ -127,15 +149,20 @@ class CategoryRepository:
             self._validate_category_parent(None, parent_id, cat_type)
         if len(icon) > _ICON_MAX_LENGTH:
             raise ValueError(f"Category icon cannot exceed {_ICON_MAX_LENGTH} characters")
+        create_kwargs: dict[str, object] = dict(
+            name=normalized_name,
+            type=cat_type,
+            color=color,
+            parent_id=parent_id,
+            is_savings=is_savings,
+            icon=icon,
+        )
+        if global_id:
+            create_kwargs["global_id"] = global_id
+        if device_id:
+            create_kwargs["last_modified_by_device_id"] = device_id
         try:
-            cat = Category.create(
-                name=normalized_name,
-                type=cat_type,
-                color=color,
-                parent_id=parent_id,
-                is_savings=is_savings,
-                icon=icon,
-            )
+            cat = Category.create(**create_kwargs)
         except PeeweeIntegrityError as exc:
             raise DuplicateCategoryNameError(f"Category '{normalized_name}' already exists") from exc
         return self._serialize_category_row(cat)
@@ -409,6 +436,7 @@ class CategoryRepository:
         is_savings: bool | None = None,
         parent_id: int | None | object = _UNSET,
         icon: str | None = None,
+        device_id: str | None = None,
     ) -> None:
         """Return update category."""
         normalized_name = name.strip()
@@ -445,6 +473,10 @@ class CategoryRepository:
             updates["parent_id"] = cast(int | None, normalized_parent_id)
         if icon is not None:
             updates["icon"] = icon
+        if device_id:
+            updates["last_modified_by_device_id"] = device_id
+            updates["updated_at"] = _utc_now_iso()
+            updates["sync_version"] = int(current.get("sync_version") or 1) + 1
         try:
             with self._atomic():
                 Category.update(**updates).where(Category.id == cat_id).execute()

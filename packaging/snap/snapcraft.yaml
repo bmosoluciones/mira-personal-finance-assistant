@@ -10,6 +10,9 @@ description: |
   Track income and expenses, organize accounts, categories, budgets, and
   savings goals, and review reports without sending financial data to
   external services.
+
+  Local network access is only used when the user explicitly starts mobile
+  sync from the desktop menu.
 grade: devel
 confinement: strict
 license: GPL-3.0-or-later
@@ -28,6 +31,8 @@ apps:
     desktop: usr/share/applications/solutions.bmogroup.mira.desktop
     plugs:
       - home
+      - network
+      - network-bind
       - opengl
     environment:
       MIRA_MODELS_DIR: $SNAP_USER_COMMON/.mira/models
@@ -66,12 +71,15 @@ parts:
     override-build: |
       python3 -m pip install --no-deps --prefix=$CRAFT_PART_INSTALL $CRAFT_PART_SRC/mira_personal_finance_assistant-0.0.1b4-py3-none-any.whl
       python3 -m pip install --no-deps --prefix=$CRAFT_PART_INSTALL \
+        cryptography==46.0.5 \
         et-xmlfile==2.0.0 \
         jinja2==3.1.6 \
         MarkupSafe==2.1.5 \
         openpyxl==3.1.5 \
         peewee==4.0.2 \
-        qt-material==2.14
+        qt-material==2.14 \
+        segno==1.6.6 \
+        zeroconf==0.148.0
     prime:
       - -bin/pip
       - -bin/pip3

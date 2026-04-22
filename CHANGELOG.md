@@ -41,7 +41,7 @@ For the record: I have started using MIRA for my personal income and expense tra
 
 ### Added
 
- - Add balance adjustment flow for accounts and cards 
+ - Add balance adjustment flow for accounts and cards
 
 ### Changed
 

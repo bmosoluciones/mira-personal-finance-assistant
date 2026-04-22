@@ -16,6 +16,7 @@ from mira.db.repositories.reconciliation_repository import ReconciliationReposit
 from mira.db.repositories.report_repository import ReportRepository
 from mira.db.repositories.savings_goal_repository import SavingsGoalRepository
 from mira.db.repositories.setting_repository import SettingRepository
+from mira.db.repositories.sync_repository import SyncRepository
 from mira.db.repositories.tag_repository import TagRepository
 from mira.db.repositories.transaction_repository import TransactionRepository
 from mira.db.runtime import DatabaseRuntime
@@ -29,6 +30,7 @@ class DatabaseBackend(
     CategoryRepository,
     SavingsGoalRepository,
     SettingRepository,
+    SyncRepository,
     TagRepository,
     RecurringRepository,
     FeedbackRepository,

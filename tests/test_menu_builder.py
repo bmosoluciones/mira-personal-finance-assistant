@@ -119,6 +119,9 @@ def test_menu_builder_creates_expected_menus_and_actions(monkeypatch: pytest.Mon
         def _menu_open_goal_simulator(self) -> None:
             return None
 
+        def _on_mobile_sync(self) -> None:
+            return None
+
         def _toggle_sidebar(self) -> None:
             return None
 
@@ -143,6 +146,8 @@ def test_menu_builder_creates_expected_menus_and_actions(monkeypatch: pytest.Mon
         file_menu = menus["Archivo"]
         file_actions = [action.text() for action in file_menu.actions() if not action.isSeparator()]
         assert "Etiquetas" in menu_labels
+        assert "Movil" not in menu_labels
+        assert "Mobile" not in menu_labels
         assert any("Archivo" in label or "File" in label for label in menu_labels)
         assert file_actions.count("Importar transacciones…") == 1
         assert file_actions.count("Exportar transacciones…") == 1
@@ -155,3 +160,17 @@ def test_menu_builder_creates_expected_menus_and_actions(monkeypatch: pytest.Mon
         assert window.open_tags_calls == 1
     finally:
         window.close()
+
+    # Verify mobile menu appears when HIDE_MOBILE is False
+    original = builder_module.HIDE_MOBILE
+    try:
+        builder_module.HIDE_MOBILE = False
+        window2 = DummyWindow()
+        try:
+            builder_module.MenuBuilder().build(window2)
+            menu_labels2 = [action.text() for action in window2.menuBar().actions()]
+            assert "Movil" in menu_labels2
+        finally:
+            window2.close()
+    finally:
+        builder_module.HIDE_MOBILE = original

@@ -73,6 +73,7 @@ class QWidget:
         self._parent = parent
         self._window = None
         self.closed = False
+        self.visible = False
 
     def parentWidget(self):
         return self._parent
@@ -82,6 +83,15 @@ class QWidget:
 
     def close(self) -> None:
         self.closed = True
+
+    def show(self) -> None:
+        self.visible = True
+
+    def raise_(self) -> None:
+        return None
+
+    def activateWindow(self) -> None:
+        return None
 
 
 class QListWidget(QWidget):
@@ -145,6 +155,7 @@ class QLabel(QWidget):
         self.style_sheet = ""
         self.visible = True
         self.font = None
+        self._text_interaction_flags = 0
 
     def setText(self, text: str) -> None:
         self._text = text
@@ -163,6 +174,34 @@ class QLabel(QWidget):
 
     def setFont(self, font) -> None:
         self.font = font
+
+    def textInteractionFlags(self) -> int:
+        return self._text_interaction_flags
+
+    def setTextInteractionFlags(self, value: int) -> None:
+        self._text_interaction_flags = value
+
+
+class QGroupBox(QWidget):
+    def __init__(self, title: str = "", parent=None) -> None:
+        super().__init__(parent)
+        self.title = title
+
+
+class QPlainTextEdit(QWidget):
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self._text = ""
+        self.read_only = False
+
+    def setReadOnly(self, value: bool) -> None:
+        self.read_only = value
+
+    def setPlainText(self, text: str) -> None:
+        self._text = text
+
+    def toPlainText(self) -> str:
+        return self._text
 
 
 class QPushButton(QWidget):
@@ -238,7 +277,7 @@ class QHBoxLayout(QVBoxLayout):
 
 
 class QFormLayout:
-    def __init__(self) -> None:
+    def __init__(self, _parent=None) -> None:
         self.rows: list[tuple[object, object]] = []
         self.label_alignment = None
 
@@ -331,6 +370,7 @@ class QDialog(QWidget):
         self.window_title = ""
         self.size = None
         self.accepted = False
+        self.modal = False
 
     def setWindowTitle(self, title: str) -> None:
         self.window_title = title
@@ -338,8 +378,14 @@ class QDialog(QWidget):
     def resize(self, width: int, height: int) -> None:
         self.size = (width, height)
 
+    def setModal(self, value: bool) -> None:
+        self.modal = value
+
     def accept(self) -> None:
         self.accepted = True
+
+    def reject(self) -> None:
+        self.closed = True
 
 
 class QDialogButtonBox(QWidget):
@@ -1040,11 +1086,13 @@ def install_fake_pyside(monkeypatch):
     qtwidgets.QDoubleSpinBox = QDoubleSpinBox
     qtwidgets.QFormLayout = QFormLayout
     qtwidgets.QFrame = QFrame
+    qtwidgets.QGroupBox = QGroupBox
     qtwidgets.QHBoxLayout = QHBoxLayout
     qtwidgets.QHeaderView = QHeaderView
     qtwidgets.QLabel = QLabel
     qtwidgets.QListWidget = QListWidget
     qtwidgets.QMessageBox = QMessageBox
+    qtwidgets.QPlainTextEdit = QPlainTextEdit
     qtwidgets.QProgressDialog = QProgressDialog
     qtwidgets.QPushButton = QPushButton
     qtwidgets.QScrollArea = QScrollArea

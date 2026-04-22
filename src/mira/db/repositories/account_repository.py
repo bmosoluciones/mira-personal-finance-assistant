@@ -6,12 +6,13 @@
 from __future__ import annotations
 
 
-from datetime import date
+from datetime import date, datetime
 import re
 from typing import TYPE_CHECKING, Any, cast
 
 from peewee import Case, fn
 
+from mira.sync_utils import utc_now_iso as _utc_now_iso
 from mira.db.helpers import (
     _ACCOUNT_ALIAS_STOPWORDS,
     canonical_account_type as _canonical_account_type,
@@ -59,6 +60,15 @@ class AccountRepository:
             return None
         normalized = dict(row)
         normalized["account_type"] = _canonical_account_type(cast(str | None, normalized.get("account_type")))
+        # Ensure updated_at is a proper ISO-8601 string with 'T' separator and trailing 'Z'
+        updated_at = normalized.get("updated_at")
+        if isinstance(updated_at, datetime):
+            normalized["updated_at"] = updated_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+        elif isinstance(updated_at, str) and updated_at:
+            s = updated_at.replace(" ", "T")
+            if not s.endswith("Z") and "+" not in s:
+                s = s + "Z"
+            normalized["updated_at"] = s
         return normalized
 
     def get_accounts(self, account_types: tuple[str, ...] | None = None) -> list[dict]:
@@ -76,6 +86,10 @@ class AccountRepository:
                 "currency": row.currency,
                 "is_default": int(bool(row.is_default)),
                 "created_at": row.created_at,
+                "global_id": row.global_id,
+                "updated_at": row.updated_at,
+                "sync_version": row.sync_version,
+                "last_modified_by_device_id": row.last_modified_by_device_id,
             }
             for row in query
         ]
@@ -104,6 +118,10 @@ class AccountRepository:
                 "currency": row.currency,
                 "is_default": int(bool(row.is_default)),
                 "created_at": row.created_at,
+                "global_id": row.global_id,
+                "updated_at": row.updated_at,
+                "sync_version": row.sync_version,
+                "last_modified_by_device_id": row.last_modified_by_device_id,
             }
         )
 
@@ -121,6 +139,34 @@ class AccountRepository:
                 "currency": row.currency,
                 "is_default": int(bool(row.is_default)),
                 "created_at": row.created_at,
+                "global_id": row.global_id,
+                "updated_at": row.updated_at,
+                "sync_version": row.sync_version,
+                "last_modified_by_device_id": row.last_modified_by_device_id,
+            }
+        )
+
+    def get_account_by_global_id(self, global_id: str) -> dict | None:
+        """Return the account with the given global_id, or None."""
+        normalized = str(global_id or "").strip()
+        if not normalized:
+            return None
+        row = Account.get_or_none(Account.global_id == normalized)
+        if row is None:
+            return None
+        return self._normalize_account_row(
+            {
+                "id": row.id,
+                "name": row.name,
+                "balance": self._cents_to_money(row.balance),
+                "account_type": row.account_type,
+                "currency": row.currency,
+                "is_default": int(bool(row.is_default)),
+                "created_at": row.created_at,
+                "global_id": row.global_id,
+                "updated_at": row.updated_at,
+                "sync_version": row.sync_version,
+                "last_modified_by_device_id": row.last_modified_by_device_id,
             }
         )
 
@@ -141,17 +187,29 @@ class AccountRepository:
         account_type: str = "bank",
         opening_balance: MoneyLike = 0.0,
         currency: str | None = None,
+        global_id: str | None = None,
+        device_id: str | None = None,
+        is_default: bool = False,
     ) -> dict:
         """Return add account."""
         normalized_name = self._normalize_account_name(name)
         normalized_type = _canonical_account_type(account_type)
         selected_currency = str(currency or self.get_default_currency()).strip().upper()
-        Account.create(
+        create_kwargs: dict[str, object] = dict(
             name=normalized_name,
             account_type=normalized_type,
             balance=self._money_to_cents(opening_balance),
             currency=selected_currency,
+            is_default=bool(is_default),
         )
+        if global_id:
+            create_kwargs["global_id"] = global_id
+        if device_id:
+            create_kwargs["last_modified_by_device_id"] = device_id
+        # When making this the default, clear any existing default first to avoid unique constraint violation
+        if is_default:
+            Account.update(is_default=False).where(Account.is_default == True).execute()  # noqa: E712
+        Account.create(**create_kwargs)
         result = self.get_account_by_name(normalized_name)
         if result is None:
             raise RuntimeError("Failed to create account")
@@ -163,16 +221,31 @@ class AccountRepository:
         name: str,
         account_type: str,
         currency: str | None = None,
+        device_id: str | None = None,
+        is_default: bool | None = None,
     ) -> None:
         """Return update account."""
         normalized_name = self._normalize_account_name(name)
         normalized_type = _canonical_account_type(account_type)
         selected_currency = str(currency or self.get_default_currency()).strip().upper()
-        (
-            Account.update(name=normalized_name, account_type=normalized_type, currency=selected_currency)
-            .where(Account.id == account_id)
-            .execute()
-        )
+        updates: dict[str, object] = {
+            "name": normalized_name,
+            "account_type": normalized_type,
+            "currency": selected_currency,
+        }
+        if device_id:
+            updates["last_modified_by_device_id"] = device_id
+            updates["updated_at"] = _utc_now_iso()
+            row = Account.get_or_none(Account.id == account_id)
+            if row is not None:
+                updates["sync_version"] = int(row.sync_version or 1) + 1
+        with self._atomic():
+            if is_default is True:
+                Account.update(is_default=False).where(Account.is_default == True).execute()  # noqa: E712
+                updates["is_default"] = True
+            elif is_default is False:
+                updates["is_default"] = False
+            Account.update(**updates).where(Account.id == account_id).execute()
 
     def delete_account(self, account_id: int) -> None:
         """Return delete account."""

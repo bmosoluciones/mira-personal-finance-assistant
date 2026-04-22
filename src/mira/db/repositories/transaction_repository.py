@@ -15,6 +15,7 @@ from peewee import JOIN, Case, fn
 
 from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.db.model import Account, BudgetDetail, Category, Transaction, TransactionTag
+from mira.sync_utils import generate_ulid as _generate_ulid, utc_now_iso as _utc_now_iso
 from mira.transaction_kinds import (
     BALANCE_ADJUSTMENT_PAYMENT_METHOD,
     TransactionType,
@@ -85,6 +86,27 @@ class TransactionRepository:
 
         def clear_reconciliation_for_transactions(self, transaction_ids: list[int]) -> int:
             """Return clear reconciliation for transactions."""
+
+        def _upsert_transaction_tombstone(
+            self,
+            *,
+            sync_id: str,
+            deleted_version: int,
+            device_id: str,
+            deleted_at: str,
+        ) -> None:
+            """Create or update a tombstone for a deleted transaction."""
+
+        def _record_transaction_sync_event(
+            self,
+            *,
+            sync_id: str,
+            operation: Any,
+            transaction_version: int,
+            device_id: str,
+            created_at: str,
+        ) -> int:
+            """Record a sync event for a transaction."""
 
     _MAX_TRANSACTION_AMOUNT = 10_000_000_000
 
@@ -183,6 +205,14 @@ class TransactionRepository:
             "converted_amount": self._cents_to_decimal(row.converted_amount, allow_none=True),
             "date": date_value,
             "created_at": created_value,
+            "sync_id": row.sync_id,
+            "sync_version": row.sync_version,
+            "updated_at": (
+                row.updated_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+                if isinstance(row.updated_at, datetime)
+                else row.updated_at
+            ),
+            "last_modified_by_device_id": row.last_modified_by_device_id,
         }
 
     def build_monthly_context(self, tx: dict[str, Any]) -> dict[str, Any]:
@@ -371,6 +401,9 @@ class TransactionRepository:
         converted_amount: MoneyLike | None = None,
         category_id: int | None = None,
         source: str | None = None,
+        sync_id: str | None = None,
+        base_version: int = 0,
+        device_id: str | None = None,
     ) -> dict:
         """Return add transaction."""
         if tx_date is None:
@@ -380,7 +413,7 @@ class TransactionRepository:
             int(category_id) if category_id is not None else self._resolve_transaction_category_id(tx_type, category)
         )
         with self._atomic():
-            tx = Transaction.create(
+            create_kwargs: dict[str, Any] = dict(
                 account=account_id,
                 type=tx_type,
                 amount=self._money_to_cents(normalized_amount),
@@ -397,10 +430,25 @@ class TransactionRepository:
                 exchange_rate=exchange_rate,
                 converted_amount=self._money_to_cents(converted_amount, allow_none=True),
             )
+            create_kwargs["sync_id"] = sync_id if sync_id else _generate_ulid()
+            if device_id:
+                create_kwargs["last_modified_by_device_id"] = device_id
+            tx = Transaction.create(**create_kwargs)
             delta = normalized_amount if tx_type == TransactionType.INCOME else -normalized_amount
             self.update_account_balance(account_id, delta)
             tx_data = self._serialize_transaction_row(tx)
             self._apply_savings_goal_delta_for_transaction(tx_data, sign=1)
+            # Record sync event for new transaction
+            tx_sync_id = str(tx_data.get("sync_id") or "")
+            tx_sync_version = int(tx_data.get("sync_version") or 1)
+            if tx_sync_id:
+                self._record_transaction_sync_event(
+                    sync_id=tx_sync_id,
+                    operation="create",
+                    transaction_version=tx_sync_version,
+                    device_id=str(device_id or "desktop-local"),
+                    created_at=_utc_now_iso(),
+                )
         if is_analytics_excluded_transaction(tx_data):
             tx_data["mira_achievement"] = None
             tx_data["mira_insight"] = None
@@ -415,13 +463,14 @@ class TransactionRepository:
         row = Transaction.get_or_none(Transaction.id == tx_id)
         return self._serialize_transaction_row(row) if row is not None else None
 
-    def delete_transaction(self, tx_id: int) -> None:
+    def delete_transaction(self, tx_id: int, device_id: str | None = None) -> None:
         # Policy: message_events are immutable historical records and must not
         # be deleted when transactions are edited or removed.
         """Return delete transaction."""
         tx = self.get_transaction_by_id(tx_id)
         if tx is None:
             return
+        effective_device_id = str(device_id or "").strip() or "desktop-local"
         with self._atomic():
             self.clear_reconciliation_for_transactions([int(tx_id)])
             self._apply_savings_goal_delta_for_transaction(tx, sign=-1)
@@ -429,6 +478,24 @@ class TransactionRepository:
                 amount_value = self._money_to_decimal(tx.get("amount")) or MONEY_ZERO
                 delta = amount_value if tx["type"] == TransactionType.INCOME else -amount_value
                 self.update_account_balance(tx["account_id"], -delta)
+            # Create tombstone if the transaction has a sync_id
+            sync_id = tx.get("sync_id")
+            sync_version = int(tx.get("sync_version") or 1)
+            deleted_version = sync_version + 1
+            if sync_id:
+                self._upsert_transaction_tombstone(
+                    sync_id=str(sync_id),
+                    deleted_version=deleted_version,
+                    device_id=effective_device_id,
+                    deleted_at=_utc_now_iso(),
+                )
+                self._record_transaction_sync_event(
+                    sync_id=str(sync_id),
+                    operation="delete",
+                    transaction_version=deleted_version,
+                    device_id=effective_device_id,
+                    created_at=_utc_now_iso(),
+                )
             Transaction.delete().where(Transaction.id == tx_id).execute()
 
     def update_transaction(self, tx_id: int, **kwargs: object) -> dict:

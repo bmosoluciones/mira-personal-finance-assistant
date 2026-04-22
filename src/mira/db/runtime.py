@@ -87,8 +87,16 @@ class DatabaseRuntime:
             self._connection = self._database.connection()
             self._connection.row_factory = sqlite3.Row
             if inspection.status == "migratable":
-                self._create_pre_migration_backup(int(inspection.user_version or 0))
-                db_migrations.migrate_database(self._connection, int(inspection.user_version or 0), target_version)
+                backup_path = self._create_pre_migration_backup(int(inspection.user_version or 0))
+                try:
+                    db_migrations.migrate_database(self._connection, int(inspection.user_version or 0), target_version)
+                except Exception as exc:
+                    self._close_handles()
+                    _ActiveDatabaseGuard.release(self)
+                    detail = str(exc).strip()
+                    raise DatabaseSchemaError(
+                        f"Database migration failed. A backup was created at {backup_path}. {detail}"
+                    ) from exc
             self._init_schema()
         except Exception:
             self._close_handles()
@@ -144,7 +152,7 @@ class DatabaseRuntime:
         connection = self._require_connection()
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         backup_path = self.path.with_name(
-            f"{self.path.stem}.pre-migration-v{from_version}-{timestamp}{self.path.suffix or '.db'}"
+            f"{self.path.stem}.pre-v{from_version}-migration-{timestamp}.db"
         )
         destination = sqlite3.connect(str(backup_path))
         try:

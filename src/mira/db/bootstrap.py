@@ -29,8 +29,10 @@ from mira.db.demo_seed import (
     seed_budget_plan,
     seed_monthly_transactions,
 )
+from mira.db.master_sync import MASTER_DATA_UPDATED_AT_SETTING
 from mira.db.model import Account, Currency, RecurringTransaction, SavingsGoal, Setting, Transaction
 from mira.db.money import MoneyLike, money_to_cents
+from mira.sync_utils import utc_now_iso
 
 # ---------------------------------------------------------------------------
 # Localized category and tag name catalogue.
@@ -491,6 +493,7 @@ def seed_default_settings() -> None:
         "number_thousands_separator": ",",
         "number_decimal_separator": ".",
         "max_tags_per_transaction": "10",
+        MASTER_DATA_UPDATED_AT_SETTING: utc_now_iso(),
     }
     for key, value in defaults.items():
         Setting.insert(key=key, value=value).on_conflict_ignore().execute()
