@@ -12,7 +12,9 @@ from typing import TYPE_CHECKING, Any, cast
 from mira.db import bootstrap as db_bootstrap
 from mira.db import helpers as db_helpers
 from mira.db.helpers import SAVINGS_GOALS_DEFAULTS, localized_savings_goals_parent_name
+from mira.db.master_sync import LOCAL_DESKTOP_DEVICE_ID_SETTING, MASTER_DATA_UPDATED_AT_SETTING
 from mira.db.model import Currency, Setting
+from mira.sync_utils import generate_ulid, normalize_utc_iso, utc_now_iso
 
 CURRENCY_CODES = db_helpers.CURRENCY_CODES
 
@@ -47,6 +49,26 @@ class SettingRepository:
         if default_currency:
             return default_currency.strip().upper()
         return "USD"
+
+    def get_local_desktop_device_id(self) -> str:
+        """Return or generate a stable local desktop device ID."""
+        stored = self.get_setting(LOCAL_DESKTOP_DEVICE_ID_SETTING)
+        if stored and stored.strip():
+            return stored.strip()
+        generated = generate_ulid()
+        self.set_setting(LOCAL_DESKTOP_DEVICE_ID_SETTING, generated)
+        return generated
+
+    def get_master_data_updated_at(self) -> str:
+        """Return the ISO-8601 UTC timestamp of the last master-data update."""
+        stored = self.get_setting(MASTER_DATA_UPDATED_AT_SETTING)
+        return normalize_utc_iso(stored or utc_now_iso())
+
+    def touch_master_data_updated_at(self, value: str | None = None) -> str:
+        """Update and return the master_data_updated_at setting."""
+        normalized = normalize_utc_iso(value or utc_now_iso())
+        self.set_setting(MASTER_DATA_UPDATED_AT_SETTING, normalized)
+        return normalized
 
     def _database_language(self) -> str:
         """Return database language."""

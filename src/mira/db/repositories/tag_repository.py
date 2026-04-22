@@ -6,13 +6,27 @@
 from __future__ import annotations
 
 
+from datetime import datetime as _datetime
 from typing import TYPE_CHECKING
 
 from peewee import IntegrityError as PeeweeIntegrityError, fn
 
+from mira.sync_utils import utc_now_iso as _utc_now_iso
 from mira.db.errors import DuplicateTagNameError
 from mira.db.helpers import _ICON_MAX_LENGTH
 from mira.db.model import RecurringTransactionTag, Tag, TransactionTag
+
+
+def _fmt_updated_at(value: object) -> str | None:
+    """Normalize a datetime/string to ISO-8601 UTC format with T and Z."""
+    if isinstance(value, _datetime):
+        return value.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(value, str) and value:
+        s = value.replace(" ", "T")
+        if not s.endswith("Z") and "+" not in s:
+            s = s + "Z"
+        return s
+    return None
 
 
 class TagRepository:
@@ -26,15 +40,27 @@ class TagRepository:
         def _atomic(self):
             """Return atomic."""
 
-    def add_tag(self, name: str, color: str = "#888888", icon: str = "") -> dict:
+    def add_tag(
+        self,
+        name: str,
+        color: str = "#888888",
+        icon: str = "",
+        global_id: str | None = None,
+        device_id: str | None = None,
+    ) -> dict:
         """Return add tag."""
         normalized = name.strip()
         if not normalized:
             raise ValueError("Tag name cannot be empty")
         if len(icon) > _ICON_MAX_LENGTH:
             raise ValueError(f"Tag icon cannot exceed {_ICON_MAX_LENGTH} characters")
+        create_kwargs: dict[str, object] = dict(name=normalized, icon=icon, color=color)
+        if global_id:
+            create_kwargs["global_id"] = global_id
+        if device_id:
+            create_kwargs["last_modified_by_device_id"] = device_id
         try:
-            tag = Tag.create(name=normalized, icon=icon, color=color)
+            tag = Tag.create(**create_kwargs)
         except PeeweeIntegrityError as exc:
             raise DuplicateTagNameError(f"Tag '{normalized}' already exists") from exc
         return {
@@ -43,6 +69,10 @@ class TagRepository:
             "icon": tag.icon,
             "color": tag.color,
             "created_at": tag.created_at,
+            "global_id": tag.global_id,
+            "updated_at": _fmt_updated_at(tag.updated_at),
+            "sync_version": tag.sync_version,
+            "last_modified_by_device_id": tag.last_modified_by_device_id,
         }
 
     def get_tags(self) -> list[dict]:
@@ -54,6 +84,10 @@ class TagRepository:
                 "icon": row.icon,
                 "color": row.color,
                 "created_at": row.created_at,
+                "global_id": row.global_id,
+                "updated_at": _fmt_updated_at(row.updated_at),
+                "sync_version": row.sync_version,
+                "last_modified_by_device_id": row.last_modified_by_device_id,
             }
             for row in Tag.select().order_by(Tag.name)
         ]
@@ -69,6 +103,10 @@ class TagRepository:
             "icon": row.icon,
             "color": row.color,
             "created_at": row.created_at,
+            "global_id": row.global_id,
+            "updated_at": _fmt_updated_at(row.updated_at),
+            "sync_version": row.sync_version,
+            "last_modified_by_device_id": row.last_modified_by_device_id,
         }
 
     def get_tag_by_name(self, name: str) -> dict | None:
@@ -85,17 +123,48 @@ class TagRepository:
             "icon": row.icon,
             "color": row.color,
             "created_at": row.created_at,
+            "global_id": row.global_id,
+            "updated_at": _fmt_updated_at(row.updated_at),
+            "sync_version": row.sync_version,
+            "last_modified_by_device_id": row.last_modified_by_device_id,
         }
 
-    def update_tag(self, tag_id: int, name: str, color: str, icon: str = "") -> None:
+    def get_tag_by_global_id(self, global_id: str) -> dict | None:
+        """Return the tag with the given global_id, or None."""
+        normalized = str(global_id or "").strip()
+        if not normalized:
+            return None
+        row = Tag.get_or_none(Tag.global_id == normalized)
+        if row is None:
+            return None
+        return {
+            "id": row.id,
+            "name": row.name,
+            "icon": row.icon,
+            "color": row.color,
+            "created_at": row.created_at,
+            "global_id": row.global_id,
+            "updated_at": _fmt_updated_at(row.updated_at),
+            "sync_version": row.sync_version,
+            "last_modified_by_device_id": row.last_modified_by_device_id,
+        }
+
+    def update_tag(self, tag_id: int, name: str, color: str, icon: str = "", device_id: str | None = None) -> None:
         """Return update tag."""
         normalized = name.strip()
         if not normalized:
             raise ValueError("Tag name cannot be empty")
         if len(icon) > _ICON_MAX_LENGTH:
             raise ValueError(f"Tag icon cannot exceed {_ICON_MAX_LENGTH} characters")
+        updates: dict[str, object] = {"name": normalized, "color": color, "icon": icon}
+        if device_id:
+            updates["last_modified_by_device_id"] = device_id
+            updates["updated_at"] = _utc_now_iso()
+            row = Tag.get_or_none(Tag.id == tag_id)
+            if row is not None:
+                updates["sync_version"] = int(row.sync_version or 1) + 1
         try:
-            Tag.update(name=normalized, color=color, icon=icon).where(Tag.id == tag_id).execute()
+            Tag.update(**updates).where(Tag.id == tag_id).execute()
         except PeeweeIntegrityError as exc:
             raise DuplicateTagNameError(f"Tag '{normalized}' already exists") from exc
 
@@ -106,7 +175,7 @@ class TagRepository:
     def get_transaction_tags(self, transaction_id: int) -> list[dict]:
         """Return get transaction tags."""
         query = (
-            Tag.select(Tag.id, Tag.name, Tag.icon, Tag.color, Tag.created_at)
+            Tag.select()
             .join(TransactionTag, on=(TransactionTag.tag == Tag.id))
             .where(TransactionTag.transaction_id == transaction_id)
             .order_by(Tag.name)
@@ -118,6 +187,10 @@ class TagRepository:
                 "icon": row.icon,
                 "color": row.color,
                 "created_at": row.created_at,
+                "global_id": row.global_id,
+                "updated_at": _fmt_updated_at(row.updated_at),
+                "sync_version": row.sync_version,
+                "last_modified_by_device_id": row.last_modified_by_device_id,
             }
             for row in query
         ]

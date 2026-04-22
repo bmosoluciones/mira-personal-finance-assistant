@@ -14,6 +14,7 @@ from .reconciliation_repository import ReconciliationRepository
 from .report_repository import ReportRepository
 from .savings_goal_repository import SavingsGoalRepository
 from .setting_repository import SettingRepository
+from .sync_repository import SyncRepository
 from .tag_repository import TagRepository
 from .transaction_repository import TransactionRepository
 
@@ -29,6 +30,7 @@ __all__ = [
     "ReportRepository",
     "SavingsGoalRepository",
     "SettingRepository",
+    "SyncRepository",
     "TagRepository",
     "TransactionRepository",
 ]

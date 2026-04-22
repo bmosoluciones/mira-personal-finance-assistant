@@ -9,9 +9,10 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .database_io import DatabaseIOService
+    from .mobile_sync import MobileSyncServer, MobileSyncService
     from .model_lifecycle import ModelLifecycle, ModelLifecycleState
 
-__all__ = ["DatabaseIOService", "ModelLifecycle", "ModelLifecycleState"]
+__all__ = ["DatabaseIOService", "MobileSyncServer", "MobileSyncService", "ModelLifecycle", "ModelLifecycleState"]
 
 
 def __getattr__(name: str) -> Any:
@@ -20,6 +21,13 @@ def __getattr__(name: str) -> Any:
         from .database_io import DatabaseIOService
 
         return DatabaseIOService
+    if name in {"MobileSyncServer", "MobileSyncService"}:
+        from .mobile_sync import MobileSyncServer, MobileSyncService
+
+        return {
+            "MobileSyncServer": MobileSyncServer,
+            "MobileSyncService": MobileSyncService,
+        }[name]
     if name in {"ModelLifecycle", "ModelLifecycleState"}:
         from .model_lifecycle import ModelLifecycle, ModelLifecycleState
 

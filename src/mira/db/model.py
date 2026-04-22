@@ -26,6 +26,13 @@ from peewee import (
     SqliteDatabase,
     TextField,
 )
+from mira.sync_utils import generate_ulid, utc_now_iso as _utc_now_iso
+
+
+def _utc_now() -> str:
+    """Return current UTC time as ISO-8601 string."""
+    return _utc_now_iso()
+
 
 DB_PROXY: Proxy = Proxy()
 SCHEMA_VERSION = 4
@@ -76,6 +83,10 @@ class Account(BaseModel):
     currency = CharField(default="USD")
     is_default = BooleanField(default=False)
     created_at = DateTimeField(default=datetime.now)
+    global_id = CharField(unique=True, null=True, default=generate_ulid)
+    updated_at = DateTimeField(default=datetime.now, null=True)
+    sync_version = IntegerField(default=1)
+    last_modified_by_device_id = CharField(default="desktop-local", null=True)
 
     class Meta:
         """Represent the Meta class."""
@@ -114,6 +125,10 @@ class Transaction(BaseModel):
     reconciled_at = DateTimeField(null=True)
     date = DateField(default=date.today)
     created_at = DateTimeField(default=datetime.now)
+    sync_id = CharField(unique=True, null=True)
+    sync_version = IntegerField(default=1)
+    updated_at = DateTimeField(default=datetime.now, null=True)
+    last_modified_by_device_id = CharField(default="desktop-local", null=True)
 
     class Meta:
         """Represent the Meta class."""
@@ -178,6 +193,10 @@ class Category(BaseModel):
     icon = CharField(default="")
     is_savings = BooleanField(default=False)
     parent_id = IntegerField(null=True)
+    global_id = CharField(unique=True, null=True, default=generate_ulid)
+    updated_at = DateTimeField(default=datetime.now, null=True)
+    sync_version = IntegerField(default=1)
+    last_modified_by_device_id = CharField(default="desktop-local", null=True)
 
     class Meta:
         """Represent the Meta class."""
@@ -194,6 +213,10 @@ class Tag(BaseModel):
     icon = CharField(default="")
     color = CharField(default="#888888")
     created_at = DateTimeField(default=datetime.now)
+    global_id = CharField(unique=True, null=True, default=generate_ulid)
+    updated_at = DateTimeField(default=datetime.now, null=True)
+    sync_version = IntegerField(default=1)
+    last_modified_by_device_id = CharField(default="desktop-local", null=True)
 
     class Meta:
         """Represent the Meta class."""
@@ -494,6 +517,53 @@ class IncomeExpenseRelation(BaseModel):
         indexes = ((("expense_category",), True),)
 
 
+class SyncDevice(BaseModel):
+    """Represent a paired mobile device for ZeroConf sync."""
+
+    device_id = CharField(primary_key=True)
+    device_name = CharField()
+    platform = CharField()
+    app_id = CharField()
+    created_at = DateTimeField(default=datetime.now)
+    last_seen_at = DateTimeField(default=datetime.now)
+    last_acked_event_id = IntegerField(default=0)
+
+    class Meta:
+        """Represent the Meta class."""
+
+        table_name = "sync_devices"
+
+
+class TransactionSyncEvent(BaseModel):
+    """Represent a sync event for a transaction."""
+
+    event_id = AutoField()
+    transaction_sync_id = CharField()
+    operation = CharField()
+    transaction_version = IntegerField()
+    device_id = CharField()
+    created_at = DateTimeField(default=datetime.now)
+
+    class Meta:
+        """Represent the Meta class."""
+
+        table_name = "transaction_sync_events"
+
+
+class TransactionTombstone(BaseModel):
+    """Represent a deleted transaction marker for sync reconciliation."""
+
+    transaction_sync_id = CharField(primary_key=True)
+    last_deleted_version = IntegerField()
+    deleted_by_device_id = CharField()
+    deleted_at = DateTimeField(default=datetime.now)
+
+    class Meta:
+        """Represent the Meta class."""
+
+        table_name = "transaction_tombstones"
+
+
 ALL_MODELS = [
     Account,
     Transaction,
@@ -516,6 +586,9 @@ ALL_MODELS = [
     ReconciliationMatch,
     IncomeExpenseRelation,
     SchemaVersion,
+    SyncDevice,
+    TransactionSyncEvent,
+    TransactionTombstone,
 ]
 
 EXPECTED_TABLES = frozenset(model._meta.table_name for model in ALL_MODELS)  # type: ignore[attr-defined]

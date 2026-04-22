@@ -776,6 +776,9 @@ def test_card_widget_menu_builder_and_report_types(monkeypatch) -> None:
         def _menu_open_goal_simulator(self) -> None:
             return None
 
+        def _on_mobile_sync(self) -> None:
+            return None
+
         def _toggle_sidebar(self) -> None:
             return None
 

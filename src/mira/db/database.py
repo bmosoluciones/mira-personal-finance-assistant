@@ -47,6 +47,10 @@ class AccountFacade(_DatabaseFacade):
         """Return find by name."""
         return self._db.get_account_by_name(name)
 
+    def find_by_global_id(self, global_id: str) -> dict | None:
+        """Return the account with the given global_id, or None."""
+        return self._db.get_account_by_global_id(global_id)
+
     def get_or_create(self, name: str) -> dict:
         """Return get or create."""
         return self._db.get_or_create_account(name)
@@ -57,13 +61,24 @@ class AccountFacade(_DatabaseFacade):
         account_type: str = "bank",
         opening_balance: MoneyLike = 0,
         currency: str | None = None,
+        global_id: str | None = None,
+        device_id: str | None = None,
+        is_default: bool = False,
     ) -> dict:
         """Return create."""
-        return self._db.add_account(name, account_type, opening_balance, currency)
+        return self._db.add_account(
+            name,
+            account_type,
+            opening_balance,
+            currency,
+            global_id=global_id,
+            device_id=device_id,
+            is_default=is_default,
+        )
 
-    def update(self, account_id: int, name: str, account_type: str, currency: str | None = None) -> None:
+    def update(self, account_id: int, name: str, account_type: str, currency: str | None = None, device_id: str | None = None, is_default: bool | None = None) -> None:
         """Return update."""
-        self._db.update_account(account_id, name, account_type, currency)
+        self._db.update_account(account_id, name, account_type, currency, device_id=device_id, is_default=is_default)
 
     def delete(self, account_id: int) -> None:
         """Return delete."""
@@ -127,6 +142,10 @@ class CategoryFacade(_DatabaseFacade):
         """Return find by name."""
         return self._db.get_category_by_name(name, cat_type)
 
+    def find_by_global_id(self, global_id: str) -> dict | None:
+        """Return the category with the given global_id, or None."""
+        return self._db.get_category_by_global_id(global_id)
+
     def create(
         self,
         name: str,
@@ -135,6 +154,8 @@ class CategoryFacade(_DatabaseFacade):
         parent_id: int | None = None,
         is_savings: bool = False,
         icon: str = "",
+        global_id: str | None = None,
+        device_id: str | None = None,
     ) -> dict:
         """Return create."""
         return self._db.add_category(
@@ -144,6 +165,8 @@ class CategoryFacade(_DatabaseFacade):
             parent_id=parent_id,
             is_savings=is_savings,
             icon=icon,
+            global_id=global_id,
+            device_id=device_id,
         )
 
     def get_or_create(
@@ -174,6 +197,7 @@ class CategoryFacade(_DatabaseFacade):
         is_savings: bool = False,
         parent_id: int | None = None,
         icon: str = "",
+        device_id: str | None = None,
     ) -> None:
         """Return update."""
         self._db.update_category(
@@ -184,6 +208,7 @@ class CategoryFacade(_DatabaseFacade):
             is_savings=is_savings,
             parent_id=parent_id,
             icon=icon,
+            device_id=device_id,
         )
 
     def list_subcategories(self, parent_id: int) -> builtins.list[dict]:
@@ -230,9 +255,16 @@ class CategoryFacade(_DatabaseFacade):
 class TagFacade(_DatabaseFacade):
     """Represent the TagFacade class."""
 
-    def create(self, name: str, color: str = "#888888", icon: str = "") -> dict:
+    def create(
+        self,
+        name: str,
+        color: str = "#888888",
+        icon: str = "",
+        global_id: str | None = None,
+        device_id: str | None = None,
+    ) -> dict:
         """Return create."""
-        return self._db.add_tag(name, color=color, icon=icon)
+        return self._db.add_tag(name, color=color, icon=icon, global_id=global_id, device_id=device_id)
 
     def list(self) -> list[dict]:
         """Return list."""
@@ -246,9 +278,13 @@ class TagFacade(_DatabaseFacade):
         """Return find by name."""
         return self._db.get_tag_by_name(name)
 
-    def update(self, tag_id: int, name: str, color: str, icon: str = "") -> None:
+    def find_by_global_id(self, global_id: str) -> dict | None:
+        """Return the tag with the given global_id, or None."""
+        return self._db.get_tag_by_global_id(global_id)
+
+    def update(self, tag_id: int, name: str, color: str, icon: str = "", device_id: str | None = None) -> None:
         """Return update."""
-        self._db.update_tag(tag_id, name, color, icon=icon)
+        self._db.update_tag(tag_id, name, color, icon=icon, device_id=device_id)
 
     def delete(self, tag_id: int) -> None:
         """Return delete."""
@@ -258,7 +294,13 @@ class TagFacade(_DatabaseFacade):
         """Return list for transaction."""
         return self._db.get_transaction_tags(transaction_id)
 
-    def set_for_transaction(self, transaction_id: int, tag_ids: builtins.list[int]) -> None:
+    def set_for_transaction(
+        self,
+        transaction_id: int,
+        tag_ids: builtins.list[int],
+        device_id: str | None = None,
+        touch_sync: bool = True,
+    ) -> None:
         """Return set for transaction."""
         self._db.set_transaction_tags(transaction_id, tag_ids)
 
@@ -313,6 +355,9 @@ class TransactionFacade(_DatabaseFacade):
         converted_amount: MoneyLike | None = None,
         category_id: int | None = None,
         source: str | None = None,
+        sync_id: str | None = None,
+        base_version: int = 0,
+        device_id: str | None = None,
     ) -> dict:
         """Return create."""
         return self._db.add_transaction(
@@ -332,11 +377,18 @@ class TransactionFacade(_DatabaseFacade):
             converted_amount=converted_amount,
             category_id=category_id,
             source=source,
+            sync_id=sync_id,
+            base_version=base_version,
+            device_id=device_id,
         )
 
     def get(self, tx_id: int) -> dict | None:
         """Return get."""
         return self._db.get_transaction_by_id(tx_id)
+
+    def get_by_sync_id(self, sync_id: str) -> dict | None:
+        """Return the transaction with the given sync_id, or None."""
+        return self._db.get_transaction_by_sync_id(sync_id)
 
     def list(
         self,
@@ -374,9 +426,9 @@ class TransactionFacade(_DatabaseFacade):
         """Return update."""
         return self._db.update_transaction(tx_id, **kwargs)
 
-    def delete(self, tx_id: int) -> None:
+    def delete(self, tx_id: int, device_id: str | None = None) -> None:
         """Return delete."""
-        self._db.delete_transaction(tx_id)
+        self._db.delete_transaction(tx_id, device_id=device_id)
 
     def update_account(self, tx_id: int, account_id: int) -> dict:
         """Return update account."""
@@ -660,6 +712,18 @@ class SettingFacade(_DatabaseFacade):
     def get_default_currency(self) -> str:
         """Return get default currency."""
         return self._db.get_default_currency()
+
+    def get_local_desktop_device_id(self) -> str:
+        """Return or generate a stable local desktop device ID."""
+        return self._db.get_local_desktop_device_id()
+
+    def get_master_data_updated_at(self) -> str:
+        """Return the ISO-8601 UTC timestamp of the last master-data update."""
+        return self._db.get_master_data_updated_at()
+
+    def touch_master_data_updated_at(self, value: str | None = None) -> str:
+        """Update and return the master_data_updated_at setting."""
+        return self._db.touch_master_data_updated_at(value)
 
     def get_savings_goals_parent_name(self) -> str:
         """Return get savings goals parent name."""
@@ -1050,6 +1114,46 @@ class FeedbackFacade(_DatabaseFacade):
         )
 
 
+class SyncFacade(_DatabaseFacade):
+    """Facade over SyncRepository for mobile device synchronisation."""
+
+    def register_device(
+        self,
+        *,
+        device_id: str | None,
+        device_name: str,
+        platform: str,
+        app_id: str = "mira-mobile-helper",
+    ) -> dict[str, Any]:
+        """Register or update a mobile sync device."""
+        return self._db.register_sync_device(
+            device_id=device_id,
+            device_name=device_name,
+            platform=platform,
+            app_id=app_id,
+        )
+
+    def get_device(self, device_id: str) -> dict[str, Any] | None:
+        """Return the registered device record for *device_id*, or None."""
+        return self._db.get_sync_device(device_id)
+
+    def ack_device_cursor(self, device_id: str, last_acked_event_id: int) -> dict[str, Any]:
+        """Acknowledge the last processed sync event for a device."""
+        return self._db.ack_sync_device_cursor(device_id, last_acked_event_id)
+
+    def get_transaction_by_sync_id(self, sync_id: str) -> dict[str, Any] | None:
+        """Return the transaction row with the given *sync_id*, or None."""
+        return self._db.get_transaction_by_sync_id(sync_id)
+
+    def get_tombstone(self, sync_id: str) -> dict[str, Any] | None:
+        """Return the tombstone record for *sync_id*, or None if not deleted."""
+        return self._db.get_transaction_tombstone(sync_id)
+
+    def list_transaction_changes(self, *, after_event_id: int, limit: int = 500) -> list[dict[str, Any]]:
+        """Return sync events with event_id > *after_event_id*."""
+        return self._db.list_transaction_changes(after_event_id=after_event_id, limit=limit)
+
+
 class IOFacade:
     """Represent the IOFacade class."""
 
@@ -1140,6 +1244,7 @@ class Database:
         self.bucket = BucketFacade(self._backend)
         self.backup = BackupFacade(self._backend)
         self.feedback = FeedbackFacade(self._backend)
+        self.sync = SyncFacade(self._backend)
         self.io = IOFacade(self._io_service)
 
     @property

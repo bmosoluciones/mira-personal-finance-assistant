@@ -1,3 +1,6 @@
 [submodule "packaging/flatpak"]
 	path = packaging/flatpak
 	url = https://github.com/bmosoluciones/solutions.bmogroup.mira.git
+[submodule "tools/mobile-helper"]
+	path = tools/mobile-helper
+	url = https://github.com/bmosoluciones/mira-mobile-helper.git

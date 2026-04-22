@@ -11,6 +11,9 @@ from mira.ui.i18n import tr
 from mira.ui.views.report_types import REPORT_ACCOUNT_TREND, REPORT_CASH_FLOW, REPORT_CATEGORY, REPORT_TOTAL
 
 
+HIDE_MOBILE: bool = True
+
+
 class MenuBuilder:
     """Extracted menu construction for MainWindow."""
 
@@ -193,6 +196,12 @@ class MenuBuilder:
         )
         act_goal_simulator.triggered.connect(window._menu_open_goal_simulator)
         tools_menu.addAction(act_goal_simulator)
+
+        if not HIDE_MOBILE:
+            mobile_menu = mb.addMenu(tr("menu.mobile", window._language, default="Mobile"))
+            act_mobile_sync = QAction(tr("menu.mobile.sync", window._language, default="Sync"), window)
+            act_mobile_sync.triggered.connect(window._on_mobile_sync)
+            mobile_menu.addAction(act_mobile_sync)
 
         view_menu = mb.addMenu(tr("menu.view", window._language, default="View"))
         window._act_sidebar = QAction(
