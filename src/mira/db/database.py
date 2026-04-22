@@ -76,7 +76,15 @@ class AccountFacade(_DatabaseFacade):
             is_default=is_default,
         )
 
-    def update(self, account_id: int, name: str, account_type: str, currency: str | None = None, device_id: str | None = None, is_default: bool | None = None) -> None:
+    def update(
+        self,
+        account_id: int,
+        name: str,
+        account_type: str,
+        currency: str | None = None,
+        device_id: str | None = None,
+        is_default: bool | None = None,
+    ) -> None:
         """Return update."""
         self._db.update_account(account_id, name, account_type, currency, device_id=device_id, is_default=is_default)
 

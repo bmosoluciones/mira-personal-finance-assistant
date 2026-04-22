@@ -78,11 +78,13 @@ def _backfill_master_table_sync_fields(
     """Backfill global_id, updated_at, sync_version and last_modified_by_device_id."""
     columns = _table_columns(conn, table_name)
     created_at_expr = created_at_column if created_at_column and created_at_column in columns else "NULL"
-    rows = conn.execute(f"""
+    rows = conn.execute(
+        f"""
         SELECT id, global_id, {created_at_expr} AS created_at, updated_at, sync_version, last_modified_by_device_id
         FROM {table_name}
         ORDER BY id
-        """).fetchall()
+        """
+    ).fetchall()
     seen_global_ids: set[str] = set()
     fallback_timestamp = utc_now_iso()
     max_attempts = max(16, len(rows) * 4)
@@ -160,14 +162,19 @@ def _validate_backfilled_sync_state(conn: sqlite3.Connection) -> None:
     if null_sync_ids:
         raise DatabaseSchemaError("Migration v2 -> v3 failed: one or more transactions have an empty sync_id.")
 
-    duplicated_sync_ids = int(conn.execute("""
+    duplicated_sync_ids = int(
+        conn.execute(
+            """
             SELECT COUNT(*) FROM (
                 SELECT sync_id
                 FROM transactions
                 GROUP BY sync_id
                 HAVING COUNT(*) > 1
             )
-            """).fetchone()[0] or 0)
+            """
+        ).fetchone()[0]
+        or 0
+    )
     if duplicated_sync_ids:
         raise DatabaseSchemaError("Migration v2 -> v3 failed: duplicated transaction sync_id values were found.")
 
@@ -182,14 +189,19 @@ def _validate_master_table_sync_state(conn: sqlite3.Connection, table_name: str)
         raise DatabaseSchemaError(
             f"Migration v2 -> v3 failed: one or more rows in '{table_name}' have an empty global_id."
         )
-    duplicated_global_ids = int(conn.execute(f"""
+    duplicated_global_ids = int(
+        conn.execute(
+            f"""
             SELECT COUNT(*) FROM (
                 SELECT global_id
                 FROM {table_name}
                 GROUP BY global_id
                 HAVING COUNT(*) > 1
             )
-            """).fetchone()[0] or 0)
+            """
+        ).fetchone()[0]
+        or 0
+    )
     if duplicated_global_ids:
         raise DatabaseSchemaError(
             f"Migration v2 -> v3 failed: duplicated global_id values were found in '{table_name}'."
@@ -211,6 +223,128 @@ def _upsert_master_data_updated_at(conn: sqlite3.Connection) -> None:
         ON CONFLICT(key) DO UPDATE SET value = excluded.value
         """,
         (MASTER_DATA_UPDATED_AT_SETTING, master_data_updated_at),
+    )
+
+
+def _ensure_sync_schema(conn: sqlite3.Connection) -> None:
+    """Ensure sync metadata, tables, seed rows, and indexes exist."""
+    for tbl in ("accounts", "categories", "tags", "savings_goals"):
+        if not _table_exists(conn, tbl):
+            continue
+        _add_column_if_missing(conn, tbl, "global_id", "global_id TEXT")
+        _add_column_if_missing(conn, tbl, "updated_at", "updated_at TEXT")
+        _add_column_if_missing(conn, tbl, "sync_version", "sync_version INTEGER NOT NULL DEFAULT 1")
+        _add_column_if_missing(conn, tbl, "last_modified_by_device_id", "last_modified_by_device_id TEXT")
+
+    if _table_exists(conn, "transactions"):
+        _add_column_if_missing(conn, "transactions", "sync_id", "sync_id TEXT")
+        _add_column_if_missing(conn, "transactions", "sync_version", "sync_version INTEGER NOT NULL DEFAULT 1")
+        _add_column_if_missing(conn, "transactions", "updated_at", "updated_at TEXT")
+        _add_column_if_missing(conn, "transactions", "last_modified_by_device_id", "last_modified_by_device_id TEXT")
+
+    for _tbl, _created_at in (
+        ("accounts", "created_at"),
+        ("categories", None),
+        ("tags", "created_at"),
+        ("savings_goals", "created_at"),
+    ):
+        if _table_exists(conn, _tbl):
+            _backfill_master_table_sync_fields(conn, _tbl, created_at_column=_created_at)
+    if _table_exists(conn, "transactions"):
+        _ensure_backfilled_transaction_sync_fields(conn)
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS sync_devices (
+            device_id TEXT PRIMARY KEY,
+            device_name TEXT NOT NULL,
+            platform TEXT NOT NULL,
+            app_id TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            last_seen_at TEXT NOT NULL,
+            last_acked_event_id INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS transaction_sync_events (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            transaction_sync_id TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            transaction_version INTEGER NOT NULL,
+            device_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS transaction_tombstones (
+            transaction_sync_id TEXT PRIMARY KEY,
+            last_deleted_version INTEGER NOT NULL,
+            deleted_by_device_id TEXT NOT NULL,
+            deleted_at TEXT NOT NULL
+        )
+        """
+    )
+
+    if _table_exists(conn, "transactions"):
+        transaction_rows = conn.execute(
+            """
+            SELECT sync_id, sync_version, updated_at
+            FROM transactions
+            ORDER BY id
+            """
+        ).fetchall()
+        if transaction_rows:
+            conn.executemany(
+                """
+                INSERT INTO transaction_sync_events (
+                    transaction_sync_id,
+                    operation,
+                    transaction_version,
+                    device_id,
+                    created_at
+                )
+                SELECT ?, 'create', ?, 'desktop-local', ?
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM transaction_sync_events
+                    WHERE transaction_sync_id = ? AND transaction_version = ?
+                    LIMIT 1
+                )
+                """,
+                [
+                    (sync_id, sync_version, normalize_utc_iso(updated_at), sync_id, sync_version)
+                    for sync_id, sync_version, updated_at in transaction_rows
+                ],
+            )
+
+    if _table_exists(conn, "transactions"):
+        _validate_backfilled_sync_state(conn)
+    for _tbl in ("accounts", "categories", "tags", "savings_goals"):
+        if _table_exists(conn, _tbl):
+            _validate_master_table_sync_state(conn, _tbl)
+    if _table_exists(conn, "settings"):
+        _upsert_master_data_updated_at(conn)
+
+    if _table_exists(conn, "transactions"):
+        _create_index_if_missing(
+            conn,
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_sync_id ON transactions(sync_id)",
+        )
+        _create_index_if_missing(
+            conn,
+            "CREATE INDEX IF NOT EXISTS idx_transactions_updated_at ON transactions(updated_at)",
+        )
+    _create_index_if_missing(
+        conn,
+        "CREATE INDEX IF NOT EXISTS idx_events_transaction_sync_id ON transaction_sync_events(transaction_sync_id)",
+    )
+    _create_index_if_missing(
+        conn,
+        "CREATE INDEX IF NOT EXISTS idx_events_event_id ON transaction_sync_events(event_id)",
     )
 
 
@@ -244,13 +378,15 @@ def _populate_money_column(
 
 def _ensure_schema_version_table(conn: sqlite3.Connection) -> None:
     """Return ensure schema version table."""
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS schema_version (
             version INTEGER PRIMARY KEY,
             applied_at TIMESTAMP NOT NULL,
             status TEXT NOT NULL
         )
-        """)
+        """
+    )
 
 
 def _record_schema_version(conn: sqlite3.Connection, version: int, *, status: str = "applied") -> None:
@@ -356,7 +492,8 @@ def _migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
         conn.execute("UPDATE accounts SET is_default = 0 WHERE is_default = 1 AND id != ?", (keep_id,))
 
     # -- Create income_expense_relations table -----------------------------
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS income_expense_relations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             income_category_id INTEGER NOT NULL
@@ -365,7 +502,8 @@ def _migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
                 REFERENCES categories(id) ON DELETE CASCADE,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
-        """)
+        """
+    )
     conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_income_expense_relations_expense "
         "ON income_expense_relations(expense_category_id)"
@@ -375,117 +513,7 @@ def _migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
         "ON income_expense_relations(income_category_id)"
     )
 
-    # -- Add sync metadata columns to master tables ------------------------
-    for tbl in ("accounts", "categories", "tags", "savings_goals"):
-        if not _table_exists(conn, tbl):
-            continue
-        _add_column_if_missing(conn, tbl, "global_id", "global_id TEXT")
-        _add_column_if_missing(conn, tbl, "updated_at", "updated_at TEXT")
-        _add_column_if_missing(conn, tbl, "sync_version", "sync_version INTEGER NOT NULL DEFAULT 1")
-        _add_column_if_missing(conn, tbl, "last_modified_by_device_id", "last_modified_by_device_id TEXT")
-
-    # -- Add sync metadata columns to transactions -------------------------
-    if _table_exists(conn, "transactions"):
-        _add_column_if_missing(conn, "transactions", "sync_id", "sync_id TEXT")
-        _add_column_if_missing(conn, "transactions", "sync_version", "sync_version INTEGER NOT NULL DEFAULT 1")
-        _add_column_if_missing(conn, "transactions", "updated_at", "updated_at TEXT")
-        _add_column_if_missing(conn, "transactions", "last_modified_by_device_id", "last_modified_by_device_id TEXT")
-
-    # -- Backfill sync fields -----------------------------------------------
-    for _tbl, _created_at in (("accounts", "created_at"), ("categories", None), ("tags", "created_at"), ("savings_goals", "created_at")):
-        if _table_exists(conn, _tbl):
-            _backfill_master_table_sync_fields(conn, _tbl, created_at_column=_created_at)
-    if _table_exists(conn, "transactions"):
-        _ensure_backfilled_transaction_sync_fields(conn)
-
-    # -- Create sync device / event / tombstone tables ---------------------
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS sync_devices (
-            device_id TEXT PRIMARY KEY,
-            device_name TEXT NOT NULL,
-            platform TEXT NOT NULL,
-            app_id TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            last_seen_at TEXT NOT NULL,
-            last_acked_event_id INTEGER NOT NULL DEFAULT 0
-        )
-        """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS transaction_sync_events (
-            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            transaction_sync_id TEXT NOT NULL,
-            operation TEXT NOT NULL,
-            transaction_version INTEGER NOT NULL,
-            device_id TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        )
-        """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS transaction_tombstones (
-            transaction_sync_id TEXT PRIMARY KEY,
-            last_deleted_version INTEGER NOT NULL,
-            deleted_by_device_id TEXT NOT NULL,
-            deleted_at TEXT NOT NULL
-        )
-        """)
-
-    # -- Seed initial sync events for existing transactions ----------------
-    if _table_exists(conn, "transactions"):
-        transaction_rows = conn.execute("""
-            SELECT sync_id, sync_version, updated_at
-            FROM transactions
-            ORDER BY id
-            """).fetchall()
-        if transaction_rows:
-            conn.executemany(
-                """
-                INSERT INTO transaction_sync_events (
-                    transaction_sync_id,
-                    operation,
-                    transaction_version,
-                    device_id,
-                    created_at
-                )
-                SELECT ?, 'create', ?, 'desktop-local', ?
-                WHERE NOT EXISTS (
-                    SELECT 1
-                    FROM transaction_sync_events
-                    WHERE transaction_sync_id = ? AND transaction_version = ?
-                    LIMIT 1
-                )
-                """,
-                [
-                    (sync_id, sync_version, normalize_utc_iso(updated_at), sync_id, sync_version)
-                    for sync_id, sync_version, updated_at in transaction_rows
-                ],
-            )
-
-    # -- Validate and create indexes ---------------------------------------
-    if _table_exists(conn, "transactions"):
-        _validate_backfilled_sync_state(conn)
-    for _tbl in ("accounts", "categories", "tags", "savings_goals"):
-        if _table_exists(conn, _tbl):
-            _validate_master_table_sync_state(conn, _tbl)
-    if _table_exists(conn, "settings"):
-        _upsert_master_data_updated_at(conn)
-
-    if _table_exists(conn, "transactions"):
-        _create_index_if_missing(
-            conn,
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_sync_id ON transactions(sync_id)",
-        )
-        _create_index_if_missing(
-            conn,
-            "CREATE INDEX IF NOT EXISTS idx_transactions_updated_at ON transactions(updated_at)",
-        )
-    _create_index_if_missing(
-        conn,
-        "CREATE INDEX IF NOT EXISTS idx_events_transaction_sync_id ON transaction_sync_events(transaction_sync_id)",
-    )
-    _create_index_if_missing(
-        conn,
-        "CREATE INDEX IF NOT EXISTS idx_events_event_id ON transaction_sync_events(event_id)",
-    )
+    _ensure_sync_schema(conn)
 
 
 def _migrate_v3_to_v4(conn: sqlite3.Connection) -> None:
@@ -493,7 +521,8 @@ def _migrate_v3_to_v4(conn: sqlite3.Connection) -> None:
     _add_column_if_missing(conn, "transactions", "is_reconciled", "is_reconciled INTEGER NOT NULL DEFAULT 0")
     _add_column_if_missing(conn, "transactions", "reconciled_at", "reconciled_at TIMESTAMP")
 
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS reconciliation_groups (
             id TEXT PRIMARY KEY,
             account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -501,8 +530,10 @@ def _migrate_v3_to_v4(conn: sqlite3.Connection) -> None:
             date_to DATE NOT NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
-        """)
-    conn.execute("""
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS reconciliation_matches (
             id TEXT PRIMARY KEY,
             reconciliation_group_id TEXT NOT NULL
@@ -515,8 +546,18 @@ def _migrate_v3_to_v4(conn: sqlite3.Connection) -> None:
             external_amount_cents INTEGER NOT NULL,
             external_item_key TEXT NOT NULL
         )
-        """)
+        """
+    )
+    for index_spec in db_model.SCHEMA_INDEX_SPECS:
+        if index_spec.table in {"transactions", "reconciliation_groups", "reconciliation_matches"}:
+            conn.execute(db_model._build_create_index_sql(index_spec))
     _record_schema_version(conn, 4)
+
+
+def _migrate_v4_to_v5(conn: sqlite3.Connection) -> None:
+    """Backfill mobile sync schema for databases already marked as v4."""
+    _ensure_sync_schema(conn)
+    _record_schema_version(conn, 5)
 
     for index_spec in db_model.SCHEMA_INDEX_SPECS:
         if index_spec.table in {"transactions", "reconciliation_groups", "reconciliation_matches", "schema_version"}:
@@ -527,6 +568,7 @@ MIGRATIONS: dict[int, MigrationFn] = {
     1: _migrate_v1_to_v2,
     2: _migrate_v2_to_v3,
     3: _migrate_v3_to_v4,
+    4: _migrate_v4_to_v5,
 }
 
 

@@ -10,7 +10,6 @@ from PySide6.QtGui import QAction
 from mira.ui.i18n import tr
 from mira.ui.views.report_types import REPORT_ACCOUNT_TREND, REPORT_CASH_FLOW, REPORT_CATEGORY, REPORT_TOTAL
 
-
 HIDE_MOBILE: bool = True
 
 

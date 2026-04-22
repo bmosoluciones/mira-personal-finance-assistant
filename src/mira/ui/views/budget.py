@@ -682,16 +682,18 @@ class BudgetView(QWidget):
     ) -> None:
         """Return refresh only the edited budget row and summary rows."""
         self._budget_table.blockSignals(True)
+        budget = self._selected_budget()
+        currency = str(budget["currency"]) if budget is not None else None
         value_item = self._budget_table.item(row, column)
         if value_item is not None:
             value_item.setText(_fmt_amount(self._db, amount))
             value_item.setData(_BUDGET_AMOUNT_ROLE, float(amount))
             value_item.setToolTip("")
-        self._update_category_annual_total(row)
-        self._update_summary_rows_from_table()
+        self._update_category_annual_total(row, currency=currency)
+        self._update_summary_rows_from_table(currency=currency)
         self._budget_table.blockSignals(False)
 
-    def _update_category_annual_total(self, row: int) -> None:
+    def _update_category_annual_total(self, row: int, *, currency: str | None = None) -> None:
         """Return refresh the category annual total for the edited row."""
         annual_total = round(
             sum(self._table_amount(self._budget_table.item(row, month_idx)) for month_idx in range(1, 13)),
@@ -699,10 +701,14 @@ class BudgetView(QWidget):
         )
         annual_item = self._budget_table.item(row, 13)
         if annual_item is not None:
-            annual_item.setText(_fmt_amount(self._db, annual_total))
+            annual_item.setText(
+                self._format_budget_amount(annual_total, currency)
+                if currency is not None
+                else _fmt_amount(self._db, annual_total)
+            )
             annual_item.setData(_BUDGET_AMOUNT_ROLE, annual_total)
 
-    def _update_summary_rows_from_table(self) -> None:
+    def _update_summary_rows_from_table(self, *, currency: str | None = None) -> None:
         """Return refresh totals and balance summary rows using visible items only."""
         income_totals = [0.0 for _ in range(12)]
         expense_totals = [0.0 for _ in range(12)]
@@ -722,11 +728,23 @@ class BudgetView(QWidget):
         balance_annual = round(income_annual - expense_annual, 2)
 
         if self._budget_total_income_row is not None:
-            self._set_row_totals(self._budget_total_income_row, income_totals, income_annual, "#4EC9B0")
+            self._set_row_totals(
+                self._budget_total_income_row,
+                income_totals,
+                income_annual,
+                "#4EC9B0",
+                currency=currency,
+            )
         if self._budget_total_expense_row is not None:
-            self._set_row_totals(self._budget_total_expense_row, expense_totals, expense_annual, "#F48771")
+            self._set_row_totals(
+                self._budget_total_expense_row,
+                expense_totals,
+                expense_annual,
+                "#F48771",
+                currency=currency,
+            )
         if self._budget_balance_row is not None:
-            self._set_row_totals(self._budget_balance_row, balance_totals, balance_annual)
+            self._set_row_totals(self._budget_balance_row, balance_totals, balance_annual, currency=currency)
 
         self._update_budget_cards_from_totals(income_annual, expense_annual, balance_annual)
 
@@ -756,16 +774,32 @@ class BudgetView(QWidget):
         amount = item.data(_BUDGET_AMOUNT_ROLE)
         return float(amount) if amount is not None else 0.0
 
-    def _set_row_totals(self, row: int, values: list[float], annual_value: float, color: str | None = None) -> None:
+    def _set_row_totals(
+        self,
+        row: int,
+        values: list[float],
+        annual_value: float,
+        color: str | None = None,
+        *,
+        currency: str | None = None,
+    ) -> None:
         """Return set monthly and annual totals for a summary row."""
         for month_idx, amount in enumerate(values, start=1):
             item = self._budget_table.item(row, month_idx)
             if item is not None:
-                item.setText(_fmt_amount(self._db, float(amount)))
+                item.setText(
+                    self._format_budget_amount(float(amount), currency)
+                    if currency is not None
+                    else _fmt_amount(self._db, float(amount))
+                )
                 item.setData(_BUDGET_AMOUNT_ROLE, float(amount))
         annual_item = self._budget_table.item(row, 13)
         if annual_item is not None:
-            annual_item.setText(_fmt_amount(self._db, float(annual_value)))
+            annual_item.setText(
+                self._format_budget_amount(float(annual_value), currency)
+                if currency is not None
+                else _fmt_amount(self._db, float(annual_value))
+            )
             annual_item.setData(_BUDGET_AMOUNT_ROLE, float(annual_value))
             if color:
                 font = annual_item.font()
@@ -1118,12 +1152,17 @@ class BudgetView(QWidget):
         if category_id is None:
             return
         raw_value = value_item.text().strip()
+        budget = self._selected_budget()
+        currency = str(budget["currency"]).strip() if budget is not None else ""
+        normalized_value = raw_value
+        if currency and raw_value.casefold().startswith(currency.casefold()):
+            normalized_value = raw_value[len(currency) :].strip()
         if not raw_value:
             amount = 0.0
         else:
             try:
                 amount = process_budget_value(
-                    raw_value,
+                    normalized_value,
                     number_format=get_number_format_config(self._db.setting),
                 )
             except ValueError as exc:
@@ -1139,7 +1178,6 @@ class BudgetView(QWidget):
         previous_amount = value_item.data(_BUDGET_AMOUNT_ROLE)
         if previous_amount is not None and abs(float(previous_amount) - amount) < 1e-9:
             return
-        budget = self._selected_budget()
         if budget is None:
             return
         self._db.budget.upsert_amount(

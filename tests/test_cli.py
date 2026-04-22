@@ -37,7 +37,8 @@ def _set_user_version(path: Path, version: int) -> None:
 def _create_legacy_float_database(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE accounts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -47,7 +48,8 @@ def _create_legacy_float_database(path: Path) -> None:
                 is_default INTEGER DEFAULT 0,
                 created_at TEXT
             )
-            """)
+            """
+        )
         conn.commit()
 
 
@@ -475,14 +477,19 @@ def test_cli_restore_reports_schema_upgrade(
     monkeypatch.setattr(
         db_migrations,
         "MIGRATIONS",
-        {1: _migration, 2: db_migrations._migrate_v2_to_v3, 3: db_migrations._migrate_v3_to_v4},
+        {
+            1: _migration,
+            2: db_migrations._migrate_v2_to_v3,
+            3: db_migrations._migrate_v3_to_v4,
+            4: db_migrations._migrate_v4_to_v5,
+        },
     )
 
     restore_exit = cli_module.main(["--db", str(db_path), "restore", "--input-file", str(backup_path)])
     captured = capsys.readouterr()
 
     assert restore_exit == 0
-    assert "schema upgraded v1 -> v4" in captured.out
+    assert "schema upgraded v1 -> v5" in captured.out
     assert applied == [1]
 
     db = Database(path=db_path)

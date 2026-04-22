@@ -151,9 +151,7 @@ class DatabaseRuntime:
         """Return create pre migration backup."""
         connection = self._require_connection()
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        backup_path = self.path.with_name(
-            f"{self.path.stem}.pre-v{from_version}-migration-{timestamp}.db"
-        )
+        backup_path = self.path.with_name(f"{self.path.stem}.pre-v{from_version}-migration-{timestamp}.db")
         destination = sqlite3.connect(str(backup_path))
         try:
             connection.commit()

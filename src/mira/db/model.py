@@ -35,7 +35,7 @@ def _utc_now() -> str:
 
 
 DB_PROXY: Proxy = Proxy()
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 @dataclass(frozen=True)

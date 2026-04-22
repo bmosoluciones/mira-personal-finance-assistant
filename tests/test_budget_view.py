@@ -188,7 +188,10 @@ def test_budget_view_tables_enable_horizontal_scroll_and_responsive_resize_modes
         monthly_header = view._monthly_tracking_table.horizontalHeader()
         assert monthly_header.sectionResizeMode(0) == qtwidgets.QHeaderView.ResizeMode.Interactive
         assert view._monthly_tracking_table.columnWidth(0) >= 160
-        assert view._monthly_tracking_table.columnWidth(0) <= int(view._monthly_tracking_table.viewport().width() * 0.21) + 1
+        assert (
+            view._monthly_tracking_table.columnWidth(0)
+            <= int(view._monthly_tracking_table.viewport().width() * 0.21) + 1
+        )
         assert monthly_header.sectionResizeMode(1) == qtwidgets.QHeaderView.ResizeMode.ResizeToContents
         assert view._monthly_tracking_table.horizontalScrollBarPolicy() == qtcore.Qt.ScrollBarPolicy.ScrollBarAsNeeded
     finally:
@@ -231,16 +234,20 @@ def test_budget_view_cell_edit_updates_summaries_without_reloading(
         view._on_budget_cell_changed(row, 1)
         app.processEvents()
 
-        expected_text = "USD 2,000.00"
+        expected_text = "2,000.00"
+        summary_text = "USD 2,000.00"
         assert value_item.text() == expected_text
-        assert view._budget_table.item(row, 13).text() == expected_text
+        assert view._budget_table.item(row, 13).text() == summary_text
 
-        total_income_row = _find_row_by_text(view._budget_table, "Subtotal ingresos")
+        total_income_row = _find_row_by_text(
+            view._budget_table,
+            view._t("budget.total.income", "Subtotal ingresos"),
+        )
         assert total_income_row >= 0
         total_income_item = view._budget_table.item(total_income_row, 1)
         assert total_income_item is not None
-        assert total_income_item.text() == expected_text
-        assert view._income_card._value_lbl.text() == expected_text
+        assert total_income_item.text() == summary_text
+        assert view._income_card._value_lbl.text() == summary_text
     finally:
         view.close()
 

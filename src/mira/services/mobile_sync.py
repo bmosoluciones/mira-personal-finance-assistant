@@ -49,9 +49,7 @@ _SYNC_OPTIONAL_CAPABILITIES = (
     "transactions-changes",
     "transactions-ack",
 )
-_SYNC_TRANSPORT_CAPABILITIES = (
-    "secure-transport-tls-pinned",
-)
+_SYNC_TRANSPORT_CAPABILITIES = ("secure-transport-tls-pinned",)
 _SYNC_CAPABILITIES = [
     *_SYNC_REQUIRED_CAPABILITIES,
     *_SYNC_OPTIONAL_CAPABILITIES,
@@ -627,7 +625,9 @@ class MobileSyncService:
         if not name:
             raise MobileSyncError("Account payload must include name.")
         account_type = self._normalized_optional_string(payload.get("account_type")) or "bank"
-        currency = (self._normalized_optional_string(payload.get("currency")) or self._db.setting.get_default_currency()).upper()
+        currency = (
+            self._normalized_optional_string(payload.get("currency")) or self._db.setting.get_default_currency()
+        ).upper()
         is_default = bool(payload.get("is_default"))
         existing_by_name = self._db.account.find_by_name(name)
 
@@ -877,7 +877,9 @@ class MobileSyncService:
                 canonical=canonical,
             )
 
-        default_currency = (self._normalized_optional_string(payload.get("default_currency")) or self._db.setting.get_default_currency()).upper()
+        default_currency = (
+            self._normalized_optional_string(payload.get("default_currency")) or self._db.setting.get_default_currency()
+        ).upper()
         _nf = payload.get("number_format")
         number_format: dict[str, object] = _nf if isinstance(_nf, dict) else {}
         thousands_separator = self._normalized_optional_string(number_format.get("thousands_separator")) or ","
@@ -1978,7 +1980,7 @@ class MobileSyncServer:
 
     def _schedule_pairing_timeout(self, expires_at: datetime) -> None:
         self._cancel_pairing_timeout()
-        delay_seconds = max(1.0, (expires_at - utc_now()).total_seconds())
+        delay_seconds = max(0.01, (expires_at - utc_now()).total_seconds())
         self._pairing_timeout_timer = threading.Timer(delay_seconds, self._expire_if_unpaired)
         self._pairing_timeout_timer.daemon = True
         self._pairing_timeout_timer.start()
