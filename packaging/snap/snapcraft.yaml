@@ -1,7 +1,7 @@
 name: mira-personal-finance-assistant
 title: MIRA
 base: core24
-version: 0.0.1b4
+version: 0.0.1b5
 summary: Offline personal finance assistant
 description: |
   MIRA is a desktop application for personal finance management that keeps
@@ -59,9 +59,9 @@ parts:
     after:
       - metadata
     plugin: nil
-    source: https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1b4-py3-none-any.whl
+    source: https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1b5-py3-none-any.whl
     source-type: file
-    source-checksum: sha256/b71f721744f7de48713f669ed6d06b58a723b20ca7a650a4f4b6702839f44aaa
+    source-checksum: sha256/ef0f37c63b543862b7678d5350bb81faecad0d10c05cdba065cb066dfec6fd4c
     build-snaps:
       - kde-pyside6-core24-sdk/latest/stable
     stage-snaps:
@@ -69,14 +69,18 @@ parts:
     build-packages:
       - python3-pip
     override-build: |
-      python3 -m pip install --no-deps --prefix=$CRAFT_PART_INSTALL $CRAFT_PART_SRC/mira_personal_finance_assistant-0.0.1b4-py3-none-any.whl
+      python3 -m pip install --no-deps --prefix=$CRAFT_PART_INSTALL $CRAFT_PART_SRC/mira_personal_finance_assistant-0.0.1b5-py3-none-any.whl
+      # PySide6 is provided by the kde-neon-6 extension/runtime and is not installed via pip here.
       python3 -m pip install --no-deps --prefix=$CRAFT_PART_INSTALL \
-        cryptography==46.0.5 \
+        cryptography==46.0.7 \
+        cffi==2.0.0 \
         et-xmlfile==2.0.0 \
+        ifaddr==0.2.0 \
         jinja2==3.1.6 \
         MarkupSafe==2.1.5 \
         openpyxl==3.1.5 \
         peewee==4.0.2 \
+        pycparser==3.0 \
         qt-material==2.14 \
         segno==1.6.6 \
         zeroconf==0.148.0

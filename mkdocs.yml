@@ -69,10 +69,10 @@ extra_css:
 extra:
   install_links:
     # Public download URLs shown on the custom home page when provided.
-    exe: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1b4.exe"
-    zip: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1b4.zip"
+    exe: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1b5.exe"
+    zip: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1b5.zip"
     flatpak: "https://github.com/bmosoluciones/solutions.bmogroup.mira"
-    snap: "https://github.com/bmosoluciones/solutions.bmogroup.mira/blob/main/solutions.bmogroup.mira.yml"
+    snap: "https://github.com/bmosoluciones/mira-personal-finance-assistant/blob/main/packaging/snap/snapcraft.yaml"
 
 nav:
   - Home: index.md
