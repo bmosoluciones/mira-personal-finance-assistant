@@ -1121,6 +1121,23 @@ class FeedbackFacade(_DatabaseFacade):
             persist=persist,
         )
 
+    def select_best_operation_message(
+        self,
+        tx: dict[str, Any],
+        *,
+        source: str | None = None,
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        """Return select best operation message."""
+        return self._db.select_best_operation_message(tx, source=source)
+
+    def evaluate_income_kpis(self, tx: dict[str, Any], context: dict[str, Any]) -> list[Any]:
+        """Return evaluate income kpis."""
+        return self._db.evaluate_income_kpis(tx, context)
+
+    def evaluate_expense_kpis(self, tx: dict[str, Any], context: dict[str, Any]) -> list[Any]:
+        """Return evaluate expense kpis."""
+        return self._db.evaluate_expense_kpis(tx, context)
+
 
 class SyncFacade(_DatabaseFacade):
     """Facade over SyncRepository for mobile device synchronisation."""
