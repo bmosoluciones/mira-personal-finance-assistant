@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
 import pytest
-from datetime import date
 from mira.db.database import Database
+
 
 @pytest.fixture
 def db(tmp_path):
@@ -12,6 +12,7 @@ def db(tmp_path):
     database.setting.seed_initial_data(include_default_categories=True)
     yield database
     database.close()
+
 
 def test_budget_creation_and_defaults(db):
     budget = db.budget.create("TEST-2026", 2026, currency="USD")
@@ -27,6 +28,7 @@ def test_budget_creation_and_defaults(db):
     assert db.budget.get(int(budget2["id"]))["is_default_year"] == 1
     assert db.budget.get(int(budget["id"]))["is_default_year"] == 0
 
+
 def test_budget_matrix_and_amounts(db):
     budget = db.budget.create("M-2026", 2026)
     categories = db.category.list(cat_type="expense", include_savings=False)
@@ -40,12 +42,14 @@ def test_budget_matrix_and_amounts(db):
     assert float(row["months"][0]) == 150.0
     assert float(matrix["totals"]["expense"][0]) == 150.0
 
+
 def test_budget_comparison_granularity(db):
     budget = db.budget.create("COMP-2026", 2026)
 
     for gran in ["annual", "semiannual", "monthly", "quarterly"]:
         comp = db.budget.compare(int(budget["id"]), granularity=gran)
         assert comp["granularity"] == gran
+
 
 def test_budget_tracking_and_reassignment(db):
     budget = db.budget.create("TRACK-2026", 2026)
@@ -65,14 +69,17 @@ def test_budget_tracking_and_reassignment(db):
     assert float(r1["assigned"]) == 150.0
     assert float(r2["assigned"]) == 150.0
 
+
 def test_budget_invalid_year_raises(db):
     with pytest.raises(Exception):
         db.budget.create("BAD", 1800)
+
 
 def test_budget_duplicate_code_raises(db):
     db.budget.create("DUP", 2026)
     with pytest.raises(Exception):
         db.budget.create("DUP", 2027)
+
 
 def test_budget_propose_logic(db):
     budget = db.budget.create("PROPOSE-2027", 2027, currency="USD")
@@ -88,7 +95,7 @@ def test_budget_propose_logic(db):
             tx_type="expense",
             amount=120.0,
             category=cat["name"],
-            tx_date=f"2026-{month:02d}-15"
+            tx_date=f"2026-{month:02d}-15",
         )
 
     res = db.budget.propose(int(budget["id"]))
@@ -100,9 +107,10 @@ def test_budget_propose_logic(db):
     # (120*3) / 12 = 30 per month
     assert float(row["months"][0]) == 30.0
 
+
 def test_budget_delete_and_active_switching(db):
     b1 = db.budget.create("B1", 2026)
-    b2 = db.budget.create("B2", 2026)
+    db.budget.create("B2", 2026)
 
     db.setting.set("active_budget_code", "B1")
     db.budget.delete(int(b1["id"]))
@@ -112,14 +120,19 @@ def test_budget_delete_and_active_switching(db):
     # Should have a new default for 2026
     assert db.budget.get_default_for_year(2026)["code"] == "B2"
 
+
 def test_budget_execution_totals_with_currency_mismatch(db):
     budget = db.budget.create("CURR-2026", 2026, currency="USD")
     acc_usd = db.account.create("USD ACC", currency="USD")
     acc_nio = db.account.create("NIO ACC", currency="NIO")
     cat = db.category.list(cat_type="expense", include_savings=False)[0]
 
-    db.transaction.create(account_id=acc_usd["id"], tx_type="expense", amount=10.0, category=cat["name"], tx_date="2026-01-01")
-    db.transaction.create(account_id=acc_nio["id"], tx_type="expense", amount=100.0, category=cat["name"], tx_date="2026-01-02")
+    db.transaction.create(
+        account_id=acc_usd["id"], tx_type="expense", amount=10.0, category=cat["name"], tx_date="2026-01-01"
+    )
+    db.transaction.create(
+        account_id=acc_nio["id"], tx_type="expense", amount=100.0, category=cat["name"], tx_date="2026-01-02"
+    )
 
     # Comparison should only include USD
     comp = db.budget.compare(int(budget["id"]), granularity="annual")
