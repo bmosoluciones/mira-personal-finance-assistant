@@ -4,8 +4,8 @@
 import pytest
 from datetime import date, timedelta
 from mira.db.database import Database
-from mira.db.model import AchievementCounter, Transaction, Category, InsightEvent, AchievementEvent, MessageEvent
-from mira.transaction_kinds import TransactionType
+from mira.db.model import AchievementCounter, AchievementEvent
+
 
 @pytest.fixture
 def db():
@@ -13,6 +13,7 @@ def db():
     facade.connect()
     facade.setting.seed_initial_data(language="es")
     return facade
+
 
 def test_achievement_counters(db):
     prev, current = db.feedback.increment_achievement_counter("test_counter", step=5)
@@ -30,6 +31,7 @@ def test_achievement_counters(db):
         db.feedback.increment_achievement_counter("test_counter", step=0)
     with pytest.raises(ValueError):
         db.feedback.increment_achievement_counter("test_counter", step=2_000_000)
+
 
 def test_daily_contextual_messages(db):
     today = date.today()
@@ -68,6 +70,7 @@ def test_daily_contextual_messages(db):
     assert msg is not None
     assert msg["code"] == "daily_no_transactions"
 
+
 def test_message_cooldown_scopes(db):
     from mira.db.repositories.feedback_repository import MessageCandidate
 
@@ -77,7 +80,9 @@ def test_message_cooldown_scopes(db):
 
     candidate_day = MessageCandidate(code="test_day", message_type="type", message="msg", cooldown_scope="day")
     candidate_period = MessageCandidate(code="test_period", message_type="type", message="msg", cooldown_scope="period")
-    candidate_cat = MessageCandidate(code="test_cat", message_type="type", message="msg", cooldown_scope="period_category", category_id=1)
+    candidate_cat = MessageCandidate(
+        code="test_cat", message_type="type", message="msg", cooldown_scope="period_category", category_id=1
+    )
 
     repo = db.feedback._db
 
@@ -98,16 +103,14 @@ def test_message_cooldown_scopes(db):
     repo.persist_message_event(candidate_cat, source_event_type="test", source_event_id=1, period_key=period)
     assert repo._message_in_cooldown(candidate_cat, period_key=period)
     # Same period, different category
-    candidate_cat2 = MessageCandidate(code="test_cat", message_type="type", message="msg", cooldown_scope="period_category", category_id=2)
+    candidate_cat2 = MessageCandidate(
+        code="test_cat", message_type="type", message="msg", cooldown_scope="period_category", category_id=2
+    )
     assert not repo._message_in_cooldown(candidate_cat2, period_key=period)
 
+
 def test_evaluate_income_kpis(db):
-    context = {
-        "income_goal": 1000.0,
-        "income_actual_prev": 750.0,
-        "income_actual": 850.0,
-        "income_avg_prev": 500.0
-    }
+    context = {"income_goal": 1000.0, "income_actual_prev": 750.0, "income_actual": 850.0, "income_avg_prev": 500.0}
     tx = {"amount": 100.0}
 
     # 80% goal reached
@@ -120,15 +123,16 @@ def test_evaluate_income_kpis(db):
     assert any(c.code == "income_goal_100" for c in candidates)
 
     # Recovery
-    context["income_actual_prev"] = 400.0 # 40%
-    context["income_actual"] = 650.0      # 65%
+    context["income_actual_prev"] = 400.0  # 40%
+    context["income_actual"] = 650.0  # 65%
     candidates = db.feedback.evaluate_income_kpis(tx, context)
     assert any(c.code == "income_recovery" for c in candidates)
 
     # Unusual high
-    tx["amount"] = 1500.0 # > 2 * avg (500)
+    tx["amount"] = 1500.0  # > 2 * avg (500)
     candidates = db.feedback.evaluate_income_kpis(tx, context)
     assert any(c.code == "income_unusual_high" for c in candidates)
+
 
 def test_evaluate_expense_kpis(db):
     context = {
@@ -142,7 +146,7 @@ def test_evaluate_expense_kpis(db):
         "expense_actual": 650.0,
         "day_of_month": 5,
         "month_days": 30,
-        "expense_category_avg_prev": 40.0
+        "expense_category_avg_prev": 40.0,
     }
     tx = {"amount": 10.0}
 
@@ -157,22 +161,27 @@ def test_evaluate_expense_kpis(db):
     assert any(c.code == "expense_total_100" for c in candidates)
 
     # High pace
-    context["day_of_month"] = 10 # 33% of month
-    context["expense_actual_prev"] = 650.0 # 65%
-    context["expense_actual"] = 750.0      # 75%
+    context["day_of_month"] = 10  # 33% of month
+    context["expense_actual_prev"] = 650.0  # 65%
+    context["expense_actual"] = 750.0  # 75%
     candidates = db.feedback.evaluate_expense_kpis(tx, context)
     assert any(c.code == "expense_high_pace" for c in candidates)
 
     # Unusual high
-    tx["amount"] = 100.0 # > 2 * avg (40)
+    tx["amount"] = 100.0  # > 2 * avg (40)
     candidates = db.feedback.evaluate_expense_kpis(tx, context)
     assert any(c.code == "expense_unusual_high" for c in candidates)
+
 
 def test_evaluate_operation_achievements_milestones(db):
     context = {
         "period_key": "2025-01",
-        "income_goal": 0, "income_actual_prev": 0, "income_actual": 0,
-        "savings_actual": 0, "year": 2025, "month": 1
+        "income_goal": 0,
+        "income_actual_prev": 0,
+        "income_actual": 0,
+        "savings_actual": 0,
+        "year": 2025,
+        "month": 1,
     }
     tx = {"id": 1, "type": "income", "amount": 100, "date": "2025-01-01"}
 
@@ -188,6 +197,7 @@ def test_evaluate_operation_achievements_milestones(db):
     candidates = repo.evaluate_operation_achievements(tx, context)
     assert any(c.code == "achievement_mira_report_views_10" for c in candidates)
 
+
 def test_savings_streaks(db):
     cat = db.category.create("Savings", "expense", is_savings=True)
     cat_id = cat["id"]
@@ -198,8 +208,13 @@ def test_savings_streaks(db):
     db.transaction.create(amount=100, tx_type="expense", tx_date="2025-01-15", account_id=acc_id, category_id=cat_id)
     # Feb 2025
     context = {
-        "period_key": "2025-02", "year": 2025, "month": 2, "savings_actual": 200,
-        "income_goal": 0, "income_actual_prev": 0, "income_actual": 0,
+        "period_key": "2025-02",
+        "year": 2025,
+        "month": 2,
+        "savings_actual": 200,
+        "income_goal": 0,
+        "income_actual_prev": 0,
+        "income_actual": 0,
     }
     tx = {"id": 1, "type": "expense", "amount": 200, "date": "2025-02-15"}
 
@@ -211,6 +226,7 @@ def test_savings_streaks(db):
     db.transaction.create(amount=50, tx_type="expense", tx_date="2024-12-15", account_id=acc_id, category_id=cat_id)
     candidates = repo.evaluate_operation_achievements(tx, context)
     assert any(c.code == "achievement_savings_three_month_streak" for c in candidates)
+
 
 def test_select_best_operation_message_end_to_end(db):
     acc = db.account.create("Acc", "cash")
@@ -226,22 +242,28 @@ def test_select_best_operation_message_end_to_end(db):
     db.transaction.create(amount=95, tx_type="expense", tx_date="2025-01-01", account_id=acc_id, category_id=cat_id)
 
     # Then 10 more -> 105
-    tx2 = db.transaction.create(amount=10, tx_type="expense", tx_date="2025-01-02", account_id=acc_id, category_id=cat_id)
+    tx2 = db.transaction.create(
+        amount=10, tx_type="expense", tx_date="2025-01-02", account_id=acc_id, category_id=cat_id
+    )
 
     # Check insight in the created transaction
     assert tx2.get("mira_insight") is not None
     assert tx2["mira_insight"]["code"] == "expense_category_100"
+
 
 def test_nl_assistant_counter_increment(db):
     acc = db.account.create("Acc", "cash")
     acc_id = acc["id"]
     cat = db.category.create("Food", "expense")
     cat_id = cat["id"]
-    tx = db.transaction.create(amount=10, tx_type="expense", tx_date="2025-01-01", account_id=acc_id, category_id=cat_id)
+    tx = db.transaction.create(
+        amount=10, tx_type="expense", tx_date="2025-01-01", account_id=acc_id, category_id=cat_id
+    )
 
     initial = db.feedback.get_achievement_counter("nl_transactions")
     db.feedback.select_best_operation_message(tx, source="nl_assistant")
     assert db.feedback.get_achievement_counter("nl_transactions") == initial + 1
+
 
 def test_achievement_persistence(db):
     acc = db.account.create("Acc", "cash")
@@ -252,7 +274,9 @@ def test_achievement_persistence(db):
     db.budget.set_default_for_year(budget["id"])
     db.budget.upsert_amount(budget["id"], cat_id, 2025, 1, 1000)
 
-    tx = db.transaction.create(amount=1100, tx_type="income", tx_date="2025-01-01", account_id=acc_id, category_id=cat_id)
+    tx = db.transaction.create(
+        amount=1100, tx_type="income", tx_date="2025-01-01", account_id=acc_id, category_id=cat_id
+    )
 
     # Check mira_achievement OR mira_insight (either could win based on priority)
     # But Achievement should win here.
@@ -260,7 +284,12 @@ def test_achievement_persistence(db):
 
     # If achievement was triggered, it should be in DB
     if tx.get("mira_achievement"):
-        assert AchievementEvent.select().where(AchievementEvent.achievement_code == tx["mira_achievement"]["code"]).exists()
+        assert (
+            AchievementEvent.select()
+            .where(AchievementEvent.achievement_code == tx["mira_achievement"]["code"])
+            .exists()
+        )
+
 
 def test_achievement_savings_contribution(db):
     acc = db.account.create("Acc", "cash")
@@ -272,7 +301,9 @@ def test_achievement_savings_contribution(db):
     # OR achievement_saved_this_month
     # We use a second transaction to ensure the counter milestone is hit regardless of which one wins priority on tx1
     db.transaction.create(amount=100, tx_type="expense", tx_date="2025-01-01", account_id=acc_id, category_id=cat_id)
-    tx2 = db.transaction.create(amount=100, tx_type="expense", tx_date="2025-01-02", account_id=acc_id, category_id=cat_id)
+    tx2 = db.transaction.create(
+        amount=100, tx_type="expense", tx_date="2025-01-02", account_id=acc_id, category_id=cat_id
+    )
 
     assert tx2.get("mira_achievement") is not None or db.feedback.get_achievement_counter("savings_contributions") >= 1
     # Verify counter incremented

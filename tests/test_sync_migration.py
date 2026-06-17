@@ -16,8 +16,7 @@ from mira.db.errors import DatabaseSchemaError
 def _create_minimal_v2_database(path: Path, *, transactions: int = 1) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
-        conn.executescript(
-            """
+        conn.executescript("""
             CREATE TABLE accounts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -173,14 +172,11 @@ def _create_minimal_v2_database(path: Path, *, transactions: int = 1) -> None:
                 priority INTEGER,
                 message_text TEXT
             );
-            """
-        )
-        conn.execute(
-            """
+            """)
+        conn.execute("""
             INSERT INTO accounts (name, balance_cents, account_type, currency, is_default, created_at)
             VALUES ('General', 10000, 'bank', 'USD', 1, '2026-04-08 10:00:00')
-            """
-        )
+            """)
         for index in range(transactions):
             conn.execute(
                 """
@@ -218,8 +214,7 @@ def _create_minimal_v2_database(path: Path, *, transactions: int = 1) -> None:
 def _create_minimal_v4_database_missing_sync_schema(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
-        conn.executescript(
-            """
+        conn.executescript("""
             CREATE TABLE accounts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -415,25 +410,20 @@ def _create_minimal_v4_database_missing_sync_schema(path: Path) -> None:
                 applied_at TIMESTAMP NOT NULL,
                 status TEXT NOT NULL
             );
-        """
-        )
-        conn.execute(
-            """
+        """)
+        conn.execute("""
             INSERT INTO accounts (
                 name, balance_cents, account_type, currency, is_default, created_at, global_id, updated_at, sync_version,
                 last_modified_by_device_id
             ) VALUES ('General', 10000, 'bank', 'USD', 1, '2026-04-08 10:00:00', '01ARZ3NDEKTSV4RRFFQ69G5FAA',
                 '2026-04-08T10:00:00Z', 1, 'desktop-local')
-            """
-        )
-        conn.execute(
-            """
+            """)
+        conn.execute("""
             INSERT INTO transactions (
                 account_id, type, amount_cents, description, category, payment_method, is_transfer,
                 is_reconciled, date, created_at
             ) VALUES (1, 'expense', 2500, 'legacy v4 expense', 'Food', 'cash', 0, 0, '2026-04-08', '2026-04-08 10:00:00')
-            """
-        )
+            """)
         conn.execute(
             "INSERT INTO schema_version(version, applied_at, status) VALUES (4, '2026-04-18 10:00:00', 'applied')"
         )
@@ -461,13 +451,11 @@ def test_migrate_v2_to_v3_backfills_sync_metadata_and_indices(tmp_path: Path) ->
         assert expected_master_columns.issubset(tag_columns)
         assert expected_master_columns.issubset(goal_columns)
 
-        rows = conn.execute(
-            """
+        rows = conn.execute("""
             SELECT sync_id, sync_version, updated_at, last_modified_by_device_id
             FROM transactions
             ORDER BY id
-            """
-        ).fetchall()
+            """).fetchall()
         assert len(rows) == 2
         assert all(row[0] and len(str(row[0])) == 26 for row in rows)
         assert all(int(row[1]) == 1 for row in rows)
@@ -502,13 +490,11 @@ def test_migrate_v2_to_v3_backfills_moderate_volume_with_unique_sync_values(tmp_
         migrated = db_migrations.migrate_database(conn, 2, 3)
         assert migrated is True
 
-        rows = conn.execute(
-            """
+        rows = conn.execute("""
             SELECT sync_id, updated_at, last_modified_by_device_id
             FROM transactions
             ORDER BY id
-            """
-        ).fetchall()
+            """).fetchall()
         sync_ids = [str(row[0]) for row in rows]
         updated_values = [str(row[1]) for row in rows]
 
