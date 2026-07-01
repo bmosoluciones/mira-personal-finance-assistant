@@ -32,12 +32,12 @@
     <color type="primary" scheme_preference="light">#0f766e</color>
     <color type="primary" scheme_preference="dark">#5eead4</color>
   </x-branding>
+  <developer id="solutions.bmogroup">
+    <name>BMO Soluciones</name>
+  </developer>
   <url type="homepage">https://github.com/bmosoluciones/mira-personal-finance-assistant</url>
   <url type="bugtracker">https://github.com/bmosoluciones/mira-personal-finance-assistant/issues</url>
   <update_contact>development@bmogroup.solutions</update_contact>
-  <x-developer id="solutions.bmogroup">
-    <name>BMO Soluciones</name>
-  </x-developer>
   <launchable type="desktop-id">solutions.bmogroup.mira.desktop</launchable>
   <requires>
     <display_length compare="ge">832</display_length>
@@ -53,9 +53,9 @@
     <keyword>income</keyword>
   </keywords>
   <releases>
-    <release version="0.0.1a2" date="2026-04-03">
+    <release version="0.0.1b5" date="2026-06-30">
       <description>
-        <p>Public alpha release of MIRA with published Windows and wheel artifacts.</p>
+        <p>Production release of MIRA with published desktop packaging artifacts.</p>
         <ul>
           <li>Offline-first personal finance workflow</li>
           <li>Annual budgets, reports, and savings goals</li>

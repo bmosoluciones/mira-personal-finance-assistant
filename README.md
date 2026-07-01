@@ -198,7 +198,7 @@ req2flatpak --requirements-file packaging/flatpak/requirements-flatpak.txt --tar
 2. Build locally with Flatpak Builder:
 
 ```bash
-flatpak-builder --user --install-deps-from=flathub --install --force-clean build-flatpak packaging/flatpak/solutions.bmogroup.MIRA.yml
+flatpak-builder --user --install-deps-from=flathub --install --force-clean build-flatpak packaging/flatpak/solutions.bmogroup.mira.yml
 ```
 
 3. Run the installed Flatpak app:

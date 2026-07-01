@@ -48,12 +48,12 @@ Nota: en hosts Ubuntu 25.10 o superiores, para una base `core24` conviene usar
 Al finalizar, Snapcraft genera el archivo en este mismo directorio, por
 ejemplo:
 
-`mira-personal-finance-assistant_0.0.1a2_amd64.snap`
+`mira-personal-finance-assistant_0.0.1b5_amd64.snap`
 
 ## Instalacion local para pruebas
 
 ```bash
-sudo snap install --dangerous ./mira-personal-finance-assistant_0.0.1a2_amd64.snap
+sudo snap install --dangerous ./mira-personal-finance-assistant_0.0.1b5_amd64.snap
 ```
 
 ## Limpieza de artefactos de build

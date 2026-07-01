@@ -13,7 +13,7 @@ description: |
 
   Local network access is only used when the user explicitly starts mobile
   sync from the desktop menu.
-grade: devel
+grade: stable
 confinement: strict
 license: GPL-3.0-or-later
 source-code: https://github.com/bmosoluciones/mira-personal-finance-assistant
