@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mira-personal-finance-assistant"
-version = "0.0.1b5"
+version = "0.0.1b6"
 description = "MIRA – Manage Income & Resources Allocations. Personal Finance Assistant."
 readme = "README.md"
 license = {text = "GPL-3.0-or-later"}
