@@ -623,7 +623,7 @@ class CategoryRepository:
         if not descendant_ids:
             return []
         rows = Category.select(Category.id, Category.name).where(Category.id.in_(descendant_ids)).dicts()
-        names_by_id = {int(row["id"]): str(row["name"]) for row in rows}
+        names_by_id = {int(row["id"]): str(row["name"]) for row in rows}  # type: ignore[index]
         return [names_by_id[descendant_id] for descendant_id in descendant_ids if descendant_id in names_by_id]
 
     # -- Income-Expense Relation helpers ------------------------------------
@@ -646,7 +646,7 @@ class CategoryRepository:
             .join(ec, on=(IncomeExpenseRelation.expense_category == ec.id))
             .order_by(ic.name.asc(), ec.name.asc())
         )
-        return [dict(row) for row in query.dicts()]
+        return [dict(row) for row in query.dicts()]  # type: ignore[call-overload]
 
     def create_category_relation(self, income_category_id: int, expense_category_id: int) -> dict[str, Any]:
         """Create a relation between an income and an expense parent category."""
@@ -691,4 +691,4 @@ class CategoryRepository:
     def get_linked_expense_category_ids(self) -> set[int]:
         """Return the set of expense category IDs that already have a relation."""
         rows = IncomeExpenseRelation.select(IncomeExpenseRelation.expense_category).dicts()
-        return {int(row["expense_category"]) for row in rows}
+        return {int(row["expense_category"]) for row in rows}  # type: ignore[index]

@@ -129,11 +129,11 @@ class ReconciliationRepository:
             .where(ReconciliationMatch.system_transaction.in_(unique_ids))
             .dicts()
         )
-        matched_ids = {
+        matched_ids: set[int] = {
             int(
-                row.get("system_transaction_id")
+                row.get("system_transaction_id")  # type: ignore[arg-type]
                 if row.get("system_transaction_id") is not None
-                else row["system_transaction"]
+                else row["system_transaction"]  # type: ignore[index]
             )
             for row in rows
         }
@@ -143,7 +143,7 @@ class ReconciliationRepository:
             transaction = Transaction.get_by_id(transaction_id)
             next_reconciled_at = transaction.reconciled_at
             if has_matches and next_reconciled_at is None:
-                next_reconciled_at = now_value
+                next_reconciled_at = now_value  # type: ignore[assignment]
             if not has_matches:
                 next_reconciled_at = None
             (
@@ -240,7 +240,7 @@ class ReconciliationRepository:
             str(
                 row.get("reconciliation_group_id")
                 if row.get("reconciliation_group_id") is not None
-                else row["reconciliation_group"]
+                else row["reconciliation_group"]  # type: ignore[index]
             )
             for row in ReconciliationMatch.select(ReconciliationMatch.reconciliation_group)
             .where(ReconciliationMatch.system_transaction.in_(tx_ids))
@@ -258,7 +258,7 @@ class ReconciliationRepository:
         if not normalized_group_ids:
             return 0
         transaction_ids = [
-            int(row["system_transaction_id"])
+            int(row["system_transaction_id"])  # type: ignore[index]
             for row in ReconciliationMatch.select(ReconciliationMatch.system_transaction)
             .where(ReconciliationMatch.reconciliation_group.in_(normalized_group_ids))
             .dicts()

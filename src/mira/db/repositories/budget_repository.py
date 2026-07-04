@@ -134,14 +134,14 @@ class BudgetRepository:
         source_details = BudgetDetail.select().where(BudgetDetail.category == source_category_id)
         for detail in source_details:
             target_detail = BudgetDetail.get_or_none(
-                (BudgetDetail.budget == detail.budget_id)
+                (BudgetDetail.budget == detail.budget_id)  # type: ignore[attr-defined]
                 & (BudgetDetail.category == target_category_id)
-                & (BudgetDetail.year == detail.year)
-                & (BudgetDetail.month == detail.month)
+                & (BudgetDetail.year == detail.year)  # type: ignore[call-overload]
+                & (BudgetDetail.month == detail.month)  # type: ignore[call-overload]
             )
             if target_detail is not None:
                 (
-                    BudgetDetail.update(amount=BudgetDetail.amount + int(detail.amount or 0))
+                    BudgetDetail.update(amount=BudgetDetail.amount + int(detail.amount or 0))  # type: ignore[call-overload]
                     .where(BudgetDetail.id == target_detail.id)
                     .execute()
                 )
@@ -301,15 +301,15 @@ class BudgetRepository:
                 continue
             account_currency = str(row.get("account_currency") or "").strip().upper()
             if account_currency != normalized_budget_currency:
-                excluded_transactions += int(row.get("tx_count") or 0)
+                excluded_transactions += int(row.get("tx_count") or 0)  # type: ignore[arg-type]
                 continue
-            amount_total = self._cents_to_decimal(row["amount_total_cents"]) or MONEY_ZERO
+            amount_total = self._cents_to_decimal(row["amount_total_cents"]) or MONEY_ZERO  # type: ignore[index]
             month_number = int(month_key)
             if category_id is None:
                 if tx_type in uncategorized_totals:
                     uncategorized_totals[tx_type][month_number] += amount_total
                 continue
-            totals[(int(category_id), month_number)] += amount_total
+            totals[(int(category_id), month_number)] += amount_total  # type: ignore[call-overload]
 
         return dict(totals), {key: dict(value) for key, value in uncategorized_totals.items()}, excluded_transactions
 
@@ -511,7 +511,7 @@ class BudgetRepository:
             .order_by(BudgetDetail.month)
         )
         details_by_category_month = {
-            (int(row.category_id), int(row.month)): self._cents_to_decimal(row.amount) or MONEY_ZERO
+            (int(row.category.id), int(row.month)): self._cents_to_decimal(row.amount) or MONEY_ZERO  # type: ignore[call-overload]
             for row in detail_rows
         }
 

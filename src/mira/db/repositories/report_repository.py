@@ -170,8 +170,8 @@ class ReportRepository:
 
         query = query.where(analytics_included_expr(tx))
         row = query.dicts().get()
-        income = self._cents_to_money(row["income"])
-        expense = self._cents_to_money(row["expense"])
+        income = self._cents_to_money(row["income"])  # type: ignore[index]
+        expense = self._cents_to_money(row["expense"])  # type: ignore[index]
         return {
             "income": income,
             "expense": expense,
@@ -220,7 +220,7 @@ class ReportRepository:
         query = query.where(analytics_included_expr(tx))
 
         rows = [
-            dict(row)
+            dict(row)  # type: ignore[call-overload]
             for row in query.group_by(category_expr)
             .having((income_sum > 0) | (expense_sum > 0))
             .order_by(expense_sum.desc(), income_sum.desc())
@@ -290,7 +290,7 @@ class ReportRepository:
             query = query.where(tx.date >= since_date)
         if until_date:
             query = query.where(tx.date <= until_date)
-        return {int(row["tag_id"]): int(row["count"]) for row in query.group_by(tx_tag.tag).dicts()}
+        return {int(row["tag_id"]): int(row["count"]) for row in query.group_by(tx_tag.tag).dicts()}  # type: ignore[index]
 
     def get_category_transaction_counts(
         self,
@@ -309,7 +309,7 @@ class ReportRepository:
             query = query.where(Transaction.date >= since_date)
         if until_date:
             query = query.where(Transaction.date <= until_date)
-        return {str(row["category"]): int(row["count"]) for row in query.group_by(category_expr).dicts()}
+        return {str(row["category"]): int(row["count"]) for row in query.group_by(category_expr).dicts()}  # type: ignore[index]
 
     def _transactions_for_month(self, year: int, month: int) -> list[dict[str, Any]]:
         """Return transactions for month."""

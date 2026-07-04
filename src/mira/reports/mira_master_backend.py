@@ -45,7 +45,7 @@ def budget_period_snapshot(
             & (BudgetDetail.month == int(month))
         )
     )
-    rows = [dict(row) for row in query.dicts()]
+    rows = [dict(row) for row in query.dicts()]  # type: ignore[call-overload]
     for row in rows:
         row["amount"] = db._cents_to_money(row["amount"])
 

@@ -290,14 +290,14 @@ class TransactionRepository:
                 .dicts()
             )
             for row in budget_rows:
-                amount = self._cents_to_decimal(row["amount"]) or MONEY_ZERO
-                if row["type"] == TransactionType.INCOME:
+                amount = self._cents_to_decimal(row["amount"]) or MONEY_ZERO  # type: ignore[index]
+                if row["type"] == TransactionType.INCOME:  # type: ignore[index]
                     income_goal += amount
                 else:
                     expense_budget += amount
-                    if int(row.get("is_savings") or 0) == 1:
+                    if int(row.get("is_savings") or 0) == 1:  # type: ignore[arg-type]
                         savings_expected += amount
-                if category_id is not None and int(row["id"]) == category_id:
+                if category_id is not None and int(row["id"]) == category_id:  # type: ignore[index]
                     category_budget = amount
 
         category_spent_current = MONEY_ZERO
@@ -319,13 +319,13 @@ class TransactionRepository:
                 .dicts()
                 .get()
             )
-            category_spent_current = self._cents_to_decimal(category_stats["total"]) or MONEY_ZERO
-            expense_avg_amount = self._cents_to_decimal(category_stats["avg_amount"]) or MONEY_ZERO
-            expense_total_count = int(category_stats["total_count"] or 0)
+            category_spent_current = self._cents_to_decimal(category_stats["total"]) or MONEY_ZERO  # type: ignore[index]
+            expense_avg_amount = self._cents_to_decimal(category_stats["avg_amount"]) or MONEY_ZERO  # type: ignore[index]
+            expense_total_count = int(category_stats["total_count"] or 0)  # type: ignore[index]
 
-        savings_actual = self._cents_to_decimal(totals["savings_actual"]) or MONEY_ZERO
-        income_actual = self._cents_to_decimal(totals["income_actual"]) or MONEY_ZERO
-        expense_actual = self._cents_to_decimal(totals["expense_actual"]) or MONEY_ZERO
+        savings_actual = self._cents_to_decimal(totals["savings_actual"]) or MONEY_ZERO  # type: ignore[index]
+        income_actual = self._cents_to_decimal(totals["income_actual"]) or MONEY_ZERO  # type: ignore[index]
+        expense_actual = self._cents_to_decimal(totals["expense_actual"]) or MONEY_ZERO  # type: ignore[index]
 
         prev_income_actual = (
             max(MONEY_ZERO, income_actual - tx_amount) if tx_type == TransactionType.INCOME else income_actual
@@ -339,13 +339,13 @@ class TransactionRepository:
             else category_spent_current
         )
 
-        income_count = int(totals["income_total_count"] or 0)
+        income_count = int(totals["income_total_count"] or 0)  # type: ignore[index]
         expense_count = expense_total_count
         income_avg_prev = (
             ((income_actual - tx_amount) / max(1, income_count - 1))
             if tx_type == TransactionType.INCOME and income_count > 1
             else (
-                self._cents_to_decimal(totals["income_avg_amount"]) or MONEY_ZERO
+                self._cents_to_decimal(totals["income_avg_amount"]) or MONEY_ZERO  # type: ignore[index]
                 if income_count > 0 and tx_type != TransactionType.INCOME
                 else None
             )
@@ -628,11 +628,11 @@ class TransactionRepository:
             query = query.where(Transaction.id.in_(tagged_ids))
 
         rows_raw = list(query.order_by(Transaction.date.desc(), Transaction.id.desc()).limit(limit))
-        referenced_ids = {int(row.account_id) for row in rows_raw if row.account_id is not None}
+        referenced_ids = {int(row.account.id) for row in rows_raw if row.account is not None}
         account_name_by_id: dict[int, str] = {}
         if referenced_ids:
             for acc_row in Account.select(Account.id, Account.name).where(Account.id.in_(referenced_ids)).dicts():
-                account_name_by_id[int(acc_row["id"])] = str(acc_row.get("name") or "")
+                account_name_by_id[int(acc_row["id"])] = str(acc_row.get("name") or "")  # type: ignore[index]
         rows: list[dict] = []
         for row in rows_raw:
             item = self._serialize_transaction_row(row)
