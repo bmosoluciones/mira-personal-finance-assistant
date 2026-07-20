@@ -47,17 +47,19 @@ def test_transactions_totals_bar_uses_theme_palette(monkeypatch: pytest.MonkeyPa
         view.close()
 
 
-@pytest.mark.xfail(reason="Balance adjustment dialog edit not persisting note in CI")
 def test_transactions_view_edits_balance_adjustments_with_dedicated_dialog(
     monkeypatch: pytest.MonkeyPatch,
     db: Database,
 ) -> None:
+    from datetime import date
+
     _get_qapplication_or_xfail(monkeypatch)
     views_module = importlib.import_module("mira.ui.views.transactions")
     dialogs_module = importlib.import_module("mira.ui.dialogs")
 
+    today_str = date.today().isoformat()
     account = db.account.create("Banco", "bank", 100.0, "USD")
-    adjustment = db.transaction.record_balance_adjustment(account["id"], 20.0, tx_date="2026-06-01")
+    adjustment = db.transaction.record_balance_adjustment(account["id"], 20.0, tx_date=today_str)
 
     class FakeBalanceAdjustmentDialog:
         class DialogCode:
@@ -74,7 +76,7 @@ def test_transactions_view_edits_balance_adjustments_with_dedicated_dialog(
             assert int(self._tx["id"]) == int(adjustment["id"])
             return {
                 "account_id": account["id"],
-                "tx_date": "2026-06-01",
+                "tx_date": today_str,
                 "signed_amount": 35.0,
                 "note": "Ajustado",
             }
@@ -98,16 +100,18 @@ def test_transactions_view_edits_balance_adjustments_with_dedicated_dialog(
         view.close()
 
 
-@pytest.mark.xfail(reason="Balance adjustment duplicate blocking not working in CI")
 def test_transactions_view_blocks_duplicate_for_balance_adjustments(
     monkeypatch: pytest.MonkeyPatch,
     db: Database,
 ) -> None:
+    from datetime import date
+
     _get_qapplication_or_xfail(monkeypatch)
     views_module = importlib.import_module("mira.ui.views.transactions")
 
+    today_str = date.today().isoformat()
     account = db.account.create("Banco", "bank", 100.0, "USD")
-    db.transaction.record_balance_adjustment(account["id"], 20.0, tx_date="2026-06-01")
+    db.transaction.record_balance_adjustment(account["id"], 20.0, tx_date=today_str)
     notifications: list[tuple[str, str]] = []
     monkeypatch.setattr(views_module, "_notify_info", lambda _w, title, message: notifications.append((title, message)))
 
