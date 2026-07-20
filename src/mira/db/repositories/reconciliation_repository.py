@@ -258,7 +258,11 @@ class ReconciliationRepository:
         if not normalized_group_ids:
             return 0
         transaction_ids = [
-            int(row["system_transaction_id"])  # type: ignore[index]
+            int(
+                row.get("system_transaction_id")  # type: ignore[arg-type]
+                if row.get("system_transaction_id") is not None
+                else row["system_transaction"]  # type: ignore[index]
+            )
             for row in ReconciliationMatch.select(ReconciliationMatch.system_transaction)
             .where(ReconciliationMatch.reconciliation_group.in_(normalized_group_ids))
             .dicts()
