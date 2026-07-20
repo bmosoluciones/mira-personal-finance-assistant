@@ -150,3 +150,46 @@ def test_reconciliation_creates_group_and_clears_matches(db: Database) -> None:
     group_id = result["group"]["id"]
     deleted = db.reconciliation.clear_groups([group_id])
     assert deleted in {0, 1}
+
+
+def test_reconciliation_clear_groups_with_active_matches_runs_successfully(db: Database) -> None:
+    account = db.account.create("Checking", "bank", 0.0, "USD")
+    tx = db.transaction.create(
+        account_id=int(account["id"]),
+        tx_type="income",
+        amount=120.0,
+        category="Salary",
+        tx_date="2026-01-05",
+    )
+
+    external_row = {
+        "reference": "ext-1",
+        "date": "2026-01-05",
+        "description": "External deposit",
+        "amount": 120.0,
+        "external_item_key": "item-1",
+    }
+
+    result = db.reconciliation.reconcile(
+        account_id=int(account["id"]),
+        date_from="2026-01-01",
+        date_to="2026-01-31",
+        system_transaction_ids=[int(tx["id"])],
+        external_rows=[external_row],
+    )
+
+    group_id = result["group"]["id"]
+
+    # Call clear_groups on the group while matches are still active/uncleared.
+    # This must run successfully without raising any KeyError.
+    deleted = db.reconciliation.clear_groups([group_id])
+    assert deleted == 1
+
+    # Verify that the matches and groups are successfully cleared.
+    assert db.reconciliation.list_groups(account_id=int(account["id"]), date_from="2026-01-01", date_to="2026-01-31") == []
+
+    # Also verify that the transaction is updated back to is_reconciled = 0
+    updated_tx = db.transaction.get(int(tx["id"]))
+    assert updated_tx is not None
+    assert updated_tx["is_reconciled"] == 0
+    assert updated_tx["reconciled_at"] is None
