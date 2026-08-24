@@ -5,8 +5,11 @@
 
 from __future__ import annotations
 
+from datetime import date
+from pathlib import Path
+
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -39,6 +42,22 @@ from mira.ui.views.tags import TagsView
 from mira.ui.views.transactions import TransactionsView
 
 _SIDEBAR_WIDTH = 170
+
+
+def _arthur_asset_name(today: date | None = None) -> str:
+    """Return Arthur's seasonal asset, keeping the regular mascot as default."""
+    current = today or date.today()
+    if current.month == 1 and current.day <= 7:
+        return "arthur-new-year.png"
+    if current.month == 9:
+        return "arthur-patria.png"
+    if current.month == 10 and current.day >= 24:
+        return "arthur-halloween.png"
+    if current.month == 11 and current.day == 1:
+        return "arthur-halloween.png"
+    if current.month == 12 and current.day >= 15:
+        return "arthur-christmas.png"
+    return "arthur.png"
 
 
 class MainWindowLayoutMixin:
@@ -224,8 +243,21 @@ class MainWindowLayoutMixin:
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(4)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        avatar = QLabel("\U0001f916")
-        avatar.setFont(QFont("Arial", 22))
+        avatar = QLabel()
+        mascot_path = Path(__file__).resolve().parent / "icons" / _arthur_asset_name()
+        mascot = QPixmap(str(mascot_path))
+        if not mascot.isNull():
+            avatar.setPixmap(
+                mascot.scaled(
+                    82,
+                    82,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+        else:
+            avatar.setText(tr("app.name", self._language, default="MIRA"))
+            avatar.setFont(QFont("Arial", 22))
         avatar.setAlignment(Qt.AlignmentFlag.AlignCenter)
         avatar.setStyleSheet("background:transparent;")
         layout.addWidget(avatar)
