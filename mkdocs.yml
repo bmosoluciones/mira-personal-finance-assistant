@@ -71,6 +71,8 @@ extra:
     # Public download URLs shown on the custom home page when provided.
     exe: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1.exe"
     zip: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1.zip"
+    wheel: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1-py3-none-any.whl"
+    source: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1.tar.gz"
     flatpak: "https://github.com/bmosoluciones/solutions.bmogroup.mira"
     snap: "https://github.com/bmosoluciones/mira-personal-finance-assistant/blob/main/packaging/snap/snapcraft.yaml"
 

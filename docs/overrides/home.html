@@ -4,9 +4,11 @@
   {% set install_links = config.extra.install_links | default({}) %}
   {% set exe_link = install_links.get("exe") %}
   {% set zip_link = install_links.get("zip") %}
+  {% set wheel_link = install_links.get("wheel") %}
+  {% set source_link = install_links.get("source") %}
   {% set flatpak_link = install_links.get("flatpak") %}
   {% set snap_link = install_links.get("snap") %}
-  {% set has_install_links = exe_link or zip_link or flatpak_link or snap_link %}
+  {% set has_install_links = exe_link or zip_link or wheel_link or source_link or flatpak_link or snap_link %}
 
   {% if i18n_page_locale == "es" %}
     {% set hero_badge = "ASISTENTE LOCAL-FIRST" %}
@@ -75,6 +77,8 @@
     {% set footer_releases = "Releases" %}
     {% set install_exe = "Instalador Windows (.exe)" %}
     {% set install_zip = "Portable (.zip)" %}
+    {% set install_wheel = "Paquete Python (.whl)" %}
+    {% set install_source = "Código fuente (.tar.gz)" %}
     {% set install_flatpak = "Flatpak" %}
     {% set install_snap = "Snap" %}
     {% set dropdown_aria = "Opciones de descarga de MIRA" %}
@@ -145,6 +149,8 @@
     {% set footer_releases = "Releases" %}
     {% set install_exe = "Windows installer (.exe)" %}
     {% set install_zip = "Portable (.zip)" %}
+    {% set install_wheel = "Python package (.whl)" %}
+    {% set install_source = "Source archive (.tar.gz)" %}
     {% set install_flatpak = "Flatpak" %}
     {% set install_snap = "Snap" %}
     {% set dropdown_aria = "MIRA download options" %}
@@ -170,6 +176,12 @@
                 {% endif %}
                 {% if zip_link %}
                   <a class="mira-install-dropdown__item" href="{{ zip_link }}">{{ install_zip }}</a>
+                {% endif %}
+                {% if wheel_link %}
+                  <a class="mira-install-dropdown__item" href="{{ wheel_link }}">{{ install_wheel }}</a>
+                {% endif %}
+                {% if source_link %}
+                  <a class="mira-install-dropdown__item" href="{{ source_link }}">{{ install_source }}</a>
                 {% endif %}
                 {% if flatpak_link %}
                   <a class="mira-install-dropdown__item" href="{{ flatpak_link }}">{{ install_flatpak }}</a>
