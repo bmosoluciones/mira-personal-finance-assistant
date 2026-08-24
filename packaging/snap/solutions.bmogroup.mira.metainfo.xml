@@ -53,7 +53,7 @@
     <keyword>income</keyword>
   </keywords>
   <releases>
-    <release version="0.0.1b5" date="2026-06-30">
+    <release version="0.0.1" date="2026-08-24">
       <description>
         <p>Production release of MIRA with published desktop packaging artifacts.</p>
         <ul>
