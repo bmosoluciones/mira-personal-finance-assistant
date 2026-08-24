@@ -12,6 +12,7 @@
     {% set hero_badge = "ASISTENTE LOCAL-FIRST" %}
     {% set hero_title = "Controla tu dinero de forma local" %}
     {% set hero_subtitle = "Registra movimientos y entiende tus finanzas sin enviar tus datos a terceros." %}
+    {% set hero_mascot_alt = "Arthur, la mascota de MIRA" %}
     {% set cta_primary = "Descargar MIRA" %}
     {% set cta_secondary = "Guia de inicio" %}
     {% set hero_signals = [
@@ -81,6 +82,7 @@
     {% set hero_badge = "LOCAL-FIRST ASSISTANT" %}
     {% set hero_title = "Manage your money fully local" %}
     {% set hero_subtitle = "Track transactions and understand your finances without sending your data to third parties." %}
+    {% set hero_mascot_alt = "Arthur, MIRA's mascot" %}
     {% set cta_primary = "Download MIRA" %}
     {% set cta_secondary = "Get Started Guide" %}
     {% set hero_signals = [
@@ -152,6 +154,7 @@
     <section class="mira-section mira-section--hero">
       <div class="mira-shell mira-hero">
         <p class="mira-hero__badge">{{ hero_badge }}</p>
+        <img class="mira-hero__mascot" src="{{ 'images/arthur.png' | url }}" alt="{{ hero_mascot_alt }}" width="220" height="220" loading="eager">
         <h1 class="mira-hero__title">{{ hero_title }}</h1>
         <p class="mira-hero__subtitle">{{ hero_subtitle }}</p>
         <div class="mira-hero__actions">

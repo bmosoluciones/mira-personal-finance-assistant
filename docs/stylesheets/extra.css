@@ -129,6 +129,13 @@
   justify-items: center;
 }
 
+.mira-hero__mascot {
+  width: min(220px, 52vw);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 24px rgba(53, 98, 118, 0.18));
+}
+
 .mira-hero__badge {
   display: inline-flex;
   margin: 0;
