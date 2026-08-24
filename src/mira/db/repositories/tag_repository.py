@@ -247,8 +247,8 @@ class TagRepository:
             .dicts()
         )
         for row in query:
-            tx_id = int(row.pop("transaction_id"))
-            result[tx_id].append(row)
+            tx_id = int(row.pop("transaction_id"))  # type: ignore[attr-defined]
+            result[tx_id].append(row)  # type: ignore[arg-type]
         return result
 
     def get_recurring_tags(self, recurring_id: int) -> list[dict]:
@@ -302,8 +302,8 @@ class TagRepository:
             .dicts()
         )
         for row in query:
-            recurring_id = int(row.pop("recurring_id"))
-            result[recurring_id].append(row)
+            recurring_id = int(row.pop("recurring_id"))  # type: ignore[attr-defined]
+            result[recurring_id].append(row)  # type: ignore[arg-type]
         return result
 
     def _enrich_recurring_rows(self, rows: list[dict]) -> list[dict]:

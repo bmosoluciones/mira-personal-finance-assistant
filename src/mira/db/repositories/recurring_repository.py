@@ -95,11 +95,11 @@ class RecurringRepository:
         row = RecurringTransaction.get_or_none(RecurringTransaction.id == rec_id)
         if row is None:
             return None
-        account = self.get_account_by_id(int(row.account_id)) if row.account_id is not None else None
-        category = self.get_category_by_id(int(row.category_id)) if row.category_id is not None else None
+        account = self.get_account_by_id(int(row.account_id)) if row.account_id is not None else None  # type: ignore[attr-defined]
+        category = self.get_category_by_id(int(row.category_id)) if row.category_id is not None else None  # type: ignore[attr-defined]
         payload = {
             "id": row.id,
-            "account_id": row.account_id,
+            "account_id": row.account_id,  # type: ignore[attr-defined]
             "type": row.type,
             "amount": self._cents_to_money(row.amount),
             "description": row.description,
@@ -118,12 +118,12 @@ class RecurringRepository:
         categories = {int(item["id"]): item for item in self.get_categories()}
         rows = []
         for row in RecurringTransaction.select().order_by(RecurringTransaction.id):
-            account = accounts.get(int(row.account_id)) if row.account_id is not None else None
-            category = categories.get(int(row.category_id)) if row.category_id is not None else None
+            account = accounts.get(int(row.account_id)) if row.account_id is not None else None  # type: ignore[attr-defined]
+            category = categories.get(int(row.category_id)) if row.category_id is not None else None  # type: ignore[attr-defined]
             rows.append(
                 {
                     "id": row.id,
-                    "account_id": row.account_id,
+                    "account_id": row.account_id,  # type: ignore[attr-defined]
                     "type": row.type,
                     "amount": self._cents_to_money(row.amount),
                     "description": row.description,
@@ -207,7 +207,7 @@ class RecurringRepository:
         if existing is None:
             raise ValueError(f"Recurring transaction {rec_id} not found")
         old = {
-            "account_id": existing.account_id,
+            "account_id": existing.account_id,  # type: ignore[attr-defined]
             "type": existing.type,
             "amount": self._cents_to_money(existing.amount),
             "description": existing.description,
