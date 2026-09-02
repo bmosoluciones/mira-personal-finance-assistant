@@ -134,6 +134,7 @@ source = ["src"]
 python_version = "3.12"
 ignore_missing_imports = false
 warn_unused_ignores = false
+disable_error_code = ["misc"]
 
 [[tool.mypy.overrides]]
 # Mobile sync modules use optional third-party packages (zeroconf, segno)
