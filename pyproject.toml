@@ -71,6 +71,7 @@ target-version = ["py312"]
 line-length = 120
 
 [tool.ruff.lint]
+select = ["E", "F"]
 ignore = ["E501"]
 
 [tool.pylint.format]
