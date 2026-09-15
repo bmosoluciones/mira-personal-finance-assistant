@@ -8,9 +8,9 @@ from __future__ import annotations
 import importlib.util
 import logging
 import os
+import platform
 from functools import lru_cache
 from pathlib import Path
-import platform
 from typing import Any
 
 from mira.ai import chat_engine as chat_engine_module

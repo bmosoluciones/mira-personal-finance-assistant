@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import sys
 from importlib import metadata
 from pathlib import Path
-import sys
 
 from mira.db.database import Database
 from mira.db.errors import DatabaseSchemaError

@@ -23,7 +23,7 @@ class _FakeDb:
         self.setting = self._SettingFacade(self)
 
     class _SettingFacade:
-        def __init__(self, db: "_FakeDb") -> None:
+        def __init__(self, db: _FakeDb) -> None:
             self._db = db
 
         def get(self, key: str) -> str:

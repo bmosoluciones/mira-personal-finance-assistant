@@ -11,8 +11,8 @@ from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
-    QFrame,
     QFormLayout,
+    QFrame,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -38,7 +38,7 @@ class PairingQrWidget(QFrame):
         super().__init__(parent)
         self._language = language
         self._payload_text = ""
-        self._matrix: tuple[tuple[bool, ...], ...] = tuple()
+        self._matrix: tuple[tuple[bool, ...], ...] = ()
         self._message = tr(
             "mobile.sync.dialog.qr_placeholder",
             language,
@@ -54,7 +54,7 @@ class PairingQrWidget(QFrame):
     def set_payload(self, payload_text: str) -> None:
         """Return set payload."""
         self._payload_text = payload_text.strip()
-        self._matrix = tuple()
+        self._matrix = ()
         if not self._payload_text:
             self._message = tr(
                 "mobile.sync.dialog.qr_placeholder",
@@ -63,7 +63,7 @@ class PairingQrWidget(QFrame):
             )
         else:
             try:
-                import segno  # noqa: PLC0415  # type: ignore[import-not-found]
+                import segno  # type: ignore[import-not-found]
             except ImportError:
                 self._message = tr(
                     "mobile.sync.dialog.qr_unavailable",
@@ -77,7 +77,7 @@ class PairingQrWidget(QFrame):
         if updater := getattr(self, "update", None):
             updater()
 
-    def paintEvent(self, _event) -> None:  # noqa: N802
+    def paintEvent(self, _event) -> None:
         """Return paintEvent."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
@@ -89,7 +89,7 @@ class PairingQrWidget(QFrame):
             return
 
         try:
-            from PySide6.QtCore import QRect  # noqa: PLC0415
+            from PySide6.QtCore import QRect
         except ImportError:
             return
 

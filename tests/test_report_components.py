@@ -10,8 +10,10 @@ goal: the new classes must be independently unit-testable.
 
 from __future__ import annotations
 
-import pytest
 from datetime import date
+
+import pytest
+
 from mira.reports.mira_master import (
     AvgMetrics,
     BudgetContextData,

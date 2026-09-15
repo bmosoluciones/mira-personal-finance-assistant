@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import cast
 
-from PySide6.QtCore import QThread, Qt, Signal
+from PySide6.QtCore import Qt, QThread, Signal
 
 from mira.ai.executor import ActionResult
 from mira.ai.pipeline import Pipeline
@@ -36,7 +36,7 @@ class PipelineCommandWorker(QThread):
             else:
                 result = self._pipeline.process(self._user_input)
             self.finished.emit(result)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self.error.emit(str(exc))
 
 

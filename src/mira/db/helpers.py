@@ -9,11 +9,11 @@ import os
 import re
 import sys
 import unicodedata
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import IntEnum, StrEnum
 from pathlib import Path
 from types import MappingProxyType
-from typing import Mapping
 
 _UNSET = object()  # sentinel for "parameter not provided"
 _ICON_MAX_LENGTH = 32

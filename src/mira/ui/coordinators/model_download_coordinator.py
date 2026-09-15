@@ -5,9 +5,9 @@
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable
 from pathlib import Path
-import threading
 
 from PySide6.QtCore import QThread, Signal
 
@@ -71,7 +71,7 @@ class ModelDownloadWorker(QThread):
                 self.finished_path.emit(str(path))
         except DownloadCancelledError:
             return
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             if self._cancel_event.is_set():
                 return
             self.error.emit(str(exc))

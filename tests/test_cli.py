@@ -15,8 +15,8 @@ from typing import Any
 import pytest
 
 from mira import cli as cli_module
-from mira.db import migrations as db_migrations
 from mira.db import bootstrap as bootstrap_module
+from mira.db import migrations as db_migrations
 from mira.db.database import Database
 from mira.db.demo_seed import build_demo_seed_catalog, normalize_demo_seed_language
 from tests.db_inspection import fetch_all_dicts, fetch_one_dict

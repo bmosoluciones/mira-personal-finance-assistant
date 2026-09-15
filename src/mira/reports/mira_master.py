@@ -1595,7 +1595,7 @@ class ReportMetricsCalculator:
 
         concentration_pct: float | None = None
         if top_categories and total_expense > 0:
-            top_name, top_amount = top_categories[0]
+            _top_name, top_amount = top_categories[0]
             concentration_pct = (top_amount / total_expense) * 100.0
 
         dependence_pct: float | None = None
@@ -2264,7 +2264,7 @@ class ReportMessageGenerator:
                 if remaining <= 0:
                     break
                 months_to_goal = remaining / monthly_savings_avg
-                eta_year, eta_month = shift_month(self._year, self._month, int(round(months_to_goal)))
+                eta_year, eta_month = shift_month(self._year, self._month, round(months_to_goal))
                 builder.add(
                     "goal_projection",
                     "info",

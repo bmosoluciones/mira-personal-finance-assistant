@@ -25,15 +25,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mira.ui.widgets.searchable_combo import SearchableComboBox
-
 from mira.app.view_services import AccountsViewService
 from mira.db.database import Database
 from mira.ui.dialogs._shared import (
     _NOTICE_LABEL_STYLE,
     _PRIMARY_ACTION_BUTTON_STYLE,
     _SECONDARY_ACTION_BUTTON_STYLE,
-    _TagMultiSelectButton,
     _format_amount_label,
     _hero_amount_spin_style,
     _make_amount_spin,
@@ -41,9 +38,11 @@ from mira.ui.dialogs._shared import (
     _make_date_edit,
     _make_formula_amount_spin,
     _notify_warning,
+    _TagMultiSelectButton,
 )
 from mira.ui.i18n import normalize_language, tr
 from mira.ui.number_format import NumberMaskedSpinBox
+from mira.ui.widgets.searchable_combo import SearchableComboBox
 
 
 class TransactionDialog(QDialog):

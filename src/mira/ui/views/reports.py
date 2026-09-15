@@ -51,16 +51,8 @@ from mira.app.view_services import (
 )
 from mira.app.view_services._common import ANALYTICS_PALETTE, AnalyticsSemanticRole
 from mira.db.database import Database
+from mira.ui.delegates.cell_delegates import _SignalCellDelegate, _TypeBadgeDelegate
 from mira.ui.i18n import normalize_language, tr
-from mira.ui.views.report_types import (
-    REPORT_ACCOUNT_BALANCE,
-    REPORT_ACCOUNT_TREND,
-    REPORT_BUDGET,
-    REPORT_CATEGORY,
-    REPORT_CASH_FLOW,
-    REPORT_TAG,
-    REPORT_TOTAL,
-)
 from mira.ui.views._shared import (
     _COMBO_STYLE,
     _DATE_STYLE,
@@ -74,7 +66,15 @@ from mira.ui.views._shared import (
     _section_title,
     _sub_title,
 )
-from mira.ui.delegates.cell_delegates import _SignalCellDelegate, _TypeBadgeDelegate
+from mira.ui.views.report_types import (
+    REPORT_ACCOUNT_BALANCE,
+    REPORT_ACCOUNT_TREND,
+    REPORT_BUDGET,
+    REPORT_CASH_FLOW,
+    REPORT_CATEGORY,
+    REPORT_TAG,
+    REPORT_TOTAL,
+)
 
 _ReportRequestSnapshot = tuple[
     str,
@@ -113,7 +113,7 @@ class _ReportWorker(QThread):
         """Return run."""
         try:
             state = self._service.load_report_state(since=self._since, until=self._until, filters=self._filters)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self.failed.emit(self._request_snapshot, str(exc))
             return
         self.loaded.emit(self._request_snapshot, state)

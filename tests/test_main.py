@@ -14,8 +14,8 @@ import types
 from pathlib import Path
 
 import pytest
-
 from conftest import opengl_import_error
+
 from mira import main as main_module
 from mira.ai.executor import ActionResult
 from mira.db.database import Database
@@ -63,7 +63,7 @@ class _FakeDatabase:
         self.setting = self._SettingFacade(self)
 
     class _SettingFacade:
-        def __init__(self, db: "_FakeDatabase") -> None:
+        def __init__(self, db: _FakeDatabase) -> None:
             self._db = db
 
         def get(self, key: str) -> str:

@@ -219,13 +219,13 @@ class TestCollectSignalsAmbiguity:
 
 class TestResolveIntent:
     def _make(self, **kwargs) -> ParseSignals:
-        defaults = dict(
-            raw_text="test",
-            amount=None,
-            currency=None,
-            category=None,
-            account=None,
-        )
+        defaults = {
+            "raw_text": "test",
+            "amount": None,
+            "currency": None,
+            "category": None,
+            "account": None,
+        }
         defaults.update(kwargs)
         return ParseSignals(**defaults)
 

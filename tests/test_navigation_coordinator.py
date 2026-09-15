@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import pytest
-
 from conftest import opengl_import_error
 
 pytest.importorskip(

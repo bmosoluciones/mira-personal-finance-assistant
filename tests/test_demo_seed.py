@@ -125,7 +125,7 @@ class FakeField:
     def __eq__(self, other: object) -> bool:
         return True
 
-    def desc(self) -> "FakeField":
+    def desc(self) -> FakeField:
         return self
 
 
@@ -138,10 +138,10 @@ class FakeTransactionQuery:
     def __init__(self, transactions: list[FakeTransaction]) -> None:
         self._transactions = transactions
 
-    def where(self, *args: Any, **kwargs: Any) -> "FakeTransactionQuery":
+    def where(self, *args: Any, **kwargs: Any) -> FakeTransactionQuery:
         return self
 
-    def order_by(self, *args: Any, **kwargs: Any) -> "FakeTransactionQuery":
+    def order_by(self, *args: Any, **kwargs: Any) -> FakeTransactionQuery:
         return self
 
     def __iter__(self) -> Any:

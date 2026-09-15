@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-
 from PySide6.QtCore import QPoint, Qt, Signal
 from PySide6.QtGui import QFont, QMouseEvent
 from PySide6.QtWidgets import (

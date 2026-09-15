@@ -3,8 +3,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 from mira.services.mobile_sync import MobileSyncServerStatus

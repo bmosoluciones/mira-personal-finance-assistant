@@ -32,16 +32,17 @@ from PySide6.QtWidgets import (
 from mira.budget_processor import process_budget_value
 from mira.db.database import Database
 from mira.db.errors import BudgetError, BudgetValidationError, DuplicateBudgetCodeError
+from mira.ui.delegates.cell_delegates import _SignalCellDelegate
 from mira.ui.number_format import (
     get_number_format_config,
     parse_number,
 )
 from mira.ui.views._shared import (
     _COMBO_STYLE,
-    _describe_exception,
     _SIGNAL_CELL_ROLE,
     _TABLE_STYLE,
     _build_scrollable_container,
+    _describe_exception,
     _fmt_amount,
     _make_toolbar_btn,
     _notify_error,
@@ -53,7 +54,6 @@ from mira.ui.views._shared import (
     _tr_db,
 )
 from mira.ui.widgets.cards import CardWidget
-from mira.ui.delegates.cell_delegates import _SignalCellDelegate
 
 _BUDGET_AMOUNT_ROLE = int(Qt.ItemDataRole.UserRole) + 1
 _CATEGORY_COLUMN_WIDTH_RATIO = 0.2
@@ -1321,7 +1321,7 @@ class BudgetView(QWidget):
                     params={"rows": exported_rows, "path": path},
                 ),
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             _notify_error(
                 self,
                 self._t("budget.export.error.title", "Error de exportación"),

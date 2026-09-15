@@ -312,7 +312,7 @@ def test_goal_simulator_target_date_and_currency_helpers(monkeypatch) -> None:
 
     class FakeDate(date):
         @classmethod
-        def today(cls) -> "FakeDate":
+        def today(cls) -> FakeDate:
             return cls(2026, 4, 1)
 
     monkeypatch.setattr(module, "date", FakeDate)

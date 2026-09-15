@@ -93,7 +93,7 @@ class ModelDownloadFlow:
                     active_runtime_path=self._get_active_runtime_path(),
                     interaction_mode=self._get_interaction_mode(),
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 del exc
                 session.progress_dialog.close()
                 self._notification_service.error(

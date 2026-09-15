@@ -362,7 +362,7 @@ class GoalScenarioDialog(QDialog):
     @staticmethod
     def _target_date_from_years(years: float) -> str:
         """Return target date from years."""
-        days = max(1, int(round(years * 365)))
+        days = max(1, round(years * 365))
         return (date.today() + timedelta(days=days)).isoformat()
 
     def _fmt_currency(self, value: float) -> str:

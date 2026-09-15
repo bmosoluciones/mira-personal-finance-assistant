@@ -13,6 +13,7 @@ from sqlite3 import Error
 from typing import Any
 
 from PySide6.QtCore import QTimer
+
 from mira.app.view_services import (
     AccountsViewService,
     CategoriesViewService,
@@ -272,7 +273,7 @@ class MainWindowFileActions:
                     params={"count": count, "path": path},
                 ),
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._notify_transaction_file_exception(
                 title_key="export.error.title",
                 title_default="Export Error",
@@ -303,7 +304,7 @@ class MainWindowFileActions:
                     params={"path": backup_path},
                 ),
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._window._notify_exception(
                 tr("dialog.backup.error.title", self._window._language, default="Backup error"),
                 exc,
@@ -331,7 +332,7 @@ class MainWindowFileActions:
                 tr("dialog.restore.success.title", self._window._language, default="Restore completed"),
                 tr(success_key, self._window._language, default=success_default, params=success_params),
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._window._notify_exception(
                 tr("dialog.restore.error.title", self._window._language, default="Restore error"),
                 exc,

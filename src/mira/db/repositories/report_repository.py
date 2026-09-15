@@ -5,14 +5,12 @@
 
 from __future__ import annotations
 
-
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from peewee import JOIN, Case, fn
 
-from mira.db.money import MONEY_ZERO
-from mira.transaction_kinds import TransactionType
 from mira.db.model import Category, Transaction, TransactionTag
+from mira.db.money import MONEY_ZERO
 from mira.finance_summary import (
     FinancialSummary,
     build_savings_lookup,
@@ -20,7 +18,7 @@ from mira.finance_summary import (
     summarize_financial_kpis_as_dict,
 )
 from mira.reports import mira_master_backend
-from mira.transaction_kinds import analytics_included_expr
+from mira.transaction_kinds import TransactionType, analytics_included_expr
 
 
 class ReportRepository:

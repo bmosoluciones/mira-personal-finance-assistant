@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-
 import csv
 import logging
 import re
@@ -486,7 +485,7 @@ def _variance_signal(section: str, variance: float) -> str:
     return "positive" if variance > 0 else "negative"
 
 
-def _wc(cell: Any) -> "_OpenpyxlCell":
+def _wc(cell: Any) -> _OpenpyxlCell:
     """Cast an openpyxl cell to a writable Cell (stubs return Union[Cell, ReadOnlyCell, MergedCell])."""
     return cast("_OpenpyxlCell", cell)
 

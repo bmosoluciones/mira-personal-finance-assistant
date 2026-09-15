@@ -5,13 +5,12 @@
 
 from __future__ import annotations
 
-
 from typing import TYPE_CHECKING, Any, cast
 
 from peewee import JOIN, Case, fn
 
-from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.db.model import Category, SavingsGoal
+from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.transaction_kinds import is_analytics_excluded_transaction
 
 

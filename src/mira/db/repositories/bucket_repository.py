@@ -5,11 +5,10 @@
 
 from __future__ import annotations
 
-
 from typing import TYPE_CHECKING, Any
 
-from mira.db.money import MoneyLike
 from mira.db.model import Bucket
+from mira.db.money import MoneyLike
 
 
 class BucketRepository:

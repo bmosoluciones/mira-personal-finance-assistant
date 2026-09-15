@@ -8,7 +8,7 @@ from __future__ import annotations
 import csv
 import sqlite3
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 
 import pytest
 from openpyxl import load_workbook
@@ -162,7 +162,7 @@ def test_connect_rejects_explicit_legacy_float_database_without_replacing_file(t
         conn.commit()
 
     database = Database(path=path)
-    with pytest.raises(DatabaseSchemaError, match="Pre-0.0.1a2 databases remain unsupported"):
+    with pytest.raises(DatabaseSchemaError, match=r"Pre-0\.0\.1a2 databases remain unsupported"):
         database.connect()
 
     assert inspect_database_schema(path) == "legacy"
@@ -183,7 +183,7 @@ def test_default_path_rejects_legacy_float_database_without_archiving(monkeypatc
     monkeypatch.setattr("mira.db.runtime.get_default_db_path", lambda: path)
 
     database = Database()
-    with pytest.raises(DatabaseSchemaError, match="Pre-0.0.1a2 databases remain unsupported"):
+    with pytest.raises(DatabaseSchemaError, match=r"Pre-0\.0\.1a2 databases remain unsupported"):
         database.connect()
 
     assert inspect_database_schema(path) == "legacy"
@@ -2702,7 +2702,7 @@ class TestBackupRestore:
         legacy_backup = tmp_path / "legacy_backup.db"
         _create_legacy_float_database(legacy_backup)
 
-        with pytest.raises(DatabaseSchemaError, match="Pre-0.0.1a2 backups remain unsupported"):
+        with pytest.raises(DatabaseSchemaError, match=r"Pre-0\.0\.1a2 backups remain unsupported"):
             db.backup.restore(legacy_backup)
 
     def test_backup_restore_round_trip_preserves_all_data(self, db, tmp_path):

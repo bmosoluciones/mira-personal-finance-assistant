@@ -17,8 +17,8 @@ from typing import Any, Literal, overload
 from mira.db import helpers as db_helpers
 from mira.db.backend import DatabaseBackend as _DatabaseBackend
 from mira.db.money import Money, MoneyLike
-from mira.finance_summary import FinancialSummary
 from mira.db.repositories.backup_repository import RestoreResult
+from mira.finance_summary import FinancialSummary
 from mira.services.database_io import DatabaseIOService
 
 CURRENCY_CODES = db_helpers.CURRENCY_CODES

@@ -18,8 +18,8 @@ from PySide6.QtWidgets import (
 )
 
 from mira.db.database import Database
-from mira.ui.i18n import normalize_language, tr
 from mira.ui.dialogs._shared import _NOTICE_LABEL_STYLE, _make_balance_spin, _notify_warning
+from mira.ui.i18n import normalize_language, tr
 
 
 class AccountDialog(QDialog):

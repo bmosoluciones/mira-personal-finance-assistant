@@ -7,7 +7,6 @@ import importlib
 import sys
 
 import pytest
-
 from conftest import opengl_import_error
 
 pytestmark = pytest.mark.skipif(

@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Callable
 from datetime import datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 
 from mira.db import model as db_model
 from mira.db.errors import DatabaseSchemaError

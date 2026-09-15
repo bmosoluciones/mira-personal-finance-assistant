@@ -5,21 +5,24 @@
 
 from __future__ import annotations
 
-
-from datetime import date, datetime
 import re
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Any, cast
 
 from peewee import Case, fn
 
-from mira.sync_utils import utc_now_iso as _utc_now_iso
 from mira.db.helpers import (
     _ACCOUNT_ALIAS_STOPWORDS,
+)
+from mira.db.helpers import (
     canonical_account_type as _canonical_account_type,
+)
+from mira.db.helpers import (
     fold_text as _fold_text,
 )
-from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.db.model import Account, Transaction
+from mira.db.money import MONEY_ZERO, MoneyLike
+from mira.sync_utils import utc_now_iso as _utc_now_iso
 
 
 class AccountRepository:
@@ -195,13 +198,13 @@ class AccountRepository:
         normalized_name = self._normalize_account_name(name)
         normalized_type = _canonical_account_type(account_type)
         selected_currency = str(currency or self.get_default_currency()).strip().upper()
-        create_kwargs: dict[str, object] = dict(
-            name=normalized_name,
-            account_type=normalized_type,
-            balance=self._money_to_cents(opening_balance),
-            currency=selected_currency,
-            is_default=bool(is_default),
-        )
+        create_kwargs: dict[str, object] = {
+            "name": normalized_name,
+            "account_type": normalized_type,
+            "balance": self._money_to_cents(opening_balance),
+            "currency": selected_currency,
+            "is_default": bool(is_default),
+        }
         if global_id:
             create_kwargs["global_id"] = global_id
         if device_id:

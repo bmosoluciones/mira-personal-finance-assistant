@@ -6,7 +6,6 @@ from __future__ import annotations
 import importlib
 
 import pytest
-
 from conftest import opengl_import_error
 
 pytestmark = pytest.mark.skipif(

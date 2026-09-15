@@ -5,16 +5,14 @@
 
 from __future__ import annotations
 
-
 import json
 import logging
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, cast
 
 from peewee import JOIN, SQL, fn
 
-from mira.finance_summary import build_savings_lookup, is_savings_transaction
 from mira.db.helpers import (
     FEEDBACK_MILESTONES,
     MessagePriority,
@@ -27,6 +25,7 @@ from mira.db.model import (
     MessageEvent,
     Transaction,
 )
+from mira.finance_summary import build_savings_lookup, is_savings_transaction
 from mira.reports.mira_master import shift_month
 from mira.transaction_kinds import TransactionType, analytics_included_expr, is_analytics_excluded_transaction
 from mira.ui.i18n import tr
