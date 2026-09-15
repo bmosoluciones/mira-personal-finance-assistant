@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QTimer
+
 from mira.ai.executor import ActionResult
 from mira.ui.i18n import tr
 from mira.ui.notification_service import NotificationService

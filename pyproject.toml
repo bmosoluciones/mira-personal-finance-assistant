@@ -71,7 +71,21 @@ target-version = ["py312"]
 line-length = 120
 
 [tool.ruff.lint]
-ignore = ["E501"]
+select = [
+    "E",     # pycodestyle errors
+    "F",     # Pyflakes
+    "I",     # isort (import sorting)
+    "UP",    # pyupgrade (modern Python 3.12+ syntax)
+    "C4",    # flake8-comprehensions
+    "RUF",   # Ruff-specific checks
+]
+ignore = [
+    "E501",    # Line length (handled by black / formatter)
+    "RUF001",  # Ambiguous unicode characters in strings (e.g., emojis, en-dashes in i18n/UI)
+    "RUF002",  # Ambiguous unicode characters in docstrings
+    "RUF003",  # Ambiguous unicode characters in comments
+    "RUF012",  # Mutable class default annotations
+]
 
 [tool.pylint.format]
 max-line-length = 120
@@ -133,6 +147,7 @@ source = ["src"]
 python_version = "3.12"
 ignore_missing_imports = false
 warn_unused_ignores = false
+disable_error_code = ["misc"]
 
 [[tool.mypy.overrides]]
 # Mobile sync modules use optional third-party packages (zeroconf, segno)

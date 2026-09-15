@@ -23,7 +23,8 @@ from PySide6.QtWidgets import (
 )
 
 from mira.db.database import Database
-from mira.error_policy import ErrorDescriptor, describe as describe_error
+from mira.error_policy import ErrorDescriptor
+from mira.error_policy import describe as describe_error
 from mira.finance_summary import build_savings_lookup
 from mira.transaction_kinds import is_balance_adjustment_transaction
 from mira.ui.i18n import normalize_language, tr

@@ -9,8 +9,8 @@ from .bucket_repository import BucketRepository
 from .budget_repository import BudgetRepository
 from .category_repository import CategoryRepository
 from .feedback_repository import FeedbackRepository
-from .recurring_repository import RecurringRepository
 from .reconciliation_repository import ReconciliationRepository
+from .recurring_repository import RecurringRepository
 from .report_repository import ReportRepository
 from .savings_goal_repository import SavingsGoalRepository
 from .setting_repository import SettingRepository
@@ -25,8 +25,8 @@ __all__ = [
     "BudgetRepository",
     "CategoryRepository",
     "FeedbackRepository",
-    "RecurringRepository",
     "ReconciliationRepository",
+    "RecurringRepository",
     "ReportRepository",
     "SavingsGoalRepository",
     "SettingRepository",

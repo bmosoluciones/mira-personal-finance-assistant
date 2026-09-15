@@ -5,10 +5,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import importlib
 import importlib.util
 import sys
+from dataclasses import dataclass
 from types import ModuleType, SimpleNamespace
 
 
@@ -489,7 +489,7 @@ class QComboBox(QWidget):
 class _StubIndex:
     """Minimal QModelIndex stub for QStandardItemModel."""
 
-    def __init__(self, row: int, col: int, model: "QStandardItemModel") -> None:
+    def __init__(self, row: int, col: int, model: QStandardItemModel) -> None:
         self._row = row
         self._col = col
         self._model = model
@@ -531,21 +531,21 @@ class QStandardItemModel:
         self.rowsRemoved = BoundSignal()
         self.modelReset = BoundSignal()
 
-    def appendRow(self, item: "QStandardItem") -> None:
+    def appendRow(self, item: QStandardItem) -> None:
         self._rows.append(item)
 
     def rowCount(self, parent=None) -> int:
         return len(self._rows)
 
-    def index(self, row: int, col: int, parent=None) -> "_StubIndex":
+    def index(self, row: int, col: int, parent=None) -> _StubIndex:
         return _StubIndex(row, col, self)
 
-    def item(self, row: int, col: int = 0) -> "QStandardItem | None":
+    def item(self, row: int, col: int = 0) -> QStandardItem | None:
         if 0 <= row < len(self._rows):
             return self._rows[row]
         return None
 
-    def data(self, index: "_StubIndex", role=None):
+    def data(self, index: _StubIndex, role=None):
         return index.data(role)
 
     def clear(self) -> None:
@@ -556,10 +556,10 @@ class QSortFilterProxyModel:
     """Minimal stub: no actual filtering – returns all rows from source."""
 
     def __init__(self, parent=None) -> None:
-        self._source: "QStandardItemModel | None" = None
+        self._source: QStandardItemModel | None = None
         self._filter = ""
 
-    def setSourceModel(self, model: "QStandardItemModel") -> None:
+    def setSourceModel(self, model: QStandardItemModel) -> None:
         self._source = model
 
     def setFilterCaseSensitivity(self, cs) -> None:
@@ -577,13 +577,13 @@ class QSortFilterProxyModel:
     def rowCount(self, parent=None) -> int:
         return self._source.rowCount() if self._source else 0
 
-    def index(self, row: int, col: int, parent=None) -> "_StubIndex":
+    def index(self, row: int, col: int, parent=None) -> _StubIndex:
         return _StubIndex(row, col, self._source) if self._source else _StubIndex(-1, col, QStandardItemModel())
 
-    def mapToSource(self, proxy_idx: "_StubIndex") -> "_StubIndex":
+    def mapToSource(self, proxy_idx: _StubIndex) -> _StubIndex:
         return proxy_idx
 
-    def mapFromSource(self, source_idx: "_StubIndex") -> "_StubIndex":
+    def mapFromSource(self, source_idx: _StubIndex) -> _StubIndex:
         return source_idx
 
 
@@ -630,11 +630,11 @@ class QDateEdit(QWidget):
     def setStyleSheet(self, style: str) -> None:
         self.style_sheet = style
 
-    def setDate(self, value: "QDate") -> None:
+    def setDate(self, value: QDate) -> None:
         self._date = value
         self.dateChanged.emit(value)
 
-    def date(self) -> "QDate":
+    def date(self) -> QDate:
         return self._date
 
 
@@ -717,7 +717,7 @@ class Rect:
     right: int = 100
     bottom: int = 30
 
-    def adjusted(self, dx1: int, dy1: int, dx2: int, dy2: int) -> "Rect":
+    def adjusted(self, dx1: int, dy1: int, dx2: int, dy2: int) -> Rect:
         return Rect(self.left + dx1, self.top + dy1, self.right + dx2, self.bottom + dy2)
 
     def width(self) -> int:
@@ -1134,7 +1134,7 @@ def install_fake_pyside(monkeypatch):
 def fresh_import(monkeypatch, module_name: str, *, clear_prefixes: tuple[str, ...] = ()):
     """Import *module_name* after clearing it and related modules from cache."""
 
-    prefixes = tuple(clear_prefixes) + (module_name,)
+    prefixes = (*tuple(clear_prefixes), module_name)
     for name in list(sys.modules):
         if any(name == prefix or name.startswith(f"{prefix}.") for prefix in prefixes):
             monkeypatch.delitem(sys.modules, name, raising=False)

@@ -20,9 +20,9 @@ import threading
 
 from mira.ai.base_engine import BaseEngine
 from mira.ai.engine import get_chat_engine
-from mira.ai.parser_engine import TransactionParserEngine
 from mira.ai.executor import ActionResult, Executor
 from mira.ai.normalizer import normalise
+from mira.ai.parser_engine import TransactionParserEngine
 from mira.ai.validator import validate
 from mira.db.database import Database
 from mira.ui.i18n import tr

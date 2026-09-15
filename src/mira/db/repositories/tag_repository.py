@@ -5,16 +5,16 @@
 
 from __future__ import annotations
 
-
 from datetime import datetime as _datetime
 from typing import TYPE_CHECKING
 
-from peewee import IntegrityError as PeeweeIntegrityError, fn
+from peewee import IntegrityError as PeeweeIntegrityError
+from peewee import fn
 
-from mira.sync_utils import utc_now_iso as _utc_now_iso
 from mira.db.errors import DuplicateTagNameError
 from mira.db.helpers import _ICON_MAX_LENGTH
 from mira.db.model import RecurringTransactionTag, Tag, TransactionTag
+from mira.sync_utils import utc_now_iso as _utc_now_iso
 
 
 def _fmt_updated_at(value: object) -> str | None:
@@ -54,7 +54,7 @@ class TagRepository:
             raise ValueError("Tag name cannot be empty")
         if len(icon) > _ICON_MAX_LENGTH:
             raise ValueError(f"Tag icon cannot exceed {_ICON_MAX_LENGTH} characters")
-        create_kwargs: dict[str, object] = dict(name=normalized, icon=icon, color=color)
+        create_kwargs: dict[str, object] = {"name": normalized, "icon": icon, "color": color}
         if global_id:
             create_kwargs["global_id"] = global_id
         if device_id:

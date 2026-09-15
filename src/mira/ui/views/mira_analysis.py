@@ -21,7 +21,7 @@ from PySide6.QtCharts import (
     QValueAxis,
 )
 from PySide6.QtCore import QRectF, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QPaintEvent, QPainter, QPalette, QPen
+from PySide6.QtGui import QColor, QFont, QPainter, QPaintEvent, QPalette, QPen
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -169,10 +169,10 @@ class _WaterfallChartWidget(QWidget):
             value = y_min + ((y_max - y_min) / grid_steps) * idx
             y_pos = map_y(value)
             painter.drawLine(
-                int(round(plot_rect.left())),
-                int(round(y_pos)),
-                int(round(plot_rect.right())),
-                int(round(y_pos)),
+                round(plot_rect.left()),
+                round(y_pos),
+                round(plot_rect.right()),
+                round(y_pos),
             )
             painter.setPen(QColor(self._COLORS["default"]))
             painter.drawText(
@@ -184,10 +184,10 @@ class _WaterfallChartWidget(QWidget):
 
         painter.setPen(QPen(QColor(self._COLORS["text"]), 1.6))
         painter.drawLine(
-            int(round(plot_rect.left())),
-            int(round(zero_y)),
-            int(round(plot_rect.right())),
-            int(round(zero_y)),
+            round(plot_rect.left()),
+            round(zero_y),
+            round(plot_rect.right()),
+            round(zero_y),
         )
 
         count = max(1, len(self._steps))
@@ -211,10 +211,10 @@ class _WaterfallChartWidget(QWidget):
             if prev_end is not None:
                 painter.setPen(QPen(QColor(self._COLORS["connector"]), 1.2, Qt.PenStyle.DashLine))
                 painter.drawLine(
-                    int(round(center_x - slot_width / 2.0)),
-                    int(round(map_y(prev_end))),
-                    int(round(center_x - bar_width / 2.0)),
-                    int(round(map_y(start))),
+                    round(center_x - slot_width / 2.0),
+                    round(map_y(prev_end)),
+                    round(center_x - bar_width / 2.0),
+                    round(map_y(start)),
                 )
 
             # When `baseline` exists we render a total/checkpoint bar between baseline and end,
@@ -285,7 +285,7 @@ class _MiraAnalysisWorker(QThread):
         """Return run."""
         try:
             payload = self._service.load_payload(year=self._year, month=self._month)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self.failed.emit(str(exc))
             return
         self.loaded.emit(payload, self._emit_to_assistant, self._year, self._month)

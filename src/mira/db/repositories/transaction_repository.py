@@ -5,17 +5,17 @@
 
 from __future__ import annotations
 
-
 import calendar
-from decimal import Decimal
 from datetime import date, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any, cast
 
 from peewee import JOIN, Case, fn
 
-from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.db.model import Account, BudgetDetail, Category, Transaction, TransactionTag
-from mira.sync_utils import generate_ulid as _generate_ulid, utc_now_iso as _utc_now_iso
+from mira.db.money import MONEY_ZERO, MoneyLike
+from mira.sync_utils import generate_ulid as _generate_ulid
+from mira.sync_utils import utc_now_iso as _utc_now_iso
 from mira.transaction_kinds import (
     BALANCE_ADJUSTMENT_PAYMENT_METHOD,
     TransactionType,
@@ -413,23 +413,23 @@ class TransactionRepository:
             int(category_id) if category_id is not None else self._resolve_transaction_category_id(tx_type, category)
         )
         with self._atomic():
-            create_kwargs: dict[str, Any] = dict(
-                account=account_id,
-                type=tx_type,
-                amount=self._money_to_cents(normalized_amount),
-                description=description,
-                category=category,
-                category_id=resolved_category_id,
-                date=tx_date,
-                subcategory=subcategory,
-                payment_method=payment_method,
-                receipt_path=receipt_path,
-                note=note,
-                to_account_id=to_account_id,
-                is_transfer=bool(is_transfer),
-                exchange_rate=exchange_rate,
-                converted_amount=self._money_to_cents(converted_amount, allow_none=True),
-            )
+            create_kwargs: dict[str, Any] = {
+                "account": account_id,
+                "type": tx_type,
+                "amount": self._money_to_cents(normalized_amount),
+                "description": description,
+                "category": category,
+                "category_id": resolved_category_id,
+                "date": tx_date,
+                "subcategory": subcategory,
+                "payment_method": payment_method,
+                "receipt_path": receipt_path,
+                "note": note,
+                "to_account_id": to_account_id,
+                "is_transfer": bool(is_transfer),
+                "exchange_rate": exchange_rate,
+                "converted_amount": self._money_to_cents(converted_amount, allow_none=True),
+            }
             create_kwargs["sync_id"] = sync_id if sync_id else _generate_ulid()
             if device_id:
                 create_kwargs["last_modified_by_device_id"] = device_id

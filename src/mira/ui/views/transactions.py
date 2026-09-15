@@ -35,6 +35,7 @@ from mira.app.view_services import (
 )
 from mira.db.database import Database
 from mira.transaction_kinds import is_balance_adjustment_transaction
+from mira.ui.delegates.cell_delegates import _TypeBadgeDelegate
 from mira.ui.views._shared import (
     _COMBO_STYLE,
     _DATE_STYLE,
@@ -51,7 +52,6 @@ from mira.ui.views._shared import (
     _select_row_at_pos,
     _tr_db,
 )
-from mira.ui.delegates.cell_delegates import _TypeBadgeDelegate
 from mira.ui.widgets.searchable_combo import SearchableComboBox
 
 

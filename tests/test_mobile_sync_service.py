@@ -3,12 +3,12 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
-from datetime import datetime, timedelta, timezone
 import json
-from pathlib import Path
 import ssl
 import time
+from contextlib import contextmanager
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -72,7 +72,7 @@ def _request_json(
     request = Request(url, data=body, method=method, headers=request_headers)
     request_context = ssl._create_unverified_context() if url.startswith("https://") else None
     try:
-        with urlopen(request, timeout=2.0, context=request_context) as response:  # noqa: S310 - local test server only
+        with urlopen(request, timeout=2.0, context=request_context) as response:
             return int(response.status), json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         return int(exc.code), json.loads(exc.read().decode("utf-8"))
@@ -382,7 +382,7 @@ def test_mobile_sync_service_rejects_missing_category_when_master_data_is_stale(
 
     db.category.delete(int(category["id"]))
     client_snapshot_at = datetime.fromisoformat(str(master_data["master_data_updated_at"]).replace("Z", "+00:00"))
-    stale_master_data_at = (client_snapshot_at + timedelta(seconds=1)).astimezone(timezone.utc)
+    stale_master_data_at = (client_snapshot_at + timedelta(seconds=1)).astimezone(UTC)
     db.setting.set(
         "master_data_updated_at",
         stale_master_data_at.replace(microsecond=0).isoformat().replace("+00:00", "Z"),

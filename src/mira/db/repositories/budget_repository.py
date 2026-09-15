@@ -5,17 +5,17 @@
 
 from __future__ import annotations
 
-
 import calendar
 from collections import defaultdict
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Any, cast
 
-from peewee import JOIN, Case, IntegrityError as PeeweeIntegrityError, fn
+from peewee import JOIN, Case, fn
+from peewee import IntegrityError as PeeweeIntegrityError
 
 from mira.db.errors import BudgetValidationError, DuplicateBudgetCodeError
-from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.db.model import Account, BudgetDetail, BudgetMaster, Category, Transaction
+from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.transaction_kinds import analytics_included_expr, is_analytics_excluded_transaction
 
 _UNCATEGORIZED_INCOME_CATEGORY_ID = -1

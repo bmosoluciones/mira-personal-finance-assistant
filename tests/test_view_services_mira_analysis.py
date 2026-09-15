@@ -264,13 +264,13 @@ def test_mira_analysis_view_state_builder_shapes_cards_waterfall_and_trends(db: 
     assert ANALYTICS_PALETTE.waterfall_hex(WaterfallStepKind.INCOME_TOTAL) in state.waterfall.legend_html
     assert ANALYTICS_PALETTE.waterfall_hex(WaterfallStepKind.FINAL_TOTAL) in state.waterfall.legend_html
     assert "900.00" in state.waterfall.summary_text
-    assert [label for label in state.ytd_chart.labels] == ["01/2026", "02/2026"]
+    assert list(state.ytd_chart.labels) == ["01/2026", "02/2026"]
     assert state.ytd_chart.series[0].color == ANALYTICS_PALETTE.semantic_hex(AnalyticsSemanticRole.INCOME)
     assert state.ytd_chart.series[1].color == ANALYTICS_PALETTE.semantic_hex(AnalyticsSemanticRole.EXPENSE)
     assert state.ytd_chart.series[2].color == ANALYTICS_PALETTE.semantic_hex(AnalyticsSemanticRole.NET)
     assert state.ytd_chart.series[3].color == ANALYTICS_PALETTE.semantic_hex(AnalyticsSemanticRole.SAVINGS)
     assert state.ytd_chart.series[0].points[-1][1] == pytest.approx(1200.0)
-    assert [label for label in state.trend_charts["income"].labels] == ["2026-01", "2026-02"]
+    assert list(state.trend_charts["income"].labels) == ["2026-01", "2026-02"]
     assert state.trend_charts["expense"].series[0].color == ANALYTICS_PALETTE.palette_hex(0)
     assert state.trend_charts["expense"].series[1].color == ANALYTICS_PALETTE.palette_hex(1)
     assert state.trend_charts["expense"].series[0].values[0] == pytest.approx(300.0)

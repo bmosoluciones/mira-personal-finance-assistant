@@ -3,18 +3,19 @@
 
 """Dialog package with stable compatibility re-exports."""
 
+from PySide6.QtWidgets import QColorDialog
+
+from . import financial as _financial
 from .accounts import AccountDialog
 from .budget import BudgetCreateDialog
 from .categories import CategoryDialog, MergeCategoryDialog
 from .goals import ContributeGoalDialog, SavingsGoalDialog
 from .mobile_sync import MobileSyncSessionDialog
-from .recurring import RecurringDialog
 from .reconciliation import ReconciliationDialog
+from .recurring import RecurringDialog
 from .setup import InitialSetupDialog
 from .tags import TagDialog
 from .transactions import BalanceAdjustmentDialog, TransactionDialog, TransferDialog
-from . import financial as _financial
-from PySide6.QtWidgets import QColorDialog
 
 CompoundInterestDialog = _financial.CompoundInterestDialog
 GoalScenarioDialog = _financial.GoalScenarioDialog
@@ -25,7 +26,6 @@ __all__ = [
     "BalanceAdjustmentDialog",
     "BudgetCreateDialog",
     "CategoryDialog",
-    "QColorDialog",
     "CompoundInterestDialog",
     "ContributeGoalDialog",
     "GoalScenarioDialog",
@@ -33,8 +33,9 @@ __all__ = [
     "LoanAmortizationDialog",
     "MergeCategoryDialog",
     "MobileSyncSessionDialog",
-    "RecurringDialog",
+    "QColorDialog",
     "ReconciliationDialog",
+    "RecurringDialog",
     "SavingsGoalDialog",
     "TagDialog",
     "TransactionDialog",

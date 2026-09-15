@@ -27,7 +27,7 @@ class SearchableComboBox(QComboBox):
         self._proxy_model.setSourceModel(self._source_model)
         self._proxy_model.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self._proxy_model.setFilterKeyColumn(0)
-        super(SearchableComboBox, self).setModel(self._source_model)
+        super().setModel(self._source_model)
         self.setEditable(True)
         self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
 
@@ -82,8 +82,8 @@ class SearchableComboBox(QComboBox):
 
     def _on_completion_activated(self, text: str) -> None:
         """Sync the combo-box selection after a filtered completion is chosen."""
-        if (source_row := super(SearchableComboBox, self).findText(text)) >= 0:
-            super(SearchableComboBox, self).setCurrentIndex(source_row)
+        if (source_row := super().findText(text)) >= 0:
+            super().setCurrentIndex(source_row)
         self._clear_filter()
 
     def _should_replace_current_value(self, event: QKeyEvent) -> bool:
@@ -107,7 +107,7 @@ class SearchableComboBox(QComboBox):
         if watched is self._line_edit and event.type() == QEvent.Type.KeyPress and isinstance(event, QKeyEvent):
             if self._should_replace_current_value(event):
                 self._line_edit.selectAll()
-        return super(SearchableComboBox, self).eventFilter(watched, event)
+        return super().eventFilter(watched, event)
 
     # ------------------------------------------------------------------
     # Public convenience API
@@ -120,7 +120,7 @@ class SearchableComboBox(QComboBox):
     def showPopup(self) -> None:
         """Open the full dropdown list when the arrow button is used."""
         self._clear_filter()
-        super(SearchableComboBox, self).showPopup()
+        super().showPopup()
 
     # ------------------------------------------------------------------
     # QComboBox API overrides routed through the source model
@@ -150,11 +150,11 @@ class SearchableComboBox(QComboBox):
 
     def currentData(self, role: int = Qt.ItemDataRole.UserRole) -> object:  # type: ignore[override]
         """Return currentData."""
-        return super(SearchableComboBox, self).currentData(role)
+        return super().currentData(role)
 
     def itemData(self, index: int, role: int = Qt.ItemDataRole.UserRole) -> object:  # type: ignore[override]
         """Return itemData."""
-        return super(SearchableComboBox, self).itemData(index, role)
+        return super().itemData(index, role)
 
     def findData(  # type: ignore[override]
         self,
@@ -163,7 +163,7 @@ class SearchableComboBox(QComboBox):
         flags: Qt.MatchFlag = Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchCaseSensitive,
     ) -> int:
         """Search all source items for *value*; return the source row index."""
-        return super(SearchableComboBox, self).findData(value, role, flags)
+        return super().findData(value, role, flags)
 
     def findText(  # type: ignore[override]
         self,
@@ -171,7 +171,7 @@ class SearchableComboBox(QComboBox):
         flags: Qt.MatchFlag = Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchCaseSensitive,
     ) -> int:
         """Search all source items for *text*; return the source row index."""
-        return super(SearchableComboBox, self).findText(text, flags)
+        return super().findText(text, flags)
 
 
 __all__ = ["SearchableComboBox"]

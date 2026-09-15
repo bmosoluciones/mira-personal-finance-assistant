@@ -7,8 +7,8 @@ import importlib
 from pathlib import Path
 
 import pytest
-
 from conftest import opengl_import_error
+
 from mira.db.database import Database
 
 

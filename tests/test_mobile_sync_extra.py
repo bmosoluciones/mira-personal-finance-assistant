@@ -1,12 +1,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
-import pytest
 from datetime import timedelta
+
+import pytest
+
 from mira.db.database import Database
 from mira.services.mobile_sync import (
-    MobileSyncService,
     MobileSyncError,
+    MobileSyncService,
     RateLimitRule,
 )
 from mira.sync_utils import generate_ulid

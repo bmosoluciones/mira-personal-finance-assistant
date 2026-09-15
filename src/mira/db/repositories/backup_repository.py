@@ -5,12 +5,11 @@
 
 from __future__ import annotations
 
-
 import os
 import sqlite3
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-import tempfile
 from typing import TYPE_CHECKING
 
 from mira.db import migrations as db_migrations

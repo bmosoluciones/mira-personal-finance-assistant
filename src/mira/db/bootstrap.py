@@ -8,16 +8,9 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Protocol, cast
 
-from mira.db.helpers import (
-    CURRENCY_SEED,
-    canonical_account_type,
-    localized_default_account_name,
-    localized_default_savings_name,
-    normalize_language,
-)
 from mira.db.demo_seed import (
-    build_demo_seed_catalog,
     build_budget_plan,
+    build_demo_seed_catalog,
     build_demo_seed_result,
     build_demo_seed_runtime,
     ensure_seed_accounts,
@@ -28,6 +21,13 @@ from mira.db.demo_seed import (
     resolve_seed_tags,
     seed_budget_plan,
     seed_monthly_transactions,
+)
+from mira.db.helpers import (
+    CURRENCY_SEED,
+    canonical_account_type,
+    localized_default_account_name,
+    localized_default_savings_name,
+    normalize_language,
 )
 from mira.db.master_sync import MASTER_DATA_UPDATED_AT_SETTING
 from mira.db.model import Account, Currency, RecurringTransaction, SavingsGoal, Setting, Transaction

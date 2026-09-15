@@ -9,8 +9,8 @@ import argparse
 import ctypes
 import logging
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
 
 from mira import __version__ as APP_VERSION

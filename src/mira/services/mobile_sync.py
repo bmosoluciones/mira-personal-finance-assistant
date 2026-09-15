@@ -5,7 +5,14 @@
 
 from __future__ import annotations
 
+import json
+import logging
+import socket
+import ssl
+import tempfile
+import threading
 from collections import deque
+from collections.abc import Callable
 from contextlib import nullcontext
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
@@ -13,17 +20,11 @@ from decimal import Decimal
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from ipaddress import ip_address
-import json
-import logging
 from math import ceil
 from pathlib import Path
 from secrets import choice, token_urlsafe
-import socket
-import ssl
-import tempfile
-import threading
 from types import TracebackType
-from typing import Any, Callable, NoReturn
+from typing import Any, NoReturn
 from urllib.parse import parse_qs, urlparse
 
 from mira.db.database import Database
@@ -1454,7 +1455,7 @@ class _ZeroconfPublisher:
     def start(self, *, port: int, properties: dict[str, str]) -> tuple[bool, tuple[str, ...]]:
         """Return start."""
         try:
-            from zeroconf import IPVersion, ServiceInfo, Zeroconf  # noqa: PLC0415  # type: ignore[import-not-found]
+            from zeroconf import IPVersion, ServiceInfo, Zeroconf  # type: ignore[import-not-found]
         except ImportError:
             logger.info("zeroconf dependency not installed; LAN announcement disabled")
             return False, tuple(_discover_local_addresses())
@@ -1581,7 +1582,7 @@ class _MobileSyncRequestHandler(BaseHTTPRequestHandler):
     server_version = "MIRAMobileSync/1.0"
 
     @property
-    def sync_server(self) -> "MobileSyncServer":
+    def sync_server(self) -> MobileSyncServer:
         """Return sync server."""
         return self.server.sync_server  # type: ignore[attr-defined]
 
@@ -1589,7 +1590,7 @@ class _MobileSyncRequestHandler(BaseHTTPRequestHandler):
         """Return log message."""
         logger.debug("mobile-sync %s - %s", self.address_string(), format % args)
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         """Return do GET."""
         try:
             self._ensure_lan_client()
@@ -1620,14 +1621,14 @@ class _MobileSyncRequestHandler(BaseHTTPRequestHandler):
                     self._write_json(HTTPStatus.NOT_FOUND, {"error": "Endpoint not found", "error_code": "not_found"})
         except MobileSyncError as exc:
             self._write_error(exc)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception("Unexpected mobile sync GET failure")
             self._write_json(
                 HTTPStatus.INTERNAL_SERVER_ERROR,
                 {"error": str(exc), "error_code": "internal_error"},
             )
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         """Return do POST."""
         try:
             self._ensure_lan_client()
@@ -1658,7 +1659,7 @@ class _MobileSyncRequestHandler(BaseHTTPRequestHandler):
                     self._write_json(HTTPStatus.NOT_FOUND, {"error": "Endpoint not found", "error_code": "not_found"})
         except MobileSyncError as exc:
             self._write_error(exc)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception("Unexpected mobile sync POST failure")
             self._write_json(
                 HTTPStatus.INTERNAL_SERVER_ERROR,
@@ -1887,7 +1888,7 @@ class MobileSyncServer:
             self._tls_dir = None
             self._tls_fingerprint_sha256 = ""
 
-    def __enter__(self) -> "MobileSyncServer":
+    def __enter__(self) -> MobileSyncServer:
         """Return context manager."""
         self.start()
         return self
@@ -1929,10 +1930,10 @@ class MobileSyncServer:
         }
 
     def _configure_tls(self, httpd: ThreadingHTTPServer, addresses: tuple[str, ...]) -> None:
-        from cryptography import x509  # noqa: PLC0415
-        from cryptography.hazmat.primitives import hashes, serialization  # noqa: PLC0415
-        from cryptography.hazmat.primitives.asymmetric import rsa  # noqa: PLC0415
-        from cryptography.x509.oid import NameOID  # noqa: PLC0415
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.x509.oid import NameOID
 
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "MIRA Mobile Sync Local")])

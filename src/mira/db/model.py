@@ -11,6 +11,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from peewee import (
+    SQL,
     AutoField,
     BooleanField,
     CharField,
@@ -22,11 +23,12 @@ from peewee import (
     IntegerField,
     Model,
     Proxy,
-    SQL,
     SqliteDatabase,
     TextField,
 )
-from mira.sync_utils import generate_ulid, utc_now_iso as _utc_now_iso
+
+from mira.sync_utils import generate_ulid
+from mira.sync_utils import utc_now_iso as _utc_now_iso
 
 
 def _utc_now() -> str:

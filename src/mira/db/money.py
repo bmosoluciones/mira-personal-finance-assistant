@@ -11,7 +11,7 @@ Money is normalized only at the persistence boundary:
 
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 type MoneyLike = Decimal | str | int | float

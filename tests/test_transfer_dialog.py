@@ -110,7 +110,7 @@ class TestTransferDialogHelpers:
     def test_transfer_roundtrip_cross_currency(self, db, two_accounts_diff_currency):
         """Cross-currency transfer with exchange rate via dialog data shape."""
         usd, nio = two_accounts_diff_currency
-        expense_tx, income_tx = db.transaction.transfer_between_accounts(
+        _expense_tx, _income_tx = db.transaction.transfer_between_accounts(
             from_account_id=usd["id"],
             to_account_id=nio["id"],
             amount=50.0,

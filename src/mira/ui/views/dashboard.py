@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from mira.db.database import Database
+from mira.ui.delegates.cell_delegates import _TypeBadgeDelegate
 from mira.ui.views._shared import (
     _TABLE_STYLE,
     _fmt_amount,
@@ -36,7 +37,6 @@ from mira.ui.views._shared import (
     _tr_db,
 )
 from mira.ui.widgets.cards import CardWidget
-from mira.ui.delegates.cell_delegates import _TypeBadgeDelegate
 
 
 class DashboardView(QWidget):

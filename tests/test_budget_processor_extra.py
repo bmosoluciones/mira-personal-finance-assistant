@@ -2,8 +2,10 @@
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
 from __future__ import annotations
+
 import pytest
-from mira.budget_processor import process_budget_value, _ensure_finite_number, _looks_like_formula
+
+from mira.budget_processor import _ensure_finite_number, _looks_like_formula, process_budget_value
 from mira.number_format import NumberFormatConfig
 
 
@@ -49,8 +51,9 @@ def test_invalid_number_in_formula():
 
 
 def test_eval_node_non_numeric_constant():
-    from mira.budget_processor import _eval_node
     import ast
+
+    from mira.budget_processor import _eval_node
 
     node = ast.Constant(value="not a number")
     with pytest.raises(ValueError, match="Only numeric values are allowed"):
@@ -62,8 +65,9 @@ def test_eval_node_non_numeric_constant():
 
 
 def test_formula_with_unsupported_ops_in_ast():
-    from mira.budget_processor import _eval_node
     import ast
+
+    from mira.budget_processor import _eval_node
 
     # Test unsupported binary op (e.g. BitAnd)
     node = ast.BinOp(left=ast.Constant(value=1), op=ast.BitAnd(), right=ast.Constant(value=2))

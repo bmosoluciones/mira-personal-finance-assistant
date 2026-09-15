@@ -161,7 +161,7 @@ class TestBuildPatterns:
             income={"strong": [r"income_only"], "weak": []},
             expense={"strong": [], "weak": [r"some_expense"]},
         )
-        inc_strong, inc_base, exp_strong, exp_base = build_patterns([cat])
+        inc_strong, _inc_base, exp_strong, exp_base = build_patterns([cat])
         assert inc_strong.search("income_only 100")
         assert exp_base.search("some_expense 50")
         # exp_strong should not match anything meaningful

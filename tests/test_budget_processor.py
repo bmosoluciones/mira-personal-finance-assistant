@@ -165,12 +165,12 @@ def test_formula_empty_after_equal_raises():
 
 
 def test_formula_syntax_error_raises():
-    with pytest.raises(ValueError, match="[Ii]nvalid"):
+    with pytest.raises(ValueError, match=r"[Ii]nvalid"):
         process_budget_value("=100+*200")
 
 
 def test_formula_unbalanced_parentheses_raises():
-    with pytest.raises(ValueError, match="[Ii]nvalid"):
+    with pytest.raises(ValueError, match=r"[Ii]nvalid"):
         process_budget_value("=(50*2")
 
 
@@ -185,7 +185,7 @@ def test_formula_invalid_localized_number_raises():
 
 
 def test_text_value_raises():
-    with pytest.raises(ValueError, match="[Ii]nvalid"):
+    with pytest.raises(ValueError, match=r"[Ii]nvalid"):
         process_budget_value("hello")
 
 

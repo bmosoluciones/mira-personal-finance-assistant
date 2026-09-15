@@ -5,14 +5,13 @@
 
 from __future__ import annotations
 
-
 import calendar
 from datetime import date
 from typing import TYPE_CHECKING, Any, cast
 
 from mira.db.helpers import _UNSET
-from mira.db.money import MONEY_ZERO, MoneyLike
 from mira.db.model import RecurringTransaction
+from mira.db.money import MONEY_ZERO, MoneyLike
 
 
 class RecurringRepository:

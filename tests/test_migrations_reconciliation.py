@@ -155,7 +155,7 @@ def test_migrate_v2_to_v3_sanitizes_duplicate_default_accounts_and_creates_relat
 def test_migrate_database_rejects_unsupported_version() -> None:
     conn = sqlite3.connect(":memory:")
     try:
-        with pytest.raises(DatabaseSchemaError, match="Pre-0.0.1a2 databases remain unsupported"):
+        with pytest.raises(DatabaseSchemaError, match=r"Pre-0\.0\.1a2 databases remain unsupported"):
             db_migrations.migrate_database(conn, 0, 4)
     finally:
         conn.close()

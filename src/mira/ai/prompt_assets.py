@@ -10,8 +10,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from mira.ai.schema_contract import build_assistant_system_prompt
 from mira.ai.normalizer import normalise
+from mira.ai.schema_contract import build_assistant_system_prompt
 
 _SYSTEM_PROMPT = build_assistant_system_prompt()
 

@@ -6,6 +6,7 @@ Unit tests for tag CRUD and tag-based transaction filtering.
 """
 
 import pytest
+
 from mira.db.database import Database
 
 

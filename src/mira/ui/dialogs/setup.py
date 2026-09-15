@@ -19,9 +19,9 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QVBoxLayout,
+    QWidget,
     QWizard,
     QWizardPage,
-    QWidget,
 )
 
 from mira.db.database import CURRENCY_CODES, Database
@@ -267,7 +267,7 @@ class _ProfilePage(QWizardPage):
         self._name_edit.setPlaceholderText(tr("setup.page.profile.name_placeholder", lang))
         self._hint_label.setText(tr("setup.page.profile.hint", lang))
 
-    def validatePage(self) -> bool:  # noqa: N802
+    def validatePage(self) -> bool:
         """Return validatePage."""
         if not self._name_edit.text().strip():
             from mira.ui.views._shared import _notify_warning as shared_notify_warning
@@ -318,7 +318,7 @@ class _LanguageThemePage(QWizardPage):
         self._theme_combo = QComboBox()
         self._theme_combo.setMaxVisibleItems(15)
         try:
-            import qt_material  # type: ignore[import-untyped]  # noqa: PLC0415
+            import qt_material  # type: ignore[import-untyped]
 
             for theme_file in qt_material.list_themes():
                 label = theme_file.replace(".xml", "").replace("_", " ").title()

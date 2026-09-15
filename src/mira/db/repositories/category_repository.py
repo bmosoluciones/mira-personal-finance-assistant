@@ -5,13 +5,12 @@
 
 from __future__ import annotations
 
-
 from datetime import datetime as _datetime
 from typing import TYPE_CHECKING, Any, cast
 
-from peewee import IntegrityError as PeeweeIntegrityError, fn
+from peewee import IntegrityError as PeeweeIntegrityError
+from peewee import fn
 
-from mira.sync_utils import utc_now_iso as _utc_now_iso
 from mira.db.errors import DuplicateCategoryNameError
 from mira.db.helpers import (
     _ICON_MAX_LENGTH,
@@ -20,6 +19,7 @@ from mira.db.helpers import (
     localized_savings_goals_parent_name,
 )
 from mira.db.model import Bucket, Category, IncomeExpenseRelation, RecurringTransaction, SavingsGoal, Transaction
+from mira.sync_utils import utc_now_iso as _utc_now_iso
 
 
 class CategoryRepository:
@@ -149,14 +149,14 @@ class CategoryRepository:
             self._validate_category_parent(None, parent_id, cat_type)
         if len(icon) > _ICON_MAX_LENGTH:
             raise ValueError(f"Category icon cannot exceed {_ICON_MAX_LENGTH} characters")
-        create_kwargs: dict[str, object] = dict(
-            name=normalized_name,
-            type=cat_type,
-            color=color,
-            parent_id=parent_id,
-            is_savings=is_savings,
-            icon=icon,
-        )
+        create_kwargs: dict[str, object] = {
+            "name": normalized_name,
+            "type": cat_type,
+            "color": color,
+            "parent_id": parent_id,
+            "is_savings": is_savings,
+            "icon": icon,
+        }
         if global_id:
             create_kwargs["global_id"] = global_id
         if device_id:
@@ -200,7 +200,7 @@ class CategoryRepository:
         *,
         color: str | None = None,
         is_savings: bool | None = None,
-        parent_id: int | None | object = _UNSET,
+        parent_id: int | object | None = _UNSET,
         icon: str | None = None,
     ) -> dict:
         """Return update category metadata direct."""
@@ -333,7 +333,7 @@ class CategoryRepository:
         new_name: str,
         new_type: str,
         new_is_savings: bool | None,
-        new_parent_id: int | None | object,
+        new_parent_id: int | object | None,
     ) -> None:
         """Return assert category change allowed."""
         cat_id = int(current["id"])
@@ -434,7 +434,7 @@ class CategoryRepository:
         cat_type: str,
         color: str,
         is_savings: bool | None = None,
-        parent_id: int | None | object = _UNSET,
+        parent_id: int | object | None = _UNSET,
         icon: str | None = None,
         device_id: str | None = None,
     ) -> None:
@@ -447,7 +447,7 @@ class CategoryRepository:
             raise ValueError(f"Category {cat_id} not found")
         if icon is not None and len(icon) > _ICON_MAX_LENGTH:
             raise ValueError(f"Category icon cannot exceed {_ICON_MAX_LENGTH} characters")
-        normalized_parent_id: int | None | object = parent_id
+        normalized_parent_id: int | object | None = parent_id
         if normalized_parent_id is not _UNSET and normalized_parent_id is not None:
             normalized_parent_id = int(cast(Any, normalized_parent_id))
         current_parent_id = current.get("parent_id")

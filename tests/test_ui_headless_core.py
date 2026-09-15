@@ -6,8 +6,8 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from tests.qt_stubs import fresh_import, install_fake_pyside
 from mira.ui.i18n import tr
+from tests.qt_stubs import fresh_import, install_fake_pyside
 
 
 class _StatusBar:

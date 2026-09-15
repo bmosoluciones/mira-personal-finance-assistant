@@ -5,15 +5,20 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any
 
 from mira.db.database import Database
 from mira.number_format import (
     NumberFormatConfig,
+)
+from mira.number_format import (
     format_number as _format_number,
+)
+from mira.number_format import (
     get_number_format_config as _get_number_format_config,
 )
 from mira.ui.i18n import normalize_language, tr

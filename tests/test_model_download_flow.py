@@ -6,8 +6,8 @@ from __future__ import annotations
 import importlib
 
 import pytest
-
 from conftest import opengl_import_error
+
 from mira.ui.i18n import tr
 
 pytestmark = pytest.mark.skipif(

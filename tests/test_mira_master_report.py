@@ -3,17 +3,18 @@
 
 from __future__ import annotations
 
-import pytest
 from datetime import date
 
+import pytest
+
 from mira.db.database import Database
-from tests.db_inspection import execute_sql
 from mira.reports.mira_master import (
     _build_financial_momentum_metric,
     _project_next_value,
     _stddev,
     shift_month,
 )
+from tests.db_inspection import execute_sql
 
 
 def test_stddev_handles_empty_and_non_empty_series() -> None:

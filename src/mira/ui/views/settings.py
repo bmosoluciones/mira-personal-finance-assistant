@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -116,7 +115,7 @@ class SettingsView(QWidget):
         self._theme_combo = QComboBox()
         self._theme_combo.setStyleSheet(_COMBO_STYLE)
         try:
-            import qt_material  # type: ignore[import-untyped]  # noqa: PLC0415
+            import qt_material  # type: ignore[import-untyped]
 
             for theme_file in qt_material.list_themes():
                 label = theme_file.replace(".xml", "").replace("_", " ").title()

@@ -6,15 +6,15 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Generator
 
 from peewee import SqliteDatabase
 
-from mira.db import migrations as db_migrations
 from mira.db import bootstrap as db_bootstrap
+from mira.db import migrations as db_migrations
 from mira.db.errors import DatabaseSchemaError
 from mira.db.helpers import get_default_db_path
 from mira.db.model import bind_database, create_peewee_database, initialize_schema, inspect_database_schema_details

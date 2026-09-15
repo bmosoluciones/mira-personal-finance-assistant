@@ -6,10 +6,10 @@
 from __future__ import annotations
 
 try:
-    from PySide6.QtCore import QThread, Qt, QTimer
+    from PySide6.QtCore import Qt, QThread, QTimer
     from PySide6.QtGui import QAction, QKeyEvent
     from PySide6.QtWidgets import (  # noqa: F401
-        QDialog,  # noqa: F401
+        QDialog,
         QLineEdit,
         QMainWindow,
         QProgressDialog,
@@ -19,28 +19,25 @@ except ImportError as exc:  # pragma: no cover - exercised only on headless runt
     raise ImportError("Qt runtime unavailable: libEGL/PySide6 missing") from exc
 
 from mira import __version__ as APP_VERSION
-from mira.app import ApplicationController, ModelDownloadService
 from mira.ai.pipeline import Pipeline
+from mira.app import ApplicationController, ModelDownloadService
 from mira.db.database import Database
 from mira.services import MobileSyncServer, ModelLifecycle
-from mira.ui.dialogs import InitialSetupDialog
-from mira.ui.dialogs.mobile_sync import MobileSyncSessionDialog
-from mira.ui.dialogs.financial.compound_interest import CompoundInterestDialog as _CompoundInterestDialog
-from mira.ui.dialogs.financial.goal_simulator import GoalScenarioDialog as _GoalScenarioDialog
-from mira.ui.dialogs.financial.loan_amortization import LoanAmortizationDialog as _LoanAmortizationDialog
-from mira.ui.i18n import normalize_language, tr
-from mira.ui.menu_builder import MenuBuilder
 from mira.ui.coordinators import ChatState
 from mira.ui.coordinators.command_coordinator import CommandCoordinator
 from mira.ui.coordinators.model_download_coordinator import ModelDownloadCoordinator
 from mira.ui.coordinators.model_download_flow import ModelDownloadFlow, ModelDownloadSession
-from mira.ui.notification_service import NotificationService
-from mira.ui.notifications import show_user_message
-from mira.ui.main_window_layout import MainWindowLayoutMixin, _SIDEBAR_WIDTH  # noqa: F401
+from mira.ui.dialogs import InitialSetupDialog
+from mira.ui.dialogs.financial.compound_interest import CompoundInterestDialog as _CompoundInterestDialog
+from mira.ui.dialogs.financial.goal_simulator import GoalScenarioDialog as _GoalScenarioDialog
+from mira.ui.dialogs.financial.loan_amortization import LoanAmortizationDialog as _LoanAmortizationDialog
+from mira.ui.dialogs.mobile_sync import MobileSyncSessionDialog
+from mira.ui.i18n import normalize_language, tr
+from mira.ui.main_window_layout import _SIDEBAR_WIDTH, MainWindowLayoutMixin  # noqa: F401
+from mira.ui.main_window_lifecycle import _DOCS_URL, MainWindowLifecycleMixin, webbrowser  # noqa: F401
 from mira.ui.main_window_navigation import MainWindowNavigationMixin
 from mira.ui.main_window_prompt import MainWindowPromptMixin
 from mira.ui.main_window_shell import MainWindowShellMixin
-from mira.ui.main_window_lifecycle import MainWindowLifecycleMixin, _DOCS_URL, webbrowser  # noqa: F401
 from mira.ui.main_window_support import (
     MainWindowChatPresenter,
     MainWindowFileActions,
@@ -49,6 +46,9 @@ from mira.ui.main_window_support import (
     resolve_transaction_export_path,
     restore_confirmation,
 )
+from mira.ui.menu_builder import MenuBuilder
+from mira.ui.notification_service import NotificationService
+from mira.ui.notifications import show_user_message
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -314,7 +314,7 @@ class MainWindow(
     def _on_mobile_sync(self) -> None:
         try:
             status = self._mobile_sync_server.start()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._notify_exception(
                 tr("mobile.sync.error.title", self._language, default="Mobile sync error"),
                 exc,
