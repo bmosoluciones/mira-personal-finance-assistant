@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import os
-import stat
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
@@ -106,17 +106,23 @@ def write_api_key(db_path: Path, api_key: str) -> None:
     path = secrets_path_for(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps({"api_key": api_key}).encode("utf-8")
-    # Create the file already private: chmod after the fact would leave a
-    # window where a freshly written key is readable by any local user.
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR)
+    # mkstemp creates the new file as owner-only. Write it fully before
+    # replacing the destination so an existing sidecar's broader permissions
+    # cannot expose the new key during the update. If writing or replacement
+    # fails, leave the previous sidecar untouched and propagate the error.
+    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temporary_path = Path(temporary_name)
+    descriptor_open = True
     try:
-        os.write(descriptor, payload)
+        with os.fdopen(descriptor, "wb") as secret_file:
+            descriptor_open = False
+            secret_file.write(payload)
+            secret_file.flush()
+        os.replace(temporary_path, path)
     finally:
-        os.close(descriptor)
-    try:
-        os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
-    except OSError:
-        return
+        if descriptor_open:
+            os.close(descriptor)
+        temporary_path.unlink(missing_ok=True)
 
 
 def clear_api_key(db_path: Path) -> None:
