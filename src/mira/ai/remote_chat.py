@@ -24,6 +24,19 @@ def _normalize_language(language: str | None) -> str:
     return "es" if str(language or "en").strip().lower() == "es" else "en"
 
 
+class _NoRedirect(request.HTTPRedirectHandler):
+    """Refuse every 30x: the API key travels in the headers we just built.
+
+    Consent is bound to the host of the configured base_url, so a redirect
+    would carry that key to a host nobody acknowledged.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        """Return no redirect request, ever."""
+        del fp, msg, newurl
+        raise error.HTTPError(req.full_url, code, "Chat endpoint redirects are not followed", headers, None)
+
+
 class RemoteChatEngine(BaseEngine):
     """Chat engine backed by an OpenAI-compatible or Anthropic HTTP API."""
 
@@ -77,6 +90,8 @@ class RemoteChatEngine(BaseEngine):
 
     def _anthropic_chat(self, system_prompt: str, user_input: str) -> str:
         """Return a completion from the Anthropic Messages API."""
+        if not str(self._config.api_key or "").strip():
+            raise RuntimeError("Anthropic needs an API key: save one in Settings before using chat mode")
         payload = {
             "model": self._config.model,
             "max_tokens": 512,
@@ -102,8 +117,9 @@ def _post_json(url: str, payload: dict[str, Any], headers: dict[str, str]) -> di
     """POST JSON and return the decoded object."""
     data = json.dumps(payload).encode("utf-8")
     req = request.Request(url, data=data, headers=headers, method="POST")
+    opener = request.build_opener(_NoRedirect())
     try:
-        with request.urlopen(req, timeout=_TIMEOUT_SECONDS) as response:
+        with opener.open(req, timeout=_TIMEOUT_SECONDS) as response:
             raw = response.read().decode("utf-8")
     except error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")

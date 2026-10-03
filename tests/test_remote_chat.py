@@ -12,7 +12,7 @@ from urllib import error
 import pytest
 
 from mira.ai.llm_config import LlmConfig
-from mira.ai.remote_chat import RemoteChatEngine, _normalize_language
+from mira.ai.remote_chat import RemoteChatEngine, _NoRedirect, _normalize_language
 
 
 class _FakeResponse:
@@ -29,16 +29,53 @@ class _FakeResponse:
         return False
 
 
-class _Recorder:
-    def __init__(self, payload: object, monkeypatch: pytest.MonkeyPatch) -> None:
+class _FakeRequest:
+    def __init__(self, full_url: str) -> None:
+        self.full_url = full_url
+
+
+class _RaisingOpener:
+    """Opener whose open() always raises, like a real transport error."""
+
+    def __init__(self, raiser: object) -> None:
+        self._raiser = raiser
+
+    def open(self, req: object, timeout: int = 0) -> _FakeResponse:
+        return self._raiser(req, timeout)  # type: ignore[operator, no-any-return]
+
+
+class _Opener:
+    """Stand-in for the opener built by request.build_opener."""
+
+    def __init__(self, handler: object, payload: object) -> None:
+        self.handler = handler
         self.requests: list[object] = []
         self._payload = payload
-        monkeypatch.setattr("mira.ai.remote_chat.request.urlopen", self._urlopen)
 
-    def _urlopen(self, req: object, timeout: int = 0) -> _FakeResponse:
+    def open(self, req: object, timeout: int = 0) -> _FakeResponse:
         assert timeout > 0
         self.requests.append(req)
         return _FakeResponse(self._payload)
+
+
+class _Recorder:
+    def __init__(self, payload: object, monkeypatch: pytest.MonkeyPatch) -> None:
+        self.openers: list[_Opener] = []
+
+        def _build_opener(*handlers: object) -> _Opener:
+            opener = _Opener(handlers, payload)
+            self.openers.append(opener)
+            return opener
+
+        monkeypatch.setattr("mira.ai.remote_chat.request.build_opener", _build_opener)
+
+    @property
+    def requests(self) -> list[object]:
+        return self.openers[-1].requests if self.openers else []
+
+    @property
+    def handler(self) -> object:
+        return self.openers[-1].handler
 
     @property
     def last(self) -> object:
@@ -138,7 +175,7 @@ def test_anthropic_chat_uses_messages_endpoint_and_headers(monkeypatch: pytest.M
 
 
 def test_http_error_is_reported_as_runtime_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    def _raise(req: object, timeout: int = 0) -> _FakeResponse:
+    def _open(req: object, timeout: int = 0) -> _FakeResponse:
         raise error.HTTPError(
             "http://localhost:1234/v1/chat/completions",
             500,
@@ -147,20 +184,67 @@ def test_http_error_is_reported_as_runtime_error(monkeypatch: pytest.MonkeyPatch
             fp=io.BytesIO(b"server exploded"),
         )
 
-    monkeypatch.setattr("mira.ai.remote_chat.request.urlopen", _raise)
+    monkeypatch.setattr("mira.ai.remote_chat.request.build_opener", lambda *_handlers: _RaisingOpener(_open))
 
     with pytest.raises(RuntimeError, match="HTTP 500"):
         RemoteChatEngine(_config()).chat("hola")
 
 
 def test_unreachable_endpoint_is_reported_as_runtime_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    def _raise(req: object, timeout: int = 0) -> _FakeResponse:
+    def _open(req: object, timeout: int = 0) -> _FakeResponse:
         raise error.URLError("connection refused")
 
-    monkeypatch.setattr("mira.ai.remote_chat.request.urlopen", _raise)
+    monkeypatch.setattr("mira.ai.remote_chat.request.build_opener", lambda *_handlers: _RaisingOpener(_open))
 
     with pytest.raises(RuntimeError, match="unreachable"):
         RemoteChatEngine(_config()).chat("hola")
+
+
+def test_redirects_are_not_followed_so_the_api_key_cannot_change_host(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A 307 would carry Authorization to a host the consent never covered."""
+    recorder = _Recorder({"choices": [{"message": {"content": "ok"}}]}, monkeypatch)
+
+    RemoteChatEngine(_config(api_key="sk-test")).chat("hola")
+
+    handler = recorder.handler
+    assert isinstance(handler, tuple) and len(handler) == 1
+    assert isinstance(handler[0], _NoRedirect)
+    with pytest.raises(error.HTTPError, match="redirects are not followed"):
+        handler[0].redirect_request(
+            _FakeRequest("http://localhost:1234/v1/chat/completions"),
+            None,
+            307,
+            "Temporary Redirect",
+            {},
+            "https://evil.example/collect",
+        )
+
+
+def test_anthropic_chat_without_api_key_fails_before_the_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recorder = _Recorder({"content": [{"text": "never"}]}, monkeypatch)
+    engine = RemoteChatEngine(_config(provider="anthropic", base_url="", model="claude-3-5-haiku-latest"), language="en")
+
+    with pytest.raises(RuntimeError, match="needs an API key"):
+        engine.chat("hi")
+
+    assert recorder.requests == []
+
+
+def test_anthropic_chat_treats_a_blank_api_key_as_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    recorder = _Recorder({"content": [{"text": "never"}]}, monkeypatch)
+    engine = RemoteChatEngine(
+        _config(provider="anthropic", base_url="", model="claude-3-5-haiku-latest", api_key="   "),
+        language="en",
+    )
+
+    with pytest.raises(RuntimeError, match="needs an API key"):
+        engine.chat("hi")
+
+    assert recorder.requests == []
 
 
 def test_non_object_json_response_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
