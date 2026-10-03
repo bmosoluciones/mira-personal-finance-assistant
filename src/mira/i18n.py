@@ -1705,6 +1705,7 @@ _TRANSLATIONS["es"].update(
             '  - "reporte"'
         ),
         "chat.unavailable": "El modo chat no está disponible porque no hay un proveedor de IA configurado en Ajustes. Puedes seguir usando el modo asistente para registrar y consultar tus finanzas.",
+        "chat.error": "La petición de chat falló: {detail}. Revisa el endpoint, el modelo y la clave de API en Ajustes.",
         "chat.parser.missing_amount.expense": "Parece un gasto, pero no detecte el monto ni la moneda. Puedes indicar cuanto gastaste y en que moneda?",
         "chat.parser.missing_amount.income": "Parece un ingreso, pero no detecte el monto ni la moneda. Puedes indicar cuanto recibiste y en que moneda?",
         "chat.parser.unknown_direction": "Detecte un monto de {amount:.0f}, pero no estoy seguro si es ingreso o gasto. Puedes indicarmelo?",
@@ -1837,6 +1838,7 @@ _TRANSLATIONS["en"].update(
             '  - "report"'
         ),
         "chat.unavailable": "Chat mode is unavailable because no AI provider is configured in Settings. You can keep using assistant mode to record and review your finances.",
+        "chat.error": "The chat request failed: {detail}. Check the endpoint, the model and the API key in Settings.",
         "chat.parser.missing_amount.expense": "This looks like an expense, but I could not detect the amount or currency. Can you tell me how much you spent and in which currency?",
         "chat.parser.missing_amount.income": "This looks like income, but I could not detect the amount or currency. Can you tell me how much you received and in which currency?",
         "chat.parser.unknown_direction": "I detected an amount of {amount:.0f}, but I am not sure whether it is income or expense. Can you clarify?",

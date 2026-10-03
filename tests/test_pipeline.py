@@ -431,6 +431,26 @@ def test_pipeline_process_chat_returns_error_result_on_exception(db):
     assert result.action == "chat"
 
 
+def test_pipeline_process_chat_reports_the_actual_failure_not_a_missing_provider(db):
+    pipeline = Pipeline(db=db, engine=TransactionParserEngine())
+    pipeline._chat_engine = _EngineChatError()
+
+    result = pipeline.process_chat("hola")
+
+    assert "chat-fail" in str(result.message)
+    assert "proveedor" not in str(result.message).lower() or "no hay" not in str(result.message)
+
+
+def test_pipeline_process_chat_without_engine_says_no_provider_is_configured(db):
+    pipeline = Pipeline(db=db, engine=TransactionParserEngine())
+    pipeline._chat_engine = None
+
+    result = pipeline.process_chat("hola")
+
+    assert result.success is False
+    assert "chat-fail" not in str(result.message)
+
+
 def test_pipeline_llm_ready_is_true_for_chat_engine(db):
     pipeline = Pipeline(db=db, engine=TransactionParserEngine())
     pipeline._chat_engine = _EngineOk()

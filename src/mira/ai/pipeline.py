@@ -62,6 +62,10 @@ _CHAT_UNAVAILABLE_MESSAGES = {
         "Puedes seguir usando el modo asistente para registrar y consultar tus finanzas."
     ),
 }
+_CHAT_ERROR_MESSAGES = {
+    "en": "The chat request failed: {detail}. Check the endpoint, the model and the API key in Settings.",
+    "es": "La petición de chat falló: {detail}. Revisa el endpoint, el modelo y la clave de API en Ajustes.",
+}
 _SPANISH_HINT_WORDS = {
     "abone",
     "aboné",
@@ -139,10 +143,14 @@ class Pipeline:
 
     def process_chat(self, user_input: str) -> ActionResult:
         """Process text in free-form chat mode."""
+        if self._chat_engine is None:
+            return ActionResult(
+                success=False,
+                action="chat",
+                message=self._chat_unavailable_message(user_input),
+            )
         try:
             with self._engine_lock:
-                if self._chat_engine is None:
-                    raise RuntimeError("chat unavailable")
                 self._chat_engine.set_language(self._chat_language(user_input))
                 response = self._chat_engine.chat(user_input)
         except _EXPECTED_CHAT_ERRORS as exc:
@@ -150,7 +158,7 @@ class Pipeline:
             return ActionResult(
                 success=False,
                 action="chat",
-                message=self._chat_unavailable_message(user_input),
+                message=self._chat_error_message(user_input, exc),
             )
         return ActionResult(success=True, action="chat", message=response)
 
@@ -198,6 +206,22 @@ class Pipeline:
             "chat.unavailable",
             language,
             default=_CHAT_UNAVAILABLE_MESSAGES[language],
+        )
+
+    def _chat_error_message(self, user_input: str | None, exc: Exception) -> str:
+        """Return the reason a configured chat provider failed.
+
+        Distinct from _chat_unavailable_message: there the provider is missing,
+        here it exists and something went wrong, so reporting "no provider
+        configured" sends the user looking in the wrong place.
+        """
+        language = self._chat_language(user_input)
+        detail = str(exc).strip() or exc.__class__.__name__
+        return tr(
+            "chat.error",
+            language,
+            default=_CHAT_ERROR_MESSAGES[language],
+            params={"detail": detail},
         )
 
     @property
