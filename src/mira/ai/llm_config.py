@@ -95,9 +95,24 @@ def write_api_key(db_path: Path, api_key: str) -> None:
     """Store the API key beside the database, not inside it."""
     path = secrets_path_for(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"api_key": api_key}), encoding="utf-8")
+    payload = json.dumps({"api_key": api_key}).encode("utf-8")
+    # Create the file already private: chmod after the fact would leave a
+    # window where a freshly written key is readable by any local user.
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR)
+    try:
+        os.write(descriptor, payload)
+    finally:
+        os.close(descriptor)
     try:
         os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
+    except OSError:
+        return
+
+
+def clear_api_key(db_path: Path) -> None:
+    """Forget the stored API key by removing the sidecar file."""
+    try:
+        secrets_path_for(db_path).unlink(missing_ok=True)
     except OSError:
         return
 

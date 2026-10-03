@@ -12,6 +12,7 @@ import pytest
 
 from mira.ai.llm_config import (
     LlmConfig,
+    clear_api_key,
     endpoint_host,
     is_loopback_url,
     load_llm_config,
@@ -166,3 +167,37 @@ def test_mcp_enabled_requires_both_flags(db: Database) -> None:
 
     db.setting.set("mcp_enabled", "0")
     assert mcp_enabled(db) is False
+
+
+def test_write_api_key_creates_the_sidecar_private_from_the_start(tmp_path: Path) -> None:
+    db_path = tmp_path / "mira.db"
+
+    write_api_key(db_path, "sk-secret")
+
+    mode = secrets_path_for(db_path).stat().st_mode
+    assert stat.S_IMODE(mode) == stat.S_IRUSR | stat.S_IWUSR
+    assert read_api_key(db_path) == "sk-secret"
+
+
+def test_write_api_key_repairs_permissions_of_an_existing_file(tmp_path: Path) -> None:
+    db_path = tmp_path / "mira.db"
+    secret_path = secrets_path_for(db_path)
+    secret_path.write_text('{"api_key": "old"}', encoding="utf-8")
+    secret_path.chmod(0o644)
+
+    write_api_key(db_path, "new")
+
+    assert stat.S_IMODE(secret_path.stat().st_mode) == stat.S_IRUSR | stat.S_IWUSR
+    assert read_api_key(db_path) == "new"
+
+
+def test_clear_api_key_removes_the_sidecar_and_is_idempotent(tmp_path: Path) -> None:
+    db_path = tmp_path / "mira.db"
+    write_api_key(db_path, "sk-secret")
+
+    clear_api_key(db_path)
+
+    assert not secrets_path_for(db_path).exists()
+    assert read_api_key(db_path) == ""
+    clear_api_key(db_path)
+    assert read_api_key(db_path) == ""

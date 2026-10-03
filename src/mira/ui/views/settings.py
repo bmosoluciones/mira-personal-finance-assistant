@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -252,7 +253,22 @@ class SettingsView(QWidget):
         self._api_key_input.setPlaceholderText(
             tr("settings.ai.api_key.placeholder", self._language, default="Not needed for local endpoints")
         )
-        ai_form.addRow(tr("settings.ai.api_key", self._language, default="API key:"), self._api_key_input)
+        self._api_key_clear_btn = QPushButton(
+            tr("settings.ai.api_key_clear", self._language, default="Forget key")
+        )
+        self._api_key_clear_btn.setToolTip(
+            tr(
+                "settings.ai.api_key_clear.tooltip",
+                self._language,
+                default="Delete the stored API key from this device",
+            )
+        )
+        self._api_key_clear_btn.clicked.connect(self._forget_api_key)
+        api_key_row = QHBoxLayout()
+        api_key_row.setSpacing(8)
+        api_key_row.addWidget(self._api_key_input, 1)
+        api_key_row.addWidget(self._api_key_clear_btn)
+        ai_form.addRow(tr("settings.ai.api_key", self._language, default="API key:"), api_key_row)
 
         ai_layout.addLayout(ai_form)
 
@@ -335,6 +351,7 @@ class SettingsView(QWidget):
             )
         self._model_input.setEnabled(is_configured or self._provider_combo.currentData() != "none")
         self._api_key_input.setEnabled(self._provider_combo.currentData() != "none")
+        self._api_key_clear_btn.setEnabled(bool(self._api_key_input.text().strip()))
 
     def _on_mcp_toggled(self, checked: bool) -> None:
         """Return on mcp toggled."""
@@ -348,6 +365,12 @@ class SettingsView(QWidget):
         if provider == "openai_compatible":
             return url_host(self._base_url_input.text().strip())
         return ""
+
+    def _forget_api_key(self) -> None:
+        """Delete the stored API key and clear the field."""
+        state = self._service.forget_api_key()
+        self._api_key_input.setText(state.llm_api_key)
+        self._api_key_clear_btn.setEnabled(False)
 
     def _confirm_third_party(self, host: str) -> bool:
         """Return whether the user accepted sending chat text to host."""
@@ -510,6 +533,7 @@ class SettingsView(QWidget):
         self._base_url_input.setText(state.llm_base_url)
         self._model_input.setText(state.llm_model)
         self._api_key_input.setText(state.llm_api_key)
+        self._api_key_clear_btn.setEnabled(bool(state.llm_api_key))
         host = self._current_host()
         self._ack_check.setChecked(bool(state.llm_third_party_ack) and state.llm_ack_host == host)
         self._on_provider_changed()

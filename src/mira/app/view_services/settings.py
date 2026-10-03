@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mira.ai.llm_config import load_llm_config, write_api_key
+from mira.ai.llm_config import clear_api_key, load_llm_config, write_api_key
 from mira.db.database import Database
 from mira.number_format import get_number_format_config, validate_number_format_config
 
@@ -103,4 +103,9 @@ class SettingsViewService:
         self._db.setting.set("mcp_third_party_ack", "1" if mcp_third_party_ack else "0")
         if llm_api_key is not None:
             write_api_key(self._db.path, llm_api_key)
+        return self.load_state()
+
+    def forget_api_key(self) -> SettingsViewState:
+        """Delete the stored API key and return the resulting state."""
+        clear_api_key(self._db.path)
         return self.load_state()

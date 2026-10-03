@@ -572,6 +572,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "settings.ai.model": "Modelo:",
         "settings.ai.api_key": "Clave de API:",
         "settings.ai.api_key.placeholder": "No se necesita en endpoints locales",
+        "settings.ai.api_key_clear": "Olvidar clave",
+        "settings.ai.api_key_clear.tooltip": "Borra la clave de API guardada en este equipo",
         "settings.ai.ack": "Entiendo que el texto del chat sale de este equipo hacia {host}.",
         "settings.ai.ack.question": (
             "El texto del chat saldrá de este dispositivo y se enviará a {host}. "
@@ -1383,6 +1385,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "settings.ai.model": "Model:",
         "settings.ai.api_key": "API key:",
         "settings.ai.api_key.placeholder": "Not needed for local endpoints",
+        "settings.ai.api_key_clear": "Forget key",
+        "settings.ai.api_key_clear.tooltip": "Delete the stored API key from this device",
         "settings.ai.ack": "I understand that chat text leaves this device towards {host}.",
         "settings.ai.ack.question": (
             "Chat text will leave this device and be sent to {host}. "
