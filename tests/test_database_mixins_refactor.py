@@ -43,3 +43,46 @@ def test_database_has_no_backend_or_facade_layer() -> None:
     assert not hasattr(db, "_backend")
     assert isinstance(db.account, database_module._Namespace)
     assert db.account.list.__self__ is db
+
+
+def test_public_api_tables_never_expose_a_private_repository_method() -> None:
+    tables = {
+        name: value
+        for name, value in vars(database_module).items()
+        if name.endswith("_API") and isinstance(value, dict)
+    }
+
+    assert tables
+    private = {
+        f"{table}.{entry}"
+        for table, entries in tables.items()
+        for entry, target in entries.items()
+        if isinstance(target, str) and target.startswith("_")
+    }
+
+    assert private == set()
+
+
+def test_facade_accepts_the_pre_collapse_keyword_names(tmp_path) -> None:
+    db = Database(path=tmp_path / "aliases.db")
+    db.connect()
+    category = db.category.create("Groceries", "expense")
+    recurring = db.recurring.create(
+        account_id=int(db.account.get_or_create("Cash")["id"]),
+        tx_type="expense",
+        amount=10.0,
+        description="Weekly",
+        category="Groceries",
+        note=None,
+        day_of_month=1,
+    )
+
+    db.category.update(cat_id=int(category["id"]), name="Food", cat_type="expense")
+    assert db.category.get(int(category["id"]))["name"] == "Food"
+
+    assert db.recurring.get(recurring_id=int(recurring["id"])) is not None
+    db.recurring.update(recurring_id=int(recurring["id"]), amount=20.0)
+    assert float(db.recurring.get(int(recurring["id"]))["amount"]) == 20.0
+    db.recurring.delete(recurring_id=int(recurring["id"]))
+    assert db.recurring.get(int(recurring["id"])) is None
+    db.close()

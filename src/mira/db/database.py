@@ -45,9 +45,10 @@ class _Namespace:
     method on the live ``Database`` instance.
     """
 
-    def __init__(self, target: Any, entries: Mapping[str, ApiEntry]) -> None:
+    def __init__(self, target: Any, entries: Mapping[str, ApiEntry], aliases: Mapping[str, Mapping[str, str]] | None = None) -> None:
         self._target = target
         self._entries = dict(entries)
+        self._aliases = {name: dict(mapping) for name, mapping in (aliases or {}).items()}
 
     def __getattr__(self, name: str) -> Any:
         try:
@@ -55,11 +56,42 @@ class _Namespace:
         except KeyError:
             raise AttributeError(f"{type(self).__name__} has no attribute {name!r}") from None
         if isinstance(entry, str):
-            return getattr(self._target, entry)
-        return functools.partial(entry, self._target)
+            resolved = getattr(self._target, entry)
+        else:
+            resolved = functools.partial(entry, self._target)
+        legacy = self._aliases.get(name)
+        return _with_legacy_keywords(resolved, legacy) if legacy else resolved
 
     def __dir__(self) -> list[str]:
         return sorted({*self._entries, *super().__dir__()})
+
+
+def _with_legacy_keywords(method: Callable[..., Any], aliases: Mapping[str, str]) -> Callable[..., Any]:
+    """Accept the pre-collapse keyword names for a facade method.
+
+    Repositories use ``cat_id``/``rec_id`` while the facades this replaced
+    exposed ``cat_id``/``recurring_id``. Callers that used keywords must keep
+    working across the collapse.
+    """
+
+    @functools.wraps(method)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        for legacy_name, current_name in aliases.items():
+            if legacy_name in kwargs and current_name not in kwargs:
+                kwargs[current_name] = kwargs.pop(legacy_name)
+        return method(*args, **kwargs)
+
+    return wrapper
+
+
+_LEGACY_KEYWORD_ALIASES: dict[str, dict[str, dict[str, str]]] = {
+    "category": {"update": {"cat_id": "category_id"}},
+    "recurring": {
+        "get": {"recurring_id": "rec_id"},
+        "update": {"recurring_id": "rec_id"},
+        "delete": {"recurring_id": "rec_id"},
+    },
+}
 
 
 def _update_category(
@@ -180,7 +212,7 @@ _RECURRING_API: dict[str, ApiEntry] = {
     "apply_for_month": "apply_recurring_for_month",
     "create": "add_recurring",
     "delete": "delete_recurring",
-    "get": "_get_recurring_by_id",
+    "get": "get_recurring_by_id",
     "list": "get_recurring",
     "update": "update_recurring",
 }
@@ -308,11 +340,11 @@ class Database(
         super().__init__(path=path)
         self._io_service = DatabaseIOService(self)
         self.account = _Namespace(self, _ACCOUNT_API)
-        self.category = _Namespace(self, _CATEGORY_API)
+        self.category = _Namespace(self, _CATEGORY_API, _LEGACY_KEYWORD_ALIASES["category"])
         self.tag = _Namespace(self, _TAG_API)
         self.transaction = _Namespace(self, _TRANSACTION_API)
         self.reconciliation = _Namespace(self, _RECONCILIATION_API)
-        self.recurring = _Namespace(self, _RECURRING_API)
+        self.recurring = _Namespace(self, _RECURRING_API, _LEGACY_KEYWORD_ALIASES["recurring"])
         self.savings_goal = _Namespace(self, _SAVINGS_GOAL_API)
         self.setting = _Namespace(self, _SETTING_API)
         self.budget = _Namespace(self, _BUDGET_API)

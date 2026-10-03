@@ -89,7 +89,7 @@ class RecurringRepository:
         def set_setting(self, key: str, value: str) -> None:
             """Return set setting."""
 
-    def _get_recurring_by_id(self, rec_id: int) -> dict | None:
+    def get_recurring_by_id(self, rec_id: int) -> dict | None:
         """Return get recurring by id."""
         row = RecurringTransaction.get_or_none(RecurringTransaction.id == rec_id)
         if row is None:
@@ -191,7 +191,7 @@ class RecurringRepository:
             )
             rec_id = int(recurring.id)  # type: ignore[call-overload]
             self._replace_recurring_tags(rec_id, normalized_tag_ids)
-        result = self._get_recurring_by_id(int(rec_id))
+        result = self.get_recurring_by_id(int(rec_id))
         if result is None:
             raise RuntimeError("Failed to create recurring transaction")
         return result
@@ -270,7 +270,7 @@ class RecurringRepository:
                 .execute()
             )
             self._replace_recurring_tags(rec_id, normalized_tag_ids)
-        updated = self._get_recurring_by_id(rec_id)
+        updated = self.get_recurring_by_id(rec_id)
         if updated is None:
             raise RuntimeError(f"Failed to update recurring transaction {rec_id}")
         return updated
