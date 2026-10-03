@@ -45,7 +45,6 @@ Base runtime:
 Optional extras:
 
 - `[gui]`: desktop UI (`PySide6==6.10.2`, `qt-material==2.14`)
-- `[mcp]`: MCP stdio server (`mcp>=1.9.0`)
 - `[dev]`: full test and tooling stack
 
 ## Installation
@@ -89,8 +88,7 @@ pip install ".[dev]"
 Optional features for source builds:
 
 ```bash
-pip install ".[gui]"   # desktop UI
-pip install ".[mcp]"   # MCP stdio server
+pip install ".[gui]"   # desktop UI (the MCP server needs no extra)
 ```
 
 CLI and source-installed entry points:

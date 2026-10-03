@@ -29,10 +29,6 @@ gui = [
     "qt-material==2.14",
 ]
 
-mcp = [
-    "mcp>=1.9.0",
-]
-
 docs = [
     "mkdocs>=1.6.0",
     "mkdocs-material>=9.6.0",
@@ -42,7 +38,6 @@ docs = [
 dev = [
     "PySide6==6.10.2",
     "qt-material==2.14",
-    "mcp>=1.9.0",
     "build",
     "wheel",
     "openpyxl==3.1.5",
