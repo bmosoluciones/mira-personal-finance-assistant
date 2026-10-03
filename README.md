@@ -91,6 +91,10 @@ Optional features for source builds:
 pip install ".[gui]"   # desktop UI (the MCP server needs no extra)
 ```
 
+`pyproject.toml` is the only source of truth for dependencies.
+`requirements.txt` mirrors the `.[dev]` environment for `pip install -r`
+workflows, and a test fails if the two drift apart.
+
 CLI and source-installed entry points:
 
 ```bash

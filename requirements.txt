@@ -1,28 +1,34 @@
+# Dependencias del entorno de desarrollo completo, derivadas de pyproject.toml.
+# pyproject.toml es la unica fuente de verdad: este fichero lo comprueba
+# tests/test_packaging_metadata.py y no se edita a mano.
+# Equivale a:  pip install -r requirements.txt   (o pip install '.[dev]')
+
+# nucleo
+cffi==2.0.0
 cryptography==46.0.7
 et-xmlfile==2.0.0
+ifaddr==0.2.0
 jinja2==3.1.6
 MarkupSafe==2.1.5
 openpyxl==3.1.5
 peewee==4.0.2
+pycparser==3.0
+segno==1.6.6
+zeroconf==0.148.0
+
+# interfaz grafica (extra [gui], repetido aqui porque [dev] tambien la trae)
 PySide6==6.10.2
 qt-material==2.14
-segno==1.6.6
-ifaddr==0.2.0
-zeroconf==0.148.0
-cffi==2.0.0
-pycparser==3.0
 
-# development
+# herramientas de desarrollo
+build
+wheel
 pytest
 pytest-cov
 flake8
 ruff
 black
 mypy
-pylint
-bandit
-build
-wheel
 pyinstaller
 types-peewee
 openpyxl-stubs
