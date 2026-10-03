@@ -33,3 +33,5 @@ to the database in `llm-secrets.json` with `0600` permissions and is never part
 of a backup.
 
 If no provider is configured, MIRA automatically returns to assistant mode.
+
+The command line and the MCP server are documented separately. See [Command Line and MCP Server](command_line.md).

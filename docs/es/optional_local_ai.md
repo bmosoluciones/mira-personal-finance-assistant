@@ -33,3 +33,5 @@ guarda junto a la base en `llm-secrets.json` con permisos `0600` y nunca forma
 parte de un respaldo.
 
 Si no hay ningún proveedor configurado, MIRA vuelve automáticamente al modo asistente.
+
+La linea de comandos y el servidor MCP se documentan aparte. Ver [Linea de comandos y servidor MCP](command_line.md).

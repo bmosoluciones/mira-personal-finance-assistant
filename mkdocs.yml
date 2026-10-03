@@ -49,6 +49,7 @@ plugins:
             Natural Language: Lenguaje Natural
             Import, Export and Backup: Importacion, Exportacion y Respaldo
             Optional AI Chat: IA Chat Opcional
+            Command Line and MCP Server: Linea de Comandos y Servidor MCP
             Troubleshooting: Solucion de Problemas
             FAQ: Preguntas Frecuentes
             Appendices: Anexos
@@ -89,6 +90,7 @@ nav:
   - Natural Language: natural_language.md
   - Import, Export and Backup: import_export_backup.md
   - Optional AI Chat: optional_local_ai.md
+  - Command Line and MCP Server: command_line.md
   - Troubleshooting: troubleshooting.md
   - FAQ: faq.md
   - Appendices:
