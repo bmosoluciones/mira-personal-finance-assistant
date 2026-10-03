@@ -26,8 +26,8 @@ from mira.db.database import Database
 from mira.error_policy import ErrorDescriptor
 from mira.error_policy import describe as describe_error
 from mira.finance_summary import build_savings_lookup
+from mira.i18n import normalize_language, tr
 from mira.transaction_kinds import is_balance_adjustment_transaction
-from mira.ui.i18n import normalize_language, tr
 from mira.ui.notifications import show_user_message
 from mira.ui.number_format import format_number, get_number_format_config
 

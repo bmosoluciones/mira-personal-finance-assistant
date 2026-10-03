@@ -5,7 +5,7 @@
 
 from collections.abc import Sequence
 
-from mira.ui.i18n import normalize_language, tr
+from mira.i18n import normalize_language, tr
 
 
 def test_language_defaults_to_english() -> None:
@@ -189,6 +189,22 @@ def test_python_sources_decode_as_utf8() -> None:
     for root_name in ("src", "tests"):
         for path in (repo_root / root_name).rglob("*.py"):
             path.read_text(encoding="utf-8")
+
+
+def test_i18n_is_imported_from_mira_i18n_only() -> None:
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[1]
+    retired = "mira.ui" + ".i18n"
+    offenders = sorted(
+        str(path.relative_to(repo_root))
+        for root_name in ("src", "tests")
+        for path in (repo_root / root_name).rglob("*.py")
+        if retired in path.read_text(encoding="utf-8")
+    )
+
+    assert offenders == []
+    assert not (repo_root / "src/mira/ui/i18n.py").exists()
 
 
 def test_python_sources_do_not_contain_common_mojibake_sequences() -> None:

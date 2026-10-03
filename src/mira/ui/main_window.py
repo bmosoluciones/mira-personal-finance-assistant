@@ -22,6 +22,7 @@ from mira import __version__ as APP_VERSION
 from mira.ai.pipeline import Pipeline
 from mira.app import ApplicationController
 from mira.db.database import Database
+from mira.i18n import normalize_language, tr
 from mira.services import MobileSyncServer, ModelLifecycle
 from mira.ui.coordinators import ChatState
 from mira.ui.coordinators.command_coordinator import CommandCoordinator
@@ -30,7 +31,6 @@ from mira.ui.dialogs.financial.compound_interest import CompoundInterestDialog a
 from mira.ui.dialogs.financial.goal_simulator import GoalScenarioDialog as _GoalScenarioDialog
 from mira.ui.dialogs.financial.loan_amortization import LoanAmortizationDialog as _LoanAmortizationDialog
 from mira.ui.dialogs.mobile_sync import MobileSyncSessionDialog
-from mira.ui.i18n import normalize_language, tr
 from mira.ui.main_window_layout import _SIDEBAR_WIDTH, MainWindowLayoutMixin  # noqa: F401
 from mira.ui.main_window_lifecycle import _DOCS_URL, MainWindowLifecycleMixin, webbrowser  # noqa: F401
 from mira.ui.main_window_navigation import MainWindowNavigationMixin

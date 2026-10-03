@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 
 from mira.finance.enums import AmortizationMethod, PaymentFrequency
 from mira.finance.loan_amortization import LoanAmortizationInput, calculate_loan_amortization
-from mira.ui.i18n import tr
+from mira.i18n import tr
 
 
 class LoanAmortizationDialog(QDialog):

@@ -51,8 +51,8 @@ from mira.app.view_services import (
 )
 from mira.app.view_services._common import ANALYTICS_PALETTE, AnalyticsSemanticRole
 from mira.db.database import Database
+from mira.i18n import normalize_language, tr
 from mira.ui.delegates.cell_delegates import _SignalCellDelegate, _TypeBadgeDelegate
-from mira.ui.i18n import normalize_language, tr
 from mira.ui.views._shared import (
     _COMBO_STYLE,
     _DATE_STYLE,

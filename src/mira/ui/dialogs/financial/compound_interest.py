@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 
 from mira.finance.compound_interest import CompoundInterestInput, calculate_compound_interest_projection
 from mira.finance.enums import PaymentFrequency
-from mira.ui.i18n import tr
+from mira.i18n import tr
 
 
 class CompoundInterestDialog(QDialog):

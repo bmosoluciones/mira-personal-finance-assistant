@@ -22,8 +22,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from mira.i18n import tr
 from mira.services.mobile_sync import MobileSyncServerStatus
-from mira.ui.i18n import tr
 
 
 def _serialize_pairing_payload_for_qr(payload: dict[str, object]) -> str:

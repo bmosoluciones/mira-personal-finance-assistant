@@ -8,8 +8,8 @@ from __future__ import annotations
 from PySide6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel, QLineEdit, QVBoxLayout
 
 from mira.db.database import Database
+from mira.i18n import normalize_language, tr
 from mira.ui.dialogs._shared import _NOTICE_LABEL_STYLE, _make_amount_spin, _make_date_edit, _notify_warning
-from mira.ui.i18n import normalize_language, tr
 
 
 class SavingsGoalDialog(QDialog):

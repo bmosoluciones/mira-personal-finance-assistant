@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QApplication
 
-from mira.ui.i18n import tr
+from mira.i18n import tr
 
 
 class MainWindowShellMixin:

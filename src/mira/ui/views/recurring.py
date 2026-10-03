@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 
 from mira.app.view_services import RecurringViewService, RecurringViewState
 from mira.db.database import Database
-from mira.ui.i18n import normalize_language, tr
+from mira.i18n import normalize_language, tr
 from mira.ui.views._shared import (
     _TABLE_STYLE,
     _fmt_amount,

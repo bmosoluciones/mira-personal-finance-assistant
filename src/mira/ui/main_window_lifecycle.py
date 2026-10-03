@@ -15,12 +15,12 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QLabel, QProgressDialog, QVBoxLayout, QWidget
 
 from mira import __version__ as APP_VERSION
+from mira.i18n import normalize_language, tr
 from mira.number_format import validate_number_format_config
 from mira.ui.dialogs import InitialSetupDialog
 from mira.ui.dialogs.financial.compound_interest import CompoundInterestDialog as _CompoundInterestDialog
 from mira.ui.dialogs.financial.goal_simulator import GoalScenarioDialog as _GoalScenarioDialog
 from mira.ui.dialogs.financial.loan_amortization import LoanAmortizationDialog as _LoanAmortizationDialog
-from mira.ui.i18n import normalize_language, tr
 from mira.ui.main_window_shell import MainWindowShellMixin
 from mira.ui.notifications import show_user_message
 

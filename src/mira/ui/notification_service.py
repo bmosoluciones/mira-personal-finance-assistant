@@ -9,7 +9,7 @@ from typing import Any
 
 from PySide6.QtWidgets import QMessageBox, QWidget
 
-from mira.ui.i18n import tr
+from mira.i18n import tr
 
 
 class NotificationService:

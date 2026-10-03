@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from mira.app.view_services import CategoriesViewService, CategoriesViewState
 from mira.db.database import Database
 from mira.db.errors import DuplicateCategoryNameError
-from mira.ui.i18n import normalize_language, tr
+from mira.i18n import normalize_language, tr
 from mira.ui.views._shared import (
     _CATEGORY_BASE_LABEL_ROLE,
     _TABLE_STYLE,

@@ -28,7 +28,7 @@ from mira.app.view_services import (
     TransactionsViewService,
 )
 from mira.error_policy import describe as describe_error
-from mira.ui.i18n import tr
+from mira.i18n import tr
 
 
 def resolve_transaction_export_path(path: str, selected_filter: str) -> str:

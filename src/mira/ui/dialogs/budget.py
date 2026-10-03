@@ -19,8 +19,8 @@ from PySide6.QtWidgets import (
 )
 
 from mira.db.database import Database
+from mira.i18n import normalize_language, tr
 from mira.ui.dialogs._shared import _notify_warning
-from mira.ui.i18n import normalize_language, tr
 
 
 class BudgetCreateDialog(QDialog):

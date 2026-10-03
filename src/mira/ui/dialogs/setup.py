@@ -25,12 +25,12 @@ from PySide6.QtWidgets import (
 )
 
 from mira.db.database import CURRENCY_CODES, Database
+from mira.i18n import SUPPORTED_LANGUAGES, normalize_language, tr
 from mira.ui.dialogs._shared import (
     _INITIAL_SETUP_THEME,
     _make_balance_spin,
     _resolve_ui_icon_path,
 )
-from mira.ui.i18n import SUPPORTED_LANGUAGES, normalize_language, tr
 from mira.ui.notifications import show_user_message
 from mira.ui.number_format import separator_options, validate_number_format_config
 

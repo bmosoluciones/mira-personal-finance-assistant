@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from mira.app.view_services import AccountsViewService
 from mira.db.database import Database
+from mira.i18n import normalize_language, tr
 from mira.ui.dialogs._shared import (
     _NOTICE_LABEL_STYLE,
     _PRIMARY_ACTION_BUTTON_STYLE,
@@ -40,7 +41,6 @@ from mira.ui.dialogs._shared import (
     _notify_warning,
     _TagMultiSelectButton,
 )
-from mira.ui.i18n import normalize_language, tr
 from mira.ui.number_format import NumberMaskedSpinBox
 from mira.ui.widgets.searchable_combo import SearchableComboBox
 

@@ -24,7 +24,7 @@ from mira.db.errors import (
 )
 from mira.db.model import SCHEMA_INDEX_SPECS, SCHEMA_VERSION, Setting, inspect_database_schema
 from mira.db.repositories import tag_repository as tag_repository_module
-from mira.ui.i18n import normalize_language, tr
+from mira.i18n import normalize_language, tr
 from tests.db_inspection import (
     backend_connection_state,
     break_backend_connection_for_test,

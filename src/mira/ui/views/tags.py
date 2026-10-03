@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from mira.app.view_services import TagsViewService, TagsViewState
 from mira.db.database import Database
 from mira.db.errors import DuplicateTagNameError
-from mira.ui.i18n import normalize_language, tr
+from mira.i18n import normalize_language, tr
 from mira.ui.views._shared import (
     _TABLE_STYLE,
     _make_toolbar_btn,

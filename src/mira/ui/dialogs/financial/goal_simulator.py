@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 
 from mira.finance.enums import PaymentFrequency
 from mira.finance.savings_goal_simulator import SavingsGoalSimulation, SavingsGoalSimulationInput, simulate_savings_goal
-from mira.ui.i18n import tr
+from mira.i18n import tr
 from mira.ui.notifications import show_user_message
 
 

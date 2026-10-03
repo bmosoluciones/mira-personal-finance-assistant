@@ -12,7 +12,7 @@ import pytest
 from mira.ai import executor as executor_module
 from mira.ai.executor import Executor
 from mira.db.database import Database
-from mira.ui.i18n import tr
+from mira.i18n import tr
 
 
 @pytest.fixture

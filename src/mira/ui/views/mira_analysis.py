@@ -43,7 +43,7 @@ from mira.app.view_services import (
 )
 from mira.app.view_services._common import ANALYTICS_PALETTE, try_parse_waterfall_step_kind
 from mira.db.database import Database
-from mira.ui.i18n import normalize_language, tr
+from mira.i18n import normalize_language, tr
 from mira.ui.views._shared import (
     _COMBO_STYLE,
     _TABLE_STYLE,

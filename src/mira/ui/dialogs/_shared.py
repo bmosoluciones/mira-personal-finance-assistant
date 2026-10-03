@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from mira.db.database import Database
-from mira.ui.i18n import normalize_language, tr
+from mira.i18n import normalize_language, tr
 from mira.ui.notifications import show_user_message
 from mira.ui.number_format import FormulaAmountEdit, NumberMaskedSpinBox, format_number, get_number_format_config
 

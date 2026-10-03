@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 from mira.ai.llm_config import endpoint_host_for, is_loopback_host
 from mira.app.view_services import SettingsViewService, SettingsViewState
 from mira.db.database import CURRENCY_CODES, Database
-from mira.ui.i18n import SUPPORTED_LANGUAGES, normalize_language, tr
+from mira.i18n import SUPPORTED_LANGUAGES, normalize_language, tr
 from mira.ui.notifications import show_user_message
 from mira.ui.number_format import (
     separator_options,

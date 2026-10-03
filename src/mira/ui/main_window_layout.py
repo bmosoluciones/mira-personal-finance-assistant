@@ -26,8 +26,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from mira.i18n import tr
 from mira.ui.coordinators.navigation_coordinator import NavigationCoordinator
-from mira.ui.i18n import tr
 from mira.ui.main_window_support import build_view_services
 from mira.ui.views.accounts import AccountsView
 from mira.ui.views.budget import BudgetView

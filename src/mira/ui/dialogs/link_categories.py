@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
 
 from mira.app.view_services import CategoriesViewService
 from mira.db.database import Database
-from mira.ui.i18n import tr
+from mira.i18n import tr
 
 
 class LinkCategoriesDialog(QDialog):
