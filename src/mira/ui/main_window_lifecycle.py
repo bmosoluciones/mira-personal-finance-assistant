@@ -302,10 +302,7 @@ class MainWindowLifecycleMixin:
         self._set_interaction_enabled(False)
         self._show_reload_progress(mode_label)
         try:
-            state = self._model_lifecycle.reload_selected_model(
-                self._active_model_path,
-                self._db.setting.get("llm_interaction_mode") or "assistant",
-            )
+            state = self._model_lifecycle.reload_selected_model(self._db.setting.get("llm_interaction_mode") or "assistant")
             self._apply_model_lifecycle_state(state, show_mode_warning=True)
         finally:
             self._hide_reload_progress()
@@ -317,20 +314,19 @@ class MainWindowLifecycleMixin:
         mode = self._mode_switch.currentData() or "assistant"
         self._db.setting.set("llm_interaction_mode", mode)
         self._apply_model_lifecycle_state(
-            self._model_lifecycle.sync_engine_info(self._active_model_path),
+            self._model_lifecycle.sync_engine_info(self._cli_model_name),
             show_mode_warning=True,
         )
 
     def _sync_engine_info(self) -> None:
         """Return sync engine info."""
         self._apply_model_lifecycle_state(
-            self._model_lifecycle.sync_engine_info(self._active_model_path),
+            self._model_lifecycle.sync_engine_info(self._cli_model_name),
             show_mode_warning=False,
         )
 
     def _apply_model_lifecycle_state(self, state, *, show_mode_warning: bool) -> None:
         """Return apply model lifecycle state."""
-        self._active_model_path = state.active_model_path
         self._view_settings.set_engine_info(state.engine_info)
         if hasattr(self, "_mode_switch"):
             self._mode_switch.setVisible(state.mode_visible)

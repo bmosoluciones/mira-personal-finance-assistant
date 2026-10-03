@@ -280,9 +280,6 @@ class TestSettings:
         db.setting.set("username", "Alice")
         assert db.setting.get("username") == "Alice"
 
-    def test_default_preferred_model_empty(self, db):
-        assert db.setting.get("preferred_model") == ""
-
     def test_missing_key_returns_none(self, db):
         assert db.setting.get("nonexistent") is None
 

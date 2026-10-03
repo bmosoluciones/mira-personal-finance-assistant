@@ -129,14 +129,7 @@ class TestPipelineWithTransactionParserEngine:
         result = pipeline.process_chat("hola")
         assert result.action == "chat"
         assert result.success is False
-        assert result.message == tr(
-            "chat.unavailable",
-            "es",
-            default=(
-                "El modo chat no está disponible porque no hay un proveedor de IA configurado en Ajustes. "
-                "Puedes seguir usando el modo asistente para registrar y consultar tus finanzas."
-            ),
-        )
+        assert result.message == tr("chat.unavailable", "es")
 
 
 class TestPipelineCreditAccounts:
@@ -221,7 +214,7 @@ def test_pipeline_reload_engine_replaces_previous_engine(monkeypatch, db):
 
     monkeypatch.setattr("mira.ai.pipeline.get_chat_engine", fake_get_chat_engine)
 
-    pipeline.reload_engine(model_path="new-model.gguf")
+    pipeline.reload_engine()
 
     assert isinstance(pipeline.engine, DummyEngineA)
     assert isinstance(pipeline.chat_engine, DummyEngineB)
@@ -235,7 +228,7 @@ def test_pipeline_reload_engine_falls_back_on_error(monkeypatch, db):
 
     monkeypatch.setattr("mira.ai.pipeline.get_chat_engine", fake_get_chat_engine)
 
-    pipeline.reload_engine(model_path="broken.gguf")
+    pipeline.reload_engine()
 
     assert isinstance(pipeline.engine, TransactionParserEngine)
     assert pipeline.chat_engine is None
@@ -485,7 +478,7 @@ def test_pipeline_reload_engine_calls_previous_shutdown(monkeypatch, db):
     pipeline._chat_engine = previous_engine
     monkeypatch.setattr("mira.ai.pipeline.get_chat_engine", lambda *_args, **_kwargs: _EngineOk())
 
-    pipeline.reload_engine(model_path="new-model.gguf")
+    pipeline.reload_engine()
 
     assert previous_engine.called is True
     assert isinstance(pipeline.engine, TransactionParserEngine)
@@ -502,7 +495,7 @@ def test_pipeline_process_uses_deterministic_parser_even_when_chat_engine_exists
 
     monkeypatch.setattr("mira.ai.pipeline.get_chat_engine", lambda *_args, **_kwargs: ChatOnlyEngine())
 
-    pipeline = Pipeline(db=db, model_path="chat.gguf")
+    pipeline = Pipeline(db=db, cli_model_name="chat-model")
     result = pipeline.process("received 250 salary")
 
     assert result.success is True
@@ -519,7 +512,7 @@ def test_pipeline_process_chat_uses_local_chat_engine_when_available(monkeypatch
 
     monkeypatch.setattr("mira.ai.pipeline.get_chat_engine", lambda *_args, **_kwargs: ChatOnlyEngine())
 
-    pipeline = Pipeline(db=db, model_path="chat.gguf")
+    pipeline = Pipeline(db=db, cli_model_name="chat-model")
     result = pipeline.process_chat("hola")
 
     assert result.success is True
@@ -554,7 +547,7 @@ def test_pipeline_reload_engine_refreshes_parser_default_currency(db: Database) 
     assert usd_parsed["base_currency"] == "USD"
 
     db.setting.set("default_currency", "NIO")
-    pipeline.reload_engine(model_path=None)
+    pipeline.reload_engine()
 
     nio_parsed = pipeline.engine.parse("gasté $200 en comida")
 

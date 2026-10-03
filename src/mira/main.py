@@ -141,7 +141,6 @@ def main() -> None:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(2)
 
-    startup_alert: str | None = None
     if args.model:
         logging.info("Ignoring --model %s; chat now uses the provider configured in Settings.", args.model)
 
@@ -168,7 +167,7 @@ def main() -> None:
         if app_icon is not None and hasattr(app, "setWindowIcon"):
             app.setWindowIcon(app_icon)
 
-        window = MainWindow(db=db, pipeline=pipeline, startup_alert=startup_alert)
+        window = MainWindow(db=db, pipeline=pipeline)
         if getattr(window, "_startup_cancelled", False):
             sys.exit(0)
         if app_icon is not None and hasattr(window, "setWindowIcon"):

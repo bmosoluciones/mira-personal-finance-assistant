@@ -23,7 +23,6 @@ class SettingsViewState:
     default_currency: str
     thousands_sep: str
     decimal_sep: str
-    preferred_model: str
     interaction_mode: str
     llm_provider: str = "none"
     llm_base_url: str = "http://localhost:1234/v1"
@@ -52,7 +51,6 @@ class SettingsViewService:
             default_currency=str(self._db.setting.get_default_currency() or "USD").strip().upper() or "USD",
             thousands_sep=number_format.thousands_sep,
             decimal_sep=number_format.decimal_sep,
-            preferred_model=str(self._db.setting.get("preferred_model") or ""),
             interaction_mode=str(self._db.setting.get("llm_interaction_mode") or "assistant"),
             llm_provider=llm.provider,
             llm_base_url=llm.base_url,
@@ -72,7 +70,6 @@ class SettingsViewService:
         default_currency: str,
         thousands_sep: str,
         decimal_sep: str,
-        preferred_model: str,
         interaction_mode: str,
         llm_provider: str = "none",
         llm_base_url: str = "http://localhost:1234/v1",
@@ -91,7 +88,6 @@ class SettingsViewService:
         self._db.setting.set("default_currency", default_currency.strip().upper() or "USD")
         self._db.setting.set("number_thousands_separator", number_format.thousands_sep)
         self._db.setting.set("number_decimal_separator", number_format.decimal_sep)
-        self._db.setting.set("preferred_model", preferred_model)
         self._db.setting.set("llm_interaction_mode", interaction_mode)
         provider = llm_provider if llm_provider in {"none", "openai_compatible", "anthropic"} else "none"
         self._db.setting.set("llm_provider", provider)

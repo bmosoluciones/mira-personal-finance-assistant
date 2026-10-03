@@ -194,9 +194,27 @@ def test_cli_argv_rejects_an_unknown_tool() -> None:
 
 
 def test_optional_flags_only_appended_when_supplied() -> None:
-    argv = mcp_server._optional_flags(["report"], {"since": "2026-01-01", "note": ""})
+    argv = mcp_server._optional_flags(["expense", "add"], {"note": "with a friend", "date": ""})
 
-    assert argv == ["report", "--since", "2026-01-01"]
+    assert argv == ["expense", "add", "--note", "with a friend"]
+
+
+def test_date_filters_are_built_once_per_tool() -> None:
+    # report and list_transactions own their --since/--until, so _optional_flags
+    # must not add them again: argparse would keep the last value and the
+    # duplication hid the fact that neither branch was tested.
+    report = mcp_server._cli_argv("/tmp/mira.db", "report", {"since": "2026-01-01"})
+    listing = mcp_server._cli_argv(
+        "/tmp/mira.db",
+        "list_transactions",
+        {"limit": 5, "account": "Cash", "since": "2026-01-01", "until": "2026-02-01"},
+    )
+
+    assert report[-3:] == ["report", "--since", "2026-01-01"]
+    assert report.count("--since") == 1
+    assert listing.count("--since") == 1
+    assert listing.count("--until") == 1
+    assert listing[-4:] == ["--since", "2026-01-01", "--until", "2026-02-01"]
 
 
 def test_call_tool_returns_the_cli_json_as_text_content(monkeypatch: pytest.MonkeyPatch) -> None:

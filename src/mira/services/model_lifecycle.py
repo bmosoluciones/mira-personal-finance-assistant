@@ -18,7 +18,6 @@ class ModelLifecycleState:
     """UI-ready description of the current assistant/chat engine state."""
 
     active_model_name: str
-    active_model_path: str | None
     engine_info: str
     mode_visible: bool
     forced_mode: str | None
@@ -34,51 +33,40 @@ class ModelLifecycle:
         self._db = db
         self._pipeline = pipeline
 
-    def resolve_model_path(self, active_runtime_path: str | None) -> str | None:
-        """Return the configured remote model name, if chat is allowed."""
-        config = load_llm_config(self._db)
-        if config.chat_allowed:
-            return config.model
-        runtime_model_path = str(active_runtime_path or "").strip()
-        return runtime_model_path or None
-
-    def reload_selected_model(self, active_runtime_path: str | None, interaction_mode: str) -> ModelLifecycleState:
+    def reload_selected_model(self, interaction_mode: str) -> ModelLifecycleState:
         """Reload the HTTP chat client from saved settings."""
-        del active_runtime_path
-        self._pipeline.reload_engine(None)
-        config = load_llm_config(self._db)
-        return self._build_state(active_runtime_path=config.model if config.chat_allowed else None, interaction_mode=interaction_mode)
+        self._pipeline.reload_engine()
+        return self._build_state(interaction_mode=interaction_mode)
 
-    def sync_engine_info(self, active_runtime_path: str | None) -> ModelLifecycleState:
+    def sync_engine_info(self, cli_model_name: str | None = None) -> ModelLifecycleState:
         """Return sync engine info."""
         interaction_mode = str(self._db.setting.get("llm_interaction_mode") or "assistant")
-        return self._build_state(active_runtime_path=active_runtime_path, interaction_mode=interaction_mode)
+        return self._build_state(cli_model_name=cli_model_name, interaction_mode=interaction_mode)
+
+    def _chat_allowed(self) -> bool:
+        """Return whether chat may run against the configured provider."""
+        return load_llm_config(self._db).chat_allowed
 
     def _selected_model_name(self) -> str:
         """Return the configured remote model name when chat is allowed."""
         config = load_llm_config(self._db)
         return config.model if config.chat_allowed else ""
 
-    def _selected_model_path(self) -> str | None:
-        """Return the configured model name when chat is allowed."""
-        name = self._selected_model_name()
-        return name or None
-
     def _language(self) -> str:
         """Return language."""
         return normalize_language(self._db.setting.get("language"))
 
-    def _build_state(self, *, active_runtime_path: str | None, interaction_mode: str) -> ModelLifecycleState:
+    def _build_state(self, *, interaction_mode: str, cli_model_name: str | None = None) -> ModelLifecycleState:
         """Return build state."""
         language = self._language()
         parser_type = type(self._pipeline.engine).__name__
         chat_engine = getattr(self._pipeline, "chat_engine", None)
         chat_type = type(chat_engine).__name__ if chat_engine is not None else ""
         llm_ready = bool(getattr(self._pipeline, "llm_ready", False))
-        selected_model_name = self._selected_model_name()
-        selected_model_path = self._selected_model_path()
-        active_model_name = selected_model_name if selected_model_path is not None else ""
-        active_model_path = self.resolve_model_path(active_runtime_path)
+        active_model_name = self._selected_model_name()
+        if not active_model_name and llm_ready:
+            # Chat is off, so the only model in play is the deprecated CLI one.
+            active_model_name = str(cli_model_name or "").strip()
 
         if llm_ready:
             engine_info = f"{parser_type} + {chat_type}".strip()
@@ -86,21 +74,13 @@ class ModelLifecycle:
             if active_model_name:
                 engine_info = f"{engine_info} ({active_model_name})"
                 status_message = tr(
-                    "status.model_loading_selected",
+                    "status.model_loading_selected" if self._chat_allowed() else "status.model_loading_cli",
                     language,
                     default="Loading selected LLM model: {model}",
                     params={"model": active_model_name},
                 )
-            elif active_model_path:
-                engine_info = f"{engine_info} ({active_model_path})"
-                status_message = tr(
-                    "status.model_loading_cli",
-                    language,
-                    default="Using LLM model defined by CLI.",
-                )
             return ModelLifecycleState(
                 active_model_name=active_model_name,
-                active_model_path=active_model_path,
                 engine_info=engine_info,
                 mode_visible=True,
                 forced_mode=None,
@@ -114,16 +94,11 @@ class ModelLifecycle:
 
         return ModelLifecycleState(
             active_model_name=active_model_name,
-            active_model_path=active_model_path,
             engine_info=parser_type,
             mode_visible=False,
             forced_mode=forced_mode,
             mode_warning=(
-                tr(
-                    "settings.mode.chat_unavailable",
-                    language,
-                    default="Chat mode requires a configured provider. Returning to assistant mode.",
-                )
+                tr("settings.mode.chat_unavailable", language)
                 if forced_mode is not None
                 else None
             ),

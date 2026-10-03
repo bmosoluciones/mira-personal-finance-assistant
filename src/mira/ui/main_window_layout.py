@@ -288,7 +288,7 @@ class MainWindowLayoutMixin:
         if (mode_idx := self._mode_switch.findData(saved_mode)) >= 0:
             self._mode_switch.setCurrentIndex(mode_idx)
         self._mode_switch.currentIndexChanged.connect(self._on_mode_changed)
-        self._mode_switch.setVisible(self._model_lifecycle.sync_engine_info(self._active_model_path).mode_visible)
+        self._mode_switch.setVisible(self._model_lifecycle.sync_engine_info(self._cli_model_name).mode_visible)
 
         self._chat_content = QFrame()
         self._chat_content.setStyleSheet("")

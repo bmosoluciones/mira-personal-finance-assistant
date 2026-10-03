@@ -158,7 +158,6 @@ def test_settings_view_service_save_roundtrip(db: Database) -> None:
         default_currency="crc",
         thousands_sep=" ",
         decimal_sep=",",
-        preferred_model="tiny.gguf",
         interaction_mode="assistant",
     )
 
@@ -167,7 +166,6 @@ def test_settings_view_service_save_roundtrip(db: Database) -> None:
     assert saved.default_currency == "CRC"
     assert saved.thousands_sep == " "
     assert saved.decimal_sep == ","
-    assert saved.preferred_model == "tiny.gguf"
     assert service.load_state() == saved
 
 
@@ -179,7 +177,6 @@ def test_settings_view_service_save_rejects_equal_separators_without_persisting(
     db.setting.set("default_currency", "USD")
     db.setting.set("number_thousands_separator", ",")
     db.setting.set("number_decimal_separator", ".")
-    db.setting.set("preferred_model", "tiny.gguf")
     db.setting.set("llm_interaction_mode", "assistant")
 
     with pytest.raises(ValueError, match="different"):
@@ -190,7 +187,6 @@ def test_settings_view_service_save_rejects_equal_separators_without_persisting(
             default_currency="crc",
             thousands_sep=".",
             decimal_sep=".",
-            preferred_model="other.gguf",
             interaction_mode="chat",
         )
 
@@ -200,7 +196,6 @@ def test_settings_view_service_save_rejects_equal_separators_without_persisting(
     assert db.setting.get("default_currency") == "USD"
     assert db.setting.get("number_thousands_separator") == ","
     assert db.setting.get("number_decimal_separator") == "."
-    assert db.setting.get("preferred_model") == "tiny.gguf"
     assert db.setting.get("llm_interaction_mode") == "assistant"
 
 

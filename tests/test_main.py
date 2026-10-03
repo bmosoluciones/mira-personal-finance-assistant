@@ -67,8 +67,6 @@ class _FakeDatabase:
             self._db = db
 
         def get(self, key: str) -> str:
-            if key == "preferred_model":
-                return self._db.selected_model
             return ""
 
         def set(self, key: str, value: str) -> None:
@@ -83,13 +81,13 @@ class _FakeDatabase:
 
 
 class _DummyPipeline:
-    def __init__(self) -> None:
+    def __init__(self, cli_model_name: str | None = None) -> None:
         self.llm_ready = False
         self.engine = object()
-        self._model_path = None
+        self.cli_model_name = cli_model_name
 
-    def reload_engine(self, model_path: str | None = None) -> None:
-        self._model_path = model_path
+    def reload_engine(self) -> None:
+        return None
 
     def shutdown(self) -> None:
         return None
@@ -254,7 +252,7 @@ def test_main_starts_app_without_embedding_a_model(monkeypatch: pytest.MonkeyPat
 
     window_kwargs = state["window_kwargs"]
     assert isinstance(window_kwargs, dict)
-    assert window_kwargs["startup_alert"] is None
+    assert "startup_alert" not in window_kwargs
     assert logging.DEBUG in set_levels
 
     app = state["app"]
@@ -292,7 +290,6 @@ def test_main_ignores_model_argument_without_touching_settings(
 
     db = state["db_holder"]["db"]
     assert isinstance(db, _FakeDatabase)
-    assert "preferred_model" not in db.saved_settings
     pipeline = state["pipeline"]
     assert hasattr(pipeline, "shutdown_called")
     assert pipeline.shutdown_called is True
@@ -300,7 +297,7 @@ def test_main_ignores_model_argument_without_touching_settings(
 
     window_kwargs = state["window_kwargs"]
     assert isinstance(window_kwargs, dict)
-    assert window_kwargs["startup_alert"] is None
+    assert "startup_alert" not in window_kwargs
 
 
 def test_main_exits_early_when_initial_setup_is_cancelled(

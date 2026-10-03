@@ -52,20 +52,6 @@ _PARSER_ERROR_MESSAGES = {
         '  - "reporte"'
     ),
 }
-_CHAT_UNAVAILABLE_MESSAGES = {
-    "en": (
-        "Chat mode is unavailable because no AI provider is configured in Settings. "
-        "You can keep using assistant mode to record and review your finances."
-    ),
-    "es": (
-        "El modo chat no está disponible porque no hay un proveedor de IA configurado en Ajustes. "
-        "Puedes seguir usando el modo asistente para registrar y consultar tus finanzas."
-    ),
-}
-_CHAT_ERROR_MESSAGES = {
-    "en": "The chat request failed: {detail}. Check the endpoint, the model and the API key in Settings.",
-    "es": "La petición de chat falló: {detail}. Revisa el endpoint, el modelo y la clave de API en Ajustes.",
-}
 _SPANISH_HINT_WORDS = {
     "abone",
     "aboné",
@@ -99,14 +85,14 @@ class Pipeline:
         self,
         db: Database,
         engine: BaseEngine | None = None,
-        model_path: str | None = None,
+        cli_model_name: str | None = None,
     ) -> None:
         """Initialize the Pipeline instance."""
         self._db = db
         self._parser: BaseEngine = engine or TransactionParserEngine(
             default_currency=db.setting.get_default_currency(),
         )
-        self._model_path = model_path
+        self._cli_model_name = str(cli_model_name or "").strip() or None
         self._chat_engine: BaseEngine | None = get_chat_engine(load_llm_config(db), language=self._chat_language())
         self._executor = Executor(db)
         self._engine_lock = threading.RLock()
@@ -162,20 +148,27 @@ class Pipeline:
             )
         return ActionResult(success=True, action="chat", message=response)
 
-    def reload_engine(self, model_path: str | None = None) -> None:
+    @property
+    def cli_model_name(self) -> str | None:
+        """Return the model name given on the command line, if any.
+
+        The deprecated --model flag only logs, so this exists for the status
+        line and for nothing else.
+        """
+        return self._cli_model_name
+
+    def reload_engine(self) -> None:
         """Reload the optional HTTP chat engine from saved settings."""
         with self._engine_lock:
-            self._parser.set_default_currency(self._db.setting.get_default_currency())
             if self._chat_engine is not None:
                 self._chat_engine.shutdown()
 
-            self._model_path = model_path
+            self._parser.set_default_currency(self._db.setting.get_default_currency())
             try:
                 self._chat_engine = get_chat_engine(load_llm_config(self._db), language=self._chat_language())
             except _EXPECTED_ENGINE_RELOAD_ERRORS as exc:
                 logger.warning("Failed to reload chat engine: %s", exc)
                 self._chat_engine = None
-            self._parser.set_default_currency(self._db.setting.get_default_currency())
 
     def _parser_error_result(self, user_input: str | None = None) -> ActionResult:
         """Return parser error result."""
@@ -202,11 +195,7 @@ class Pipeline:
     def _chat_unavailable_message(self, user_input: str | None = None) -> str:
         """Return chat unavailable message."""
         language = self._chat_language(user_input)
-        return tr(
-            "chat.unavailable",
-            language,
-            default=_CHAT_UNAVAILABLE_MESSAGES[language],
-        )
+        return tr("chat.unavailable", language)
 
     def _chat_error_message(self, user_input: str | None, exc: Exception) -> str:
         """Return the reason a configured chat provider failed.
@@ -217,12 +206,7 @@ class Pipeline:
         """
         language = self._chat_language(user_input)
         detail = str(exc).strip() or exc.__class__.__name__
-        return tr(
-            "chat.error",
-            language,
-            default=_CHAT_ERROR_MESSAGES[language],
-            params={"detail": detail},
-        )
+        return tr("chat.error", language, params={"detail": detail})
 
     @property
     def engine(self) -> BaseEngine:

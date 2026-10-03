@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from mira.ai.engine import get_chat_engine, get_engine
 from mira.ai.llm_config import LlmConfig
 from mira.ai.parser_engine import TransactionParserEngine
@@ -32,13 +30,8 @@ def _config(
     )
 
 
-def test_get_engine_without_model_uses_transaction_parser() -> None:
-    engine = get_engine(model_path=None)
-    assert isinstance(engine, TransactionParserEngine)
-
-
-def test_get_engine_ignores_model_path() -> None:
-    engine = get_engine(model_path=Path("/tmp/any.gguf"))
+def test_get_engine_uses_transaction_parser() -> None:
+    engine = get_engine()
     assert isinstance(engine, TransactionParserEngine)
 
 

@@ -470,7 +470,6 @@ class SettingsView(QWidget):
                 default_currency=str(self._default_currency_combo.currentData() or "USD"),
                 thousands_sep=str(self._thousands_sep_combo.currentData() or ","),
                 decimal_sep=str(self._decimal_sep_combo.currentData() or "."),
-                preferred_model="",
                 interaction_mode=interaction_mode,
                 llm_provider=provider,
                 llm_base_url=base_url or "http://localhost:1234/v1",

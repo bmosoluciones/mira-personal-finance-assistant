@@ -11,7 +11,6 @@ class _FakeDb:
     def __init__(
         self,
         *,
-        preferred_model: str = "",
         mode: str = "assistant",
         language: str = "es",
         provider: str = "none",
@@ -22,7 +21,6 @@ class _FakeDb:
     ) -> None:
         self.path = Path("/tmp/mira-lifecycle.db")
         self._settings = {
-            "preferred_model": preferred_model,
             "llm_interaction_mode": mode,
             "language": language,
             "llm_provider": provider,
@@ -49,10 +47,10 @@ class _FakePipeline:
         self.engine = type("ParserEngine", (), {})()
         self.chat_engine = chat_engine
         self.llm_ready = llm_ready
-        self.reload_calls: list[str | None] = []
+        self.reload_calls: list[None] = []
 
-    def reload_engine(self, model_path: str | None = None) -> None:
-        self.reload_calls.append(model_path)
+    def reload_engine(self) -> None:
+        self.reload_calls.append(None)
 
 
 def test_model_lifecycle_uses_local_provider_when_configured() -> None:
@@ -61,7 +59,7 @@ def test_model_lifecycle_uses_local_provider_when_configured() -> None:
     pipeline = _FakePipeline(llm_ready=True, chat_engine=type("RemoteChatEngine", (), {})())
     lifecycle = module.ModelLifecycle(db, pipeline)
 
-    state = lifecycle.reload_selected_model(None, "assistant")
+    state = lifecycle.reload_selected_model("assistant")
 
     assert pipeline.reload_calls == [None]
     assert state.active_model_name == "local-model"

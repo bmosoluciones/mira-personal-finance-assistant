@@ -133,8 +133,9 @@ def _cli_argv(db_path: str, tool: str, arguments: dict[str, Any]) -> list[str]:
         ]
     if tool == "list_transactions":
         argv = [*base, "transactions", "list", "--limit", str(int(arguments.get("limit") or 50))]
-        if arguments.get("account"):
-            argv.extend(["--account", str(arguments["account"])])
+        for key, flag in (("account", "--account"), ("since", "--since"), ("until", "--until")):
+            if arguments.get(key):
+                argv.extend([flag, str(arguments[key])])
         return argv
     if tool == "report":
         argv = [*base, "report"]
@@ -146,7 +147,7 @@ def _cli_argv(db_path: str, tool: str, arguments: dict[str, Any]) -> list[str]:
 
 def _optional_flags(argv: list[str], arguments: dict[str, Any]) -> list[str]:
     """Append optional CLI flags when the client sent them."""
-    for key, flag in (("description", "--description"), ("category", "--category"), ("date", "--date"), ("note", "--note"), ("since", "--since"), ("until", "--until")):
+    for key, flag in (("description", "--description"), ("category", "--category"), ("date", "--date"), ("note", "--note")):
         if arguments.get(key):
             argv.extend([flag, str(arguments[key])])
     return argv

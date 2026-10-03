@@ -136,7 +136,6 @@ class MainWindow(
         self,
         db: Database,
         pipeline: Pipeline,
-        startup_alert: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
         """Initialize the MainWindow instance."""
@@ -154,8 +153,7 @@ class MainWindow(
         self._mobile_sync_event_timer = QTimer(self)
         self._language = normalize_language(self._db.setting.get("language"))
         self._theme = self._normalize_theme(self._db.setting.get("theme"))
-        self._startup_alert = startup_alert
-        self._active_model_path = getattr(self._pipeline, "_model_path", None)
+        self._cli_model_name = self._pipeline.cli_model_name
         self._reload_progress: QProgressDialog | None = None
         self._chat_state = ChatState()
         self._startup_cancelled = False
@@ -175,12 +173,6 @@ class MainWindow(
         self._refresh_all()
         self._sync_engine_info()
         self._run_initial_setup_if_needed()
-        if self._startup_alert:
-            self.notify_user_message(
-                tr("app.name", self._language, default="MIRA"),
-                self._startup_alert,
-                level="warning",
-            )
         QTimer.singleShot(2000, self._show_daily_contextual_message_if_needed)
 
     # ------------------------------------------------------------------

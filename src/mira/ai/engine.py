@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any
 
 from mira.ai import parser_engine as parser_engine_module
@@ -27,7 +26,6 @@ def get_chat_engine(config: LlmConfig | None = None, **kwargs: Any) -> BaseEngin
     return RemoteChatEngine(config, language=language)
 
 
-def get_engine(model_path: str | Path | None = None, **kwargs: Any) -> BaseEngine:
+def get_engine() -> BaseEngine:
     """Return the deterministic parser. Remote chat is optional and separate."""
-    del model_path, kwargs
     return parser_engine_module.TransactionParserEngine(prompts=PromptAssets())

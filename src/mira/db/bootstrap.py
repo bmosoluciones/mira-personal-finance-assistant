@@ -487,7 +487,6 @@ def seed_default_settings() -> None:
         "language": "en",
         "theme": "dark_teal.xml",
         "default_currency": "USD",
-        "preferred_model": "",
         "llm_interaction_mode": "assistant",
         "llm_provider": "none",
         "llm_base_url": "http://localhost:1234/v1",

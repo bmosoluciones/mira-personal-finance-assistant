@@ -32,7 +32,6 @@ def db(tmp_path: Path):
     database.connect()
     database.setting.set("language", "es")
     database.setting.set("onboarding_completed", "1")
-    database.setting.set("model_download_offer_shown", "1")
     database.setting.set("theme", "dark_teal.xml")
     yield database
     database.close()
@@ -51,10 +50,10 @@ class _DummyPipeline:
     def __init__(self) -> None:
         self.llm_ready = False
         self.engine = object()
-        self._model_path = None
+        self.cli_model_name = None
 
-    def reload_engine(self, model_path: str | None = None) -> None:
-        self._model_path = model_path
+    def reload_engine(self) -> None:
+        return None
 
     def shutdown(self) -> None:
         return None
