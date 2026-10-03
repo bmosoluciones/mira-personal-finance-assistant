@@ -1394,8 +1394,7 @@ class MobileSyncService:
         return normalize_utc_iso(self._db.setting.get_master_data_updated_at())
 
     def _push_atomic_context(self):
-        backend = getattr(self._db, "_backend", None)
-        atomic = getattr(backend, "_atomic", None)
+        atomic = getattr(self._db, "_atomic", None)
         return atomic() if callable(atomic) else nullcontext()
 
     def _emit_event(self, kind: str, message: str, *, level: str = "info") -> None:

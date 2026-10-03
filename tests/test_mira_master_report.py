@@ -199,7 +199,7 @@ def test_budget_period_snapshot_uses_orm_without_legacy_cursor_contract(
     db.budget.upsert_amount(int(budget["id"]), int(salary["id"]), year, 3, 1000.0)
     db.budget.upsert_amount(int(budget["id"]), int(food["id"]), year, 3, 300.0)
     db.budget.upsert_amount(int(budget["id"]), int(savings["id"]), year, 3, 200.0)
-    assert not hasattr(db._backend, "_cursor")
+    assert not hasattr(db, "_cursor")
 
     active_budget, grouped, rows = db.report.budget_period_snapshot(year, 3)
 

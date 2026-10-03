@@ -86,7 +86,7 @@ def test_message_cooldown_scopes(db):
         code="test_cat", message_type="type", message="msg", cooldown_scope="period_category", category_id=1
     )
 
-    repo = db.feedback._db
+    repo = db
 
     # Initial state: no cooldown
     assert not repo._message_in_cooldown(candidate_day, reference_date=today_str)
@@ -190,7 +190,7 @@ def test_evaluate_operation_achievements_milestones(db):
     # Milestone for nl is 100
     AchievementCounter.create(user_id=1, counter_key="nl_transactions", counter_value=99)
 
-    repo = db.feedback._db
+    repo = db
     candidates = repo.evaluate_operation_achievements(tx, context, source="nl_assistant")
     assert any(c.code == "achievement_nl_transactions_100" for c in candidates)
 
@@ -220,7 +220,7 @@ def test_savings_streaks(db):
     }
     tx = {"id": 1, "type": "expense", "amount": 200, "date": "2025-02-15"}
 
-    repo = db.feedback._db
+    repo = db
     candidates = repo.evaluate_operation_achievements(tx, context)
     assert any(c.code == "achievement_savings_vs_previous_month" for c in candidates)
 

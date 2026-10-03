@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Any, cast
@@ -26,9 +27,9 @@ from mira.db.model import (
     Transaction,
 )
 from mira.finance_summary import build_savings_lookup, is_savings_transaction
+from mira.i18n import tr
 from mira.reports.mira_master import shift_month
 from mira.transaction_kinds import TransactionType, analytics_included_expr, is_analytics_excluded_transaction
-from mira.ui.i18n import tr
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +56,23 @@ class MessageCandidate:
 
 
 logger = logging.getLogger(__name__)
+
+
+def _coerce_message_candidate(candidate: MessageCandidate | dict[str, Any]) -> MessageCandidate:
+    """Normalize a plain dict candidate into a MessageCandidate."""
+    if isinstance(candidate, MessageCandidate):
+        return candidate
+    return MessageCandidate(
+        code=str(candidate.get("code") or ""),
+        message_type=str(candidate.get("message_type") or ""),
+        message=str(candidate.get("message") or ""),
+        priority=int(candidate.get("priority") or 0),
+        specificity=int(candidate.get("specificity") or 0),
+        cooldown_scope=candidate.get("cooldown_scope"),
+        category_id=candidate.get("category_id"),
+        amount=candidate.get("amount"),
+        counter_updates=candidate.get("counter_updates"),
+    )
 
 
 class FeedbackRepository:
@@ -327,7 +345,7 @@ class FeedbackRepository:
 
     def resolve_single_message(
         self,
-        candidates: list[MessageCandidate],
+        candidates: Sequence[MessageCandidate | dict[str, Any]],
         *,
         source_event_type: str,
         source_event_id: int | None,
@@ -338,7 +356,7 @@ class FeedbackRepository:
     ) -> dict[str, Any] | None:
         """Return resolve single message."""
         selected = self.resolve_candidate(
-            candidates,
+            [_coerce_message_candidate(candidate) for candidate in candidates],
             period_key=period_key,
             reference_date=reference_date,
         )

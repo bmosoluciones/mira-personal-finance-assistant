@@ -96,12 +96,6 @@ class MainWindowLifecycleMixin:
         else:
             self._startup_cancelled = True
 
-    def _on_download_default_model(self) -> None:
-        """Return on download default model."""
-        session = self._model_download_flow.start_default_download()
-        self._download_session = session
-        self._download_worker = session.handle.worker
-
     def _application_version(self) -> str:
         """Return application version."""
         app = QApplication.instance()
@@ -346,10 +340,6 @@ class MainWindowLifecycleMixin:
             self._status_bar.showMessage(state.status_message, 3500)
         if show_mode_warning and state.mode_warning:
             self._status_bar.showMessage(state.mode_warning, 4500)
-
-    def _apply_download_model_lifecycle_state(self, state) -> None:
-        """Return apply download model lifecycle state."""
-        self._apply_model_lifecycle_state(state, show_mode_warning=True)
 
     def _on_language_changed(self, language: str) -> None:
         """Return on language changed."""

@@ -32,17 +32,21 @@ Official documentation is published at:
 
 Base runtime:
 
+- `cryptography==46.0.7`
 - `et-xmlfile==2.0.0`
+- `ifaddr==0.2.0`
 - `jinja2==3.1.6`
 - `MarkupSafe==2.1.5`
 - `openpyxl==3.1.5`
 - `peewee==4.0.2`
-- `PySide6==6.10.2`
-- `qt-material==2.14`
+- `segno==1.6.6`
+- `zeroconf==0.148.0`
 
-Optional local chat (experimental):
+Optional extras:
 
-- `llama-cpp-python==0.2.0`
+- `[gui]`: desktop UI (`PySide6==6.10.2`, `qt-material==2.14`)
+- `[mcp]`: MCP stdio server (`mcp>=1.9.0`)
+- `[dev]`: full test and tooling stack
 
 ## Installation
 
@@ -82,10 +86,11 @@ For local development with the full test/tooling stack:
 pip install ".[dev]"
 ```
 
-Optional local chat support (experimental) for source builds:
+Optional features for source builds:
 
 ```bash
-pip install ".[chat]"
+pip install ".[gui]"   # desktop UI
+pip install ".[mcp]"   # MCP stdio server
 ```
 
 CLI and source-installed entry points:
@@ -98,7 +103,7 @@ mira-cli
 Useful flags:
 
 - `--db PATH`: custom SQLite database path
-- `--model PATH`: optional GGUF model path for chat mode
+- `--model PATH`: deprecated and ignored (chat is configured in Settings)
 - `--debug`: verbose logging
 
 ## Product flow
@@ -112,13 +117,15 @@ First-run setup covers onboarding basics:
 
 ### Chat mode
 
-If you want local chat:
+Chat is optional and talks to a remote HTTP provider (an OpenAI-compatible
+endpoint such as LM Studio or Ollama, or Anthropic):
 
 1. Open `Settings`
-2. Download or select a GGUF model
-3. Switch interaction mode to `Chat`
+2. Pick an AI provider, base URL, model and API key
+3. Accept the third-party notice when the endpoint is not local
+4. Switch interaction mode to `Chat`
 
-If no model is active, MIRA stays in deterministic assistant mode.
+If no provider is configured, MIRA stays in deterministic assistant mode.
 
 ## How natural-language parsing works
 

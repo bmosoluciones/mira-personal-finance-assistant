@@ -20,13 +20,11 @@ except ImportError as exc:  # pragma: no cover - exercised only on headless runt
 
 from mira import __version__ as APP_VERSION
 from mira.ai.pipeline import Pipeline
-from mira.app import ApplicationController, ModelDownloadService
+from mira.app import ApplicationController
 from mira.db.database import Database
 from mira.services import MobileSyncServer, ModelLifecycle
 from mira.ui.coordinators import ChatState
 from mira.ui.coordinators.command_coordinator import CommandCoordinator
-from mira.ui.coordinators.model_download_coordinator import ModelDownloadCoordinator
-from mira.ui.coordinators.model_download_flow import ModelDownloadFlow, ModelDownloadSession
 from mira.ui.dialogs import InitialSetupDialog
 from mira.ui.dialogs.financial.compound_interest import CompoundInterestDialog as _CompoundInterestDialog
 from mira.ui.dialogs.financial.goal_simulator import GoalScenarioDialog as _GoalScenarioDialog
@@ -146,23 +144,19 @@ class MainWindow(
         self._db = db
         self._pipeline = pipeline
         self._worker: QThread | None = None
-        self._download_worker: QThread | None = None
         self._act_sidebar: QAction | None = None
         self._act_prompt: QAction | None = None
         self._command_coordinator = CommandCoordinator(self._pipeline)
-        self._model_download_coordinator = ModelDownloadCoordinator()
         self._controller = ApplicationController(self._db, self._pipeline)
         self._model_lifecycle = ModelLifecycle(self._db, self._pipeline)
         self._mobile_sync_server = MobileSyncServer(self._db)
         self._mobile_sync_dialog: MobileSyncSessionDialog | None = None
         self._mobile_sync_event_timer = QTimer(self)
-        self._model_download_service = ModelDownloadService(self._db, self._model_lifecycle)
         self._language = normalize_language(self._db.setting.get("language"))
         self._theme = self._normalize_theme(self._db.setting.get("theme"))
         self._startup_alert = startup_alert
         self._active_model_path = getattr(self._pipeline, "_model_path", None)
         self._reload_progress: QProgressDialog | None = None
-        self._download_session: ModelDownloadSession | None = None
         self._chat_state = ChatState()
         self._startup_cancelled = False
 
@@ -178,21 +172,6 @@ class MainWindow(
         self._chat_presenter = MainWindowChatPresenter(self)
         self._notification_proxy = MainWindowNotificationProxy(self)
         self._file_actions = MainWindowFileActions(self)
-        self._model_download_flow = ModelDownloadFlow(
-            parent=self,
-            language=self._language,
-            db=self._db,
-            download_coordinator=self._model_download_coordinator,
-            download_service=self._model_download_service,
-            notification_service=self._notification_service,
-            apply_model_lifecycle_state=self._apply_download_model_lifecycle_state,
-            refresh_settings_view=self._view_settings.refresh,
-            get_active_runtime_path=lambda: self._active_model_path,
-            get_interaction_mode=lambda: self._db.setting.get("llm_interaction_mode") or "assistant",
-            get_username=lambda: self._db.setting.get("username")
-            or tr("settings.saved_default_user", self._language, default="User"),
-            set_status=self._set_status,
-        )
         self._refresh_all()
         self._sync_engine_info()
         self._run_initial_setup_if_needed()
@@ -304,8 +283,8 @@ class MainWindow(
                     "Assistant parser: <b>{parser}</b><br>"
                     "Chat engine: <b>{chat}</b><br><br>"
                     "Assistant mode always uses the deterministic parser.<br>"
-                    "Optional local chat mode can be enabled with:<br>"
-                    "<code>mira --model /path/to/model.gguf</code>"
+                    "Optional chat mode is configured in Settings → AI.<br>"
+                    "<code>Settings → AI provider</code>"
                 ),
                 params={"parser": parser_type, "chat": chat_type},
             ),

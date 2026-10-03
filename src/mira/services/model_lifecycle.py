@@ -7,10 +7,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mira.ai.model_registry import find_model_path_by_name
+from mira.ai.llm_config import load_llm_config
 from mira.ai.pipeline import Pipeline
 from mira.db.database import Database
-from mira.ui.i18n import normalize_language, tr
+from mira.i18n import normalize_language, tr
 
 
 @dataclass(frozen=True)
@@ -35,19 +35,19 @@ class ModelLifecycle:
         self._pipeline = pipeline
 
     def resolve_model_path(self, active_runtime_path: str | None) -> str | None:
-        """Return resolve model path."""
-        selected_path = self._selected_model_path()
-        if selected_path is not None:
-            return selected_path
-
+        """Return the configured remote model name, if chat is allowed."""
+        config = load_llm_config(self._db)
+        if config.chat_allowed:
+            return config.model
         runtime_model_path = str(active_runtime_path or "").strip()
         return runtime_model_path or None
 
     def reload_selected_model(self, active_runtime_path: str | None, interaction_mode: str) -> ModelLifecycleState:
-        """Return reload selected model."""
-        model_path = self.resolve_model_path(active_runtime_path)
-        self._pipeline.reload_engine(model_path=model_path)
-        return self._build_state(active_runtime_path=model_path, interaction_mode=interaction_mode)
+        """Reload the HTTP chat client from saved settings."""
+        del active_runtime_path
+        self._pipeline.reload_engine(None)
+        config = load_llm_config(self._db)
+        return self._build_state(active_runtime_path=config.model if config.chat_allowed else None, interaction_mode=interaction_mode)
 
     def sync_engine_info(self, active_runtime_path: str | None) -> ModelLifecycleState:
         """Return sync engine info."""
@@ -55,19 +55,14 @@ class ModelLifecycle:
         return self._build_state(active_runtime_path=active_runtime_path, interaction_mode=interaction_mode)
 
     def _selected_model_name(self) -> str:
-        """Return selected model name."""
-        return str(self._db.setting.get("preferred_model") or "").strip()
+        """Return the configured remote model name when chat is allowed."""
+        config = load_llm_config(self._db)
+        return config.model if config.chat_allowed else ""
 
     def _selected_model_path(self) -> str | None:
-        """Return selected model path."""
-        selected_model = self._selected_model_name()
-        if not selected_model:
-            return None
-
-        model_path = find_model_path_by_name(selected_model)
-        if model_path is None or not model_path.is_file():
-            return None
-        return str(model_path)
+        """Return the configured model name when chat is allowed."""
+        name = self._selected_model_name()
+        return name or None
 
     def _language(self) -> str:
         """Return language."""
@@ -127,7 +122,7 @@ class ModelLifecycle:
                 tr(
                     "settings.mode.chat_unavailable",
                     language,
-                    default="Chat mode requires an active GGUF model. Returning to assistant mode.",
+                    default="Chat mode requires a configured provider. Returning to assistant mode.",
                 )
                 if forced_mode is not None
                 else None

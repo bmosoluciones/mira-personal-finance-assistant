@@ -38,11 +38,11 @@ def backend_connection_state(db: Any) -> tuple[bool, bool]:
     missing_db = False
     missing_connection = False
     try:
-        db._backend._require_db()
+        db._require_db()
     except RuntimeError:
         missing_db = True
     try:
-        db._backend._require_connection()
+        db._require_connection()
     except RuntimeError:
         missing_connection = True
     return (missing_db, missing_connection)

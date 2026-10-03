@@ -221,7 +221,7 @@ class TestMigrationIdempotency:
         try:
             tables = {
                 row[0]
-                for row in database._backend._require_connection()
+                for row in database._require_connection()
                 .execute("SELECT name FROM sqlite_master WHERE type='table'")
                 .fetchall()
             }

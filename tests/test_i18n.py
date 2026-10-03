@@ -325,7 +325,7 @@ def test_translation_keys_referenced_from_src_exist_in_english_and_spanish() -> 
     import ast
     from pathlib import Path
 
-    from mira.ui import i18n as i18n_module
+    from mira import i18n as i18n_module
 
     repo_root = Path(__file__).resolve().parents[1]
     referenced_keys: set[str] = set()

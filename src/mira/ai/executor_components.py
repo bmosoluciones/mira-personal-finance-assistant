@@ -11,8 +11,8 @@ from typing import Any, cast
 
 from mira.db.database import Database
 from mira.db.money import MONEY_ZERO, Money, money_to_decimal
+from mira.i18n import normalize_language, tr
 from mira.transaction_kinds import TransactionType
-from mira.ui.i18n import normalize_language, tr
 
 
 @dataclass(frozen=True)

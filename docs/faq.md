@@ -15,7 +15,7 @@ Yes. MIRA includes a built-in deterministic parser that allows you to use natura
 ## What is the difference between Assistant and Chat?
 
 - **Assistant**: Interprets and executes structured financial actions (e.g., adding expenses).
-- **Chat**: A free-form conversation mode that requires an optional local GGUF model to be active.
+- **Chat**: An optional free-form conversation mode that talks to a configured remote AI provider (OpenAI-compatible endpoint or Anthropic).
 
 ## Where is my database stored?
 

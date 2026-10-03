@@ -12,6 +12,7 @@ from types import MappingProxyType
 from typing import Any
 
 from mira.db.database import Database
+from mira.i18n import normalize_language, tr
 from mira.number_format import (
     NumberFormatConfig,
 )
@@ -21,7 +22,6 @@ from mira.number_format import (
 from mira.number_format import (
     get_number_format_config as _get_number_format_config,
 )
-from mira.ui.i18n import normalize_language, tr
 
 
 class AnalyticsSemanticRole(StrEnum):

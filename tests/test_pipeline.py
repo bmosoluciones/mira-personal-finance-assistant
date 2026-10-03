@@ -133,7 +133,7 @@ class TestPipelineWithTransactionParserEngine:
             "chat.unavailable",
             "es",
             default=(
-                "El modo chat no está disponible porque no hay un modelo GGUF activo. "
+                "El modo chat no está disponible porque no hay un proveedor de IA configurado en Ajustes. "
                 "Puedes seguir usando el modo asistente para registrar y consultar tus finanzas."
             ),
         )
@@ -215,8 +215,8 @@ def test_pipeline_reload_engine_replaces_previous_engine(monkeypatch, db):
 
     pipeline = Pipeline(db=db, engine=DummyEngineA())
 
-    def fake_get_chat_engine(model_path, **_kwargs):
-        assert model_path == "new-model.gguf"
+    def fake_get_chat_engine(config, **_kwargs):
+        assert config is not None
         return DummyEngineB()
 
     monkeypatch.setattr("mira.ai.pipeline.get_chat_engine", fake_get_chat_engine)

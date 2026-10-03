@@ -24,15 +24,14 @@ Actions:
 
 ## Chat does not appear or does not respond
 
-- Chat is enabled only when the local LLM engine is ready.
-- Without an active GGUF model, only `Assistant` mode is available.
+- Chat mode requires a configured AI provider.
+- Without a provider (and model) in `Settings`, only `Assistant` mode is available.
 
 Quick review:
 
-1. Confirm the GGUF model path is valid.
-2. Verify that `llama-cpp-python` is installed if you want local chat.
+1. Confirm the provider, base URL and model are set in `Settings`.
+2. Confirm the API key was saved and the third-party notice was accepted when the endpoint is not local.
 3. Review logs with `--debug`.
-
 ## CSV import fails
 
 Typical causes:

@@ -198,7 +198,6 @@ class MainWindowLayoutMixin:
         self._view_settings.settings_saved.connect(self._on_settings_saved)
         self._view_settings.language_changed.connect(self._on_language_changed)
         self._view_settings.theme_changed.connect(self._on_theme_changed)
-        self._view_settings.download_default_model_requested.connect(self._on_download_default_model)
 
         for view in [
             self._view_dashboard,

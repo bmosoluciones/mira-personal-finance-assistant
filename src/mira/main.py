@@ -86,7 +86,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model",
         metavar="PATH",
-        help="Path to a GGUF model file for optional local chat mode.",
+        help="Deprecated and ignored. Chat is configured with an AI provider in Settings.",
         default=None,
     )
     parser.add_argument(
@@ -129,7 +129,6 @@ def main() -> None:
     except ImportError:
         pass
 
-    from mira.ai.model_registry import discover_gguf_models, find_model_path_by_name
     from mira.ai.pipeline import Pipeline
     from mira.db.database import Database
     from mira.ui.main_window import MainWindow
@@ -142,33 +141,14 @@ def main() -> None:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(2)
 
-    # Resolve model preference (CLI has priority; otherwise use persisted selected model)
     startup_alert: str | None = None
-    model_path: str | None = args.model
-    selected_model = (db.setting.get("preferred_model") or "").strip()
-    if model_path is None and selected_model:
-        candidate = find_model_path_by_name(selected_model)
-        if candidate is not None and candidate.is_file():
-            model_path = str(candidate)
-            logging.info("Loading user-selected model: %s", selected_model)
-        else:
-            startup_alert = (
-                f"El modelo seleccionado '{selected_model}' ya no está disponible en disco. "
-                "El modo chat seguirá desactivado hasta seleccionar otro modelo."
-            )
-            db.setting.set("preferred_model", "")
-
-    discovered = discover_gguf_models()
-    if not discovered:
-        logging.info("No GGUF models found in configured model directories.")
+    if args.model:
+        logging.info("Ignoring --model %s; chat now uses the provider configured in Settings.", args.model)
 
     # Initialise AI pipeline
     pipeline: Pipeline | None = None
     try:
-        pipeline = Pipeline(
-            db=db,
-            model_path=model_path,
-        )
+        pipeline = Pipeline(db=db)
 
         # Start Qt application
         _set_windows_app_user_model_id("solutions.bmogroup.MIRA")

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from sqlite3 import Error
 
 from mira.db.errors import BudgetError
-from mira.ui.i18n import normalize_language, tr
+from mira.i18n import normalize_language, tr
 
 
 @dataclass(frozen=True)

@@ -8,7 +8,7 @@ Orchestrates:
   2. Transaction parser - deterministic extraction for structured actions
   3. Validator - strict schema checking
   4. Executor - database operations
-  5. Optional local chat engine - GGUF-backed conversational mode
+  5. Optional chat engine - remote HTTP conversational mode
 """
 
 from __future__ import annotations
@@ -21,11 +21,12 @@ import threading
 from mira.ai.base_engine import BaseEngine
 from mira.ai.engine import get_chat_engine
 from mira.ai.executor import ActionResult, Executor
+from mira.ai.llm_config import load_llm_config
 from mira.ai.normalizer import normalise
 from mira.ai.parser_engine import TransactionParserEngine
 from mira.ai.validator import validate
 from mira.db.database import Database
-from mira.ui.i18n import tr
+from mira.i18n import tr
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +54,11 @@ _PARSER_ERROR_MESSAGES = {
 }
 _CHAT_UNAVAILABLE_MESSAGES = {
     "en": (
-        "Chat mode is unavailable because there is no active GGUF model. "
+        "Chat mode is unavailable because no AI provider is configured in Settings. "
         "You can keep using assistant mode to record and review your finances."
     ),
     "es": (
-        "El modo chat no está disponible porque no hay un modelo GGUF activo. "
+        "El modo chat no está disponible porque no hay un proveedor de IA configurado en Ajustes. "
         "Puedes seguir usando el modo asistente para registrar y consultar tus finanzas."
     ),
 }
@@ -101,9 +102,9 @@ class Pipeline:
         self._parser: BaseEngine = engine or TransactionParserEngine(
             default_currency=db.setting.get_default_currency(),
         )
-        self._chat_engine: BaseEngine | None = get_chat_engine(model_path, language=self._chat_language())
-        self._executor = Executor(db)
         self._model_path = model_path
+        self._chat_engine: BaseEngine | None = get_chat_engine(load_llm_config(db), language=self._chat_language())
+        self._executor = Executor(db)
         self._engine_lock = threading.RLock()
 
     def process(self, user_input: str) -> ActionResult:
@@ -153,8 +154,8 @@ class Pipeline:
             )
         return ActionResult(success=True, action="chat", message=response)
 
-    def reload_engine(self, model_path: str | None) -> None:
-        """Hot-reload the optional chat engine when the selected model changes."""
+    def reload_engine(self, model_path: str | None = None) -> None:
+        """Reload the optional HTTP chat engine from saved settings."""
         with self._engine_lock:
             self._parser.set_default_currency(self._db.setting.get_default_currency())
             if self._chat_engine is not None:
@@ -162,7 +163,7 @@ class Pipeline:
 
             self._model_path = model_path
             try:
-                self._chat_engine = get_chat_engine(model_path, language=self._chat_language())
+                self._chat_engine = get_chat_engine(load_llm_config(self._db), language=self._chat_language())
             except _EXPECTED_ENGINE_RELOAD_ERRORS as exc:
                 logger.warning("Failed to reload chat engine: %s", exc)
                 self._chat_engine = None

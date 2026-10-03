@@ -217,7 +217,7 @@ def normalize_language(language: str | None) -> str:
 
 def _translated_db_label(key: str, language: str | None, default: str) -> str:
     """Return translated db label."""
-    from mira.ui.i18n import tr
+    from mira.i18n import tr
 
     return tr(key, normalize_language(language), default=default)
 

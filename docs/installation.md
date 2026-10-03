@@ -32,7 +32,7 @@ Published artifacts:
 ## Useful parameters
 
 - `--db PATH`: custom SQLite database path.
-- `--model PATH`: optional GGUF model for chat mode.
+- `--model PATH`: deprecated and ignored (chat is configured in Settings).
 - `--debug`: enables verbose logging.
 
 ## Important notes

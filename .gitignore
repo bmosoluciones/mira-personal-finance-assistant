@@ -208,13 +208,6 @@ marimo/_lsp/
 __marimo__/
 docs/mira_ui_screenshot.png
 
-# Model artifacts
-src/mira/models/*.gguf
-dist-assets/models/*.gguf
-
-# Generated training data (large files, regenerate with csv_to_chatml_jsonl.py)
-model/ia_finetune_examples.jsonl
-
 # Flatpak builder files
 .flatpak-builder/
 build-flatpak/

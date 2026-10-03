@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from openpyxl.cell.cell import Cell as _OpenpyxlCell
 
 from mira.db.money import MONEY_ZERO, MoneyLike, money_to_decimal
-from mira.ui.i18n import normalize_language, tr
+from mira.i18n import normalize_language, tr
 
 logger = logging.getLogger(__name__)
 

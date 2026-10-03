@@ -15,7 +15,7 @@ Sí. Incluye un parser determinístico para entrada en lenguaje natural.
 ## ¿Qué diferencia hay entre Assistant y Chat?
 
 - Assistant ejecuta acciones financieras estructuradas.
-- Chat es conversación libre y requiere LLM local listo.
+- Chat es conversación libre opcional y usa un proveedor de IA remoto configurado (endpoint compatible con OpenAI o Anthropic).
 
 ## ¿Dónde está mi base de datos?
 

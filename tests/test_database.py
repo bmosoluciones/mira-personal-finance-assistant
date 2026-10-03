@@ -86,7 +86,7 @@ def test_default_db_path_is_resolved_before_connect_attempt(monkeypatch, tmp_pat
 def test_init_schema_requires_connected_database(tmp_path) -> None:
     database = Database(path=tmp_path / "not-connected.db")
     with pytest.raises(RuntimeError, match="Database is not connected"):
-        database._backend._init_schema()
+        database._init_schema()
 
 
 def test_connect_cleans_internal_state_on_unexpected_init_failure(monkeypatch, tmp_path) -> None:
@@ -95,7 +95,7 @@ def test_connect_cleans_internal_state_on_unexpected_init_failure(monkeypatch, t
     def _fail_init_schema() -> None:
         raise TypeError("unexpected init failure")
 
-    monkeypatch.setattr(database._backend, "_init_schema", _fail_init_schema)
+    monkeypatch.setattr(database, "_init_schema", _fail_init_schema)
 
     with pytest.raises(TypeError, match="unexpected init failure"):
         database.connect()
@@ -104,10 +104,10 @@ def test_connect_cleans_internal_state_on_unexpected_init_failure(monkeypatch, t
 
 
 def test_atomic_rolls_back_on_unexpected_exception(db) -> None:
-    assert not hasattr(db._backend, "_cursor")
+    assert not hasattr(db, "_cursor")
 
     with pytest.raises(TypeError, match="force rollback"):
-        with db._backend._atomic():
+        with db._atomic():
             Setting.insert(key="__rollback_test_key__", value="temp").execute()
             raise TypeError("force rollback")
 
@@ -321,14 +321,14 @@ class TestAccounts:
             reopened.close()
 
     def test_add_account_raises_runtime_error_when_created_row_cannot_be_read(self, db, monkeypatch):
-        original = db._backend.get_account_by_name
+        original = db.get_account_by_name
 
         def _missing_after_create(name: str):
             if name == "Cuenta inconsistente":
                 return None
             return original(name)
 
-        monkeypatch.setattr(db._backend, "get_account_by_name", _missing_after_create)
+        monkeypatch.setattr(db, "get_account_by_name", _missing_after_create)
 
         with pytest.raises(RuntimeError, match="Failed to create account"):
             db.account.create(
@@ -809,7 +809,7 @@ class TestTransactions:
         def _boom(_account_id: int, _delta: float) -> None:
             raise RuntimeError("balance update failed")
 
-        monkeypatch.setattr(db._backend, "update_account_balance", _boom)
+        monkeypatch.setattr(db, "update_account_balance", _boom)
 
         with pytest.raises(RuntimeError, match="balance update failed"):
             db.transaction.create(account_id=acc["id"], tx_type="income", amount=25.0, description="should rollback")
@@ -1255,7 +1255,7 @@ class TestAnnualBudgets:
         def _boom(*args, **kwargs):
             raise AssertionError("get_budget_by_id should not call list_budgets()")
 
-        monkeypatch.setattr(db._backend, "list_budgets", _boom)
+        monkeypatch.setattr(db, "list_budgets", _boom)
 
         loaded = db.budget.get(int(budget["id"]))
 
@@ -1549,7 +1549,7 @@ class TestAnnualBudgets:
         def _boom(*args, **kwargs):
             raise AssertionError("budget comparison should not call _get_budget_transactions()")
 
-        monkeypatch.setattr(db._backend, "_get_budget_transactions", _boom)
+        monkeypatch.setattr(db, "_get_budget_transactions", _boom)
 
         comparison = db.budget.compare(int(budget["id"]), granularity="quarterly")
         rows = {row["name"]: row for row in comparison["rows"]}
@@ -1718,7 +1718,7 @@ class TestAnnualBudgets:
         def _boom(*args, **kwargs):
             raise AssertionError("monthly tracking should not call _get_budget_transactions()")
 
-        monkeypatch.setattr(db._backend, "_get_budget_transactions", _boom)
+        monkeypatch.setattr(db, "_get_budget_transactions", _boom)
 
         tracking = db.budget.get_monthly_tracking(int(budget["id"]), year, month)
         rows = {row["name"]: row for row in tracking["rows"]}
@@ -2200,7 +2200,7 @@ class TestExtendedPersonalFinanceBasics:
             if sign > 0:
                 raise RuntimeError("reapply failed")
 
-        monkeypatch.setattr(db._backend, "_apply_savings_goal_delta_for_transaction", _boom)
+        monkeypatch.setattr(db, "_apply_savings_goal_delta_for_transaction", _boom)
 
         with pytest.raises(RuntimeError, match="reapply failed"):
             db.transaction.update(tx["id"], amount=25.0, description="should rollback")
@@ -2224,7 +2224,7 @@ class TestExtendedPersonalFinanceBasics:
             if sign < 0:
                 raise RuntimeError("delete delta failed")
 
-        monkeypatch.setattr(db._backend, "_apply_savings_goal_delta_for_transaction", _boom)
+        monkeypatch.setattr(db, "_apply_savings_goal_delta_for_transaction", _boom)
 
         with pytest.raises(RuntimeError, match="delete delta failed"):
             db.transaction.delete(tx["id"])
@@ -2409,7 +2409,7 @@ class TestRecurring:
             day_of_month=2,
         )
 
-        original_add_transaction = db._backend.add_transaction
+        original_add_transaction = db.add_transaction
         calls = {"count": 0}
 
         def _fail_on_second_transaction(*args, **kwargs):
@@ -2418,7 +2418,7 @@ class TestRecurring:
                 raise RuntimeError("boom")
             return original_add_transaction(*args, **kwargs)
 
-        monkeypatch.setattr(db._backend, "add_transaction", _fail_on_second_transaction)
+        monkeypatch.setattr(db, "add_transaction", _fail_on_second_transaction)
 
         with pytest.raises(RuntimeError, match="boom"):
             db.recurring.apply_for_month(2025, 3)
@@ -3572,7 +3572,7 @@ class TestRuntimeGuards:
             description="Original",
             category="General",
         )
-        original = db._backend.get_transaction_by_id
+        original = db.get_transaction_by_id
 
         calls = {"count": 0}
 
@@ -3583,7 +3583,7 @@ class TestRuntimeGuards:
                 return None
             return row
 
-        monkeypatch.setattr(db._backend, "get_transaction_by_id", _flaky_get_transaction_by_id)
+        monkeypatch.setattr(db, "get_transaction_by_id", _flaky_get_transaction_by_id)
 
         with pytest.raises(RuntimeError, match="Failed to update transaction"):
             db.transaction.update(int(tx["id"]), description="Actualizada")

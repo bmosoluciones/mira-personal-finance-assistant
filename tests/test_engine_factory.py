@@ -1,19 +1,35 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
-"""Tests for AI engine factory and llama runtime selection."""
+"""Tests for the AI engine factory (local parser + optional remote chat)."""
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
-from types import ModuleType, SimpleNamespace
 
-import pytest
-
-from mira.ai import engine as engine_module
-from mira.ai.engine import _recommended_llama_kwargs, get_chat_engine, get_engine, is_llama_cpp_available
+from mira.ai.engine import get_chat_engine, get_engine
+from mira.ai.llm_config import LlmConfig
 from mira.ai.parser_engine import TransactionParserEngine
+from mira.ai.remote_chat import RemoteChatEngine
+
+
+def _config(
+    *,
+    provider: str = "openai_compatible",
+    base_url: str = "http://localhost:1234/v1",
+    model: str = "local-model",
+    third_party_ack: bool = False,
+    ack_host: str = "",
+) -> LlmConfig:
+    return LlmConfig(
+        provider=provider,
+        base_url=base_url,
+        model=model,
+        api_key="",
+        interaction_mode="chat",
+        third_party_ack=third_party_ack,
+        ack_host=ack_host,
+    )
 
 
 def test_get_engine_without_model_uses_transaction_parser() -> None:
@@ -21,220 +37,73 @@ def test_get_engine_without_model_uses_transaction_parser() -> None:
     assert isinstance(engine, TransactionParserEngine)
 
 
-def test_get_chat_engine_without_model_returns_none() -> None:
-    assert get_chat_engine(model_path=None) is None
+def test_get_engine_ignores_model_path() -> None:
+    engine = get_engine(model_path=Path("/tmp/any.gguf"))
+    assert isinstance(engine, TransactionParserEngine)
 
 
-def test_is_llama_cpp_available_uses_module_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
-    is_llama_cpp_available.cache_clear()
-    monkeypatch.setattr(
-        engine_module.importlib.util,
-        "find_spec",
-        lambda name: object() if name == "llama_cpp" else None,
+def test_get_chat_engine_returns_none_without_config() -> None:
+    assert get_chat_engine(None) is None
+
+
+def test_get_chat_engine_returns_none_when_provider_is_disabled() -> None:
+    assert get_chat_engine(_config(provider="none", model="")) is None
+
+
+def test_get_chat_engine_returns_none_when_model_is_missing() -> None:
+    assert get_chat_engine(_config(model="")) is None
+
+
+def test_get_chat_engine_returns_remote_engine_for_loopback_endpoint() -> None:
+    engine = get_chat_engine(_config(), language="es")
+
+    assert isinstance(engine, RemoteChatEngine)
+
+
+def test_get_chat_engine_returns_none_for_cloud_endpoint_without_ack() -> None:
+    config = _config(base_url="https://api.openai.com/v1", model="gpt-4o-mini")
+
+    assert config.shares_with_third_party is True
+    assert get_chat_engine(config) is None
+
+
+def test_get_chat_engine_returns_remote_engine_for_acknowledged_cloud_endpoint() -> None:
+    config = _config(
+        base_url="https://api.openai.com/v1",
+        model="gpt-4o-mini",
+        third_party_ack=True,
+        ack_host="api.openai.com",
     )
 
-    assert is_llama_cpp_available() is True
+    engine = get_chat_engine(config, language="en")
 
-    is_llama_cpp_available.cache_clear()
+    assert isinstance(engine, RemoteChatEngine)
 
 
-def test_is_llama_cpp_available_returns_false_when_lookup_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    is_llama_cpp_available.cache_clear()
-    monkeypatch.setattr(
-        engine_module.importlib.util,
-        "find_spec",
-        lambda _name: (_ for _ in ()).throw(ValueError("boom")),
+def test_get_chat_engine_returns_none_for_anthropic_without_ack() -> None:
+    config = _config(provider="anthropic", base_url="", model="claude-3-5-haiku-latest")
+
+    assert get_chat_engine(config) is None
+
+
+def test_get_chat_engine_returns_remote_engine_for_acknowledged_anthropic() -> None:
+    config = _config(
+        provider="anthropic",
+        base_url="",
+        model="claude-3-5-haiku-latest",
+        third_party_ack=True,
+        ack_host="api.anthropic.com",
     )
 
-    assert is_llama_cpp_available() is False
+    assert isinstance(get_chat_engine(config), RemoteChatEngine)
 
-    is_llama_cpp_available.cache_clear()
 
+def test_get_chat_engine_rejects_stale_ack_for_a_different_host() -> None:
+    config = _config(
+        base_url="https://api.openai.com/v1",
+        model="gpt-4o-mini",
+        third_party_ack=True,
+        ack_host="some-other-host.example",
+    )
 
-def test_get_chat_engine_returns_none_when_model_path_is_missing(tmp_path: Path) -> None:
-    engine = get_chat_engine(model_path=tmp_path / "missing.gguf")
-    assert engine is None
-
-
-def test_get_chat_engine_returns_none_when_llama_cpp_is_unavailable(monkeypatch, tmp_path: Path) -> None:
-    model = tmp_path / "model.gguf"
-    model.write_text("stub", encoding="utf-8")
-
-    monkeypatch.setattr(engine_module, "is_llama_cpp_available", lambda: False)
-
-    assert get_chat_engine(model_path=model) is None
-
-
-def test_get_chat_engine_uses_llama_cpp_engine_when_available(monkeypatch, tmp_path: Path) -> None:
-    model = tmp_path / "model.gguf"
-    model.write_text("stub", encoding="utf-8")
-
-    class DummyLlamaEngine:
-        def __init__(self, model_path: str | Path, prompts=None, **kwargs: object) -> None:
-            self.model_path = Path(model_path)
-            self.prompts = prompts
-            self.kwargs = kwargs
-
-    monkeypatch.setattr(engine_module.chat_engine_module, "LlamaCppEngine", DummyLlamaEngine)
-    monkeypatch.setattr(engine_module, "is_llama_cpp_available", lambda: True)
-
-    engine = get_chat_engine(model_path=model)
-
-    assert isinstance(engine, DummyLlamaEngine)
-    assert engine.model_path == model
-    assert engine.prompts is not None
-
-
-def test_get_chat_engine_forwards_language_and_tuned_kwargs(monkeypatch, tmp_path: Path) -> None:
-    model = tmp_path / "model.gguf"
-    model.write_text("stub", encoding="utf-8")
-
-    class DummyLlamaEngine:
-        def __init__(self, model_path: str | Path, prompts=None, **kwargs: object) -> None:
-            self.model_path = Path(model_path)
-            self.prompts = prompts
-            self.kwargs = kwargs
-
-    monkeypatch.setattr(engine_module.chat_engine_module, "LlamaCppEngine", DummyLlamaEngine)
-    monkeypatch.setattr(engine_module, "is_llama_cpp_available", lambda: True)
-    monkeypatch.setattr(engine_module, "_recommended_llama_kwargs", lambda kwargs: {"n_ctx": 2048, **kwargs})
-
-    engine = get_chat_engine(model_path=model, language="es", temperature=0.3)
-
-    assert isinstance(engine, DummyLlamaEngine)
-    assert engine.kwargs["language"] == "es"
-    assert engine.kwargs["n_ctx"] == 2048
-    assert engine.kwargs["temperature"] == 0.3
-
-
-def test_get_chat_engine_returns_none_when_llama_init_fails(monkeypatch, tmp_path: Path) -> None:
-    model = tmp_path / "model.gguf"
-    model.write_text("stub", encoding="utf-8")
-
-    class BrokenLlama:
-        def __init__(self, *_args, **_kwargs) -> None:
-            raise RuntimeError("llama-fail")
-
-    monkeypatch.setattr(engine_module.chat_engine_module, "LlamaCppEngine", BrokenLlama)
-    monkeypatch.setattr(engine_module, "is_llama_cpp_available", lambda: True)
-
-    assert get_chat_engine(model_path=model) is None
-
-
-def test_get_chat_engine_raises_unexpected_llama_init_errors(monkeypatch, tmp_path: Path) -> None:
-    model = tmp_path / "model.gguf"
-    model.write_text("stub", encoding="utf-8")
-
-    class BrokenLlama:
-        def __init__(self, *_args, **_kwargs) -> None:
-            raise AssertionError("unexpected-llama-fail")
-
-    monkeypatch.setattr(engine_module.chat_engine_module, "LlamaCppEngine", BrokenLlama)
-    monkeypatch.setattr(engine_module, "is_llama_cpp_available", lambda: True)
-
-    with pytest.raises(AssertionError, match="unexpected-llama-fail"):
-        get_chat_engine(model_path=model)
-
-
-def test_recommended_llama_kwargs_raspberry_profile(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MIRA_LLAMA_PROFILE", "rpi")
-    monkeypatch.setattr(engine_module.os, "cpu_count", lambda: 4)
-
-    kwargs = _recommended_llama_kwargs({"n_ctx": 2048})
-
-    assert kwargs["n_gpu_layers"] == 0
-    assert kwargs["n_batch"] == 128
-    assert kwargs["n_ctx"] == 2048
-    assert kwargs["n_threads"] == 3
-
-
-def test_recommended_llama_kwargs_uses_gpu_when_available(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("MIRA_LLAMA_PROFILE", raising=False)
-    monkeypatch.setattr(engine_module, "_looks_like_raspberry_pi", lambda: False)
-    monkeypatch.setattr(engine_module, "_detect_gpu_layers_for_llama", lambda: -1)
-
-    kwargs = _recommended_llama_kwargs({})
-
-    assert kwargs["n_gpu_layers"] == -1
-
-
-def test_recommended_llama_kwargs_gpu_override_on_rpi(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MIRA_LLAMA_PROFILE", "rpi")
-    monkeypatch.setenv("MIRA_LLAMA_GPU_LAYERS", "12")
-    monkeypatch.setattr(engine_module.os, "cpu_count", lambda: 4)
-
-    kwargs = _recommended_llama_kwargs({})
-
-    assert kwargs["n_gpu_layers"] == 12
-    assert kwargs["n_threads"] == 3
-
-
-def test_recommended_llama_kwargs_invalid_gpu_override_falls_back(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MIRA_LLAMA_GPU_LAYERS", "invalid")
-    monkeypatch.setattr(engine_module, "_looks_like_raspberry_pi", lambda: False)
-
-    kwargs = _recommended_llama_kwargs({})
-
-    assert kwargs["n_gpu_layers"] in {0, -1}
-
-
-def test_looks_like_raspberry_pi_detects_known_device_tree_model(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("MIRA_LLAMA_PROFILE", raising=False)
-    monkeypatch.setattr(engine_module.platform, "machine", lambda: "aarch64")
-
-    class _FakePath:
-        def __init__(self, *_args, **_kwargs) -> None:
-            pass
-
-        def is_file(self) -> bool:
-            return True
-
-        def read_text(self, **_kwargs) -> str:
-            return "Raspberry Pi 5\x00"
-
-    monkeypatch.setattr(engine_module, "Path", _FakePath)
-
-    assert engine_module._looks_like_raspberry_pi() is True
-
-
-def test_looks_like_raspberry_pi_returns_false_when_model_file_cannot_be_read(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("MIRA_LLAMA_PROFILE", raising=False)
-    monkeypatch.setattr(engine_module.platform, "machine", lambda: "arm64")
-
-    class _FakePath:
-        def __init__(self, *_args, **_kwargs) -> None:
-            pass
-
-        def is_file(self) -> bool:
-            return True
-
-        def read_text(self, **_kwargs) -> str:
-            raise OSError("unavailable")
-
-    monkeypatch.setattr(engine_module, "Path", _FakePath)
-
-    assert engine_module._looks_like_raspberry_pi() is False
-
-
-def test_detect_gpu_layers_respects_forced_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MIRA_LLAMA_GPU_LAYERS", "7")
-
-    assert engine_module._detect_gpu_layers_for_llama() == 7
-
-
-def test_detect_gpu_layers_uses_llama_gpu_probe_when_available(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("MIRA_LLAMA_GPU_LAYERS", raising=False)
-    fake_module = ModuleType("llama_cpp")
-    fake_module.llama_cpp = SimpleNamespace(llama_supports_gpu_offload=lambda: True)
-    monkeypatch.setitem(sys.modules, "llama_cpp", fake_module)
-
-    assert engine_module._detect_gpu_layers_for_llama() == -1
-
-
-def test_detect_gpu_layers_returns_cpu_when_llama_probe_is_false(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("MIRA_LLAMA_GPU_LAYERS", raising=False)
-    fake_module = ModuleType("llama_cpp")
-    fake_module.llama_cpp = SimpleNamespace(llama_supports_gpu_offload=lambda: False)
-    monkeypatch.setitem(sys.modules, "llama_cpp", fake_module)
-
-    assert engine_module._detect_gpu_layers_for_llama() == 0
+    assert get_chat_engine(config) is None

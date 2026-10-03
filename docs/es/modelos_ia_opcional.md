@@ -1,18 +1,18 @@
-# Modelos locales opcionales
+# Chat IA opcional
 
 MIRA no necesita un LLM para registrar transacciones o generar reportes estructurados.
 
-## Qué hace el modelo local
+## Qué hace el modo chat
 
-Un modelo GGUF local solo se usa para:
+El modo chat opcional solo se usa para:
 
 - modo chat
 - respuestas conversacionales
 - preguntas abiertas dentro de la app
 
-## Qué no hace el modelo local
+## Qué no hace el modo chat
 
-El modelo local no participa en:
+El modo chat no participa en:
 
 - registrar ingresos
 - registrar gastos
@@ -23,14 +23,13 @@ Eso lo hace siempre `TransactionParserEngine`.
 
 ## Cómo activarlo
 
-1. Si usas una distribución oficial (`.exe` o `.zip`), abre `Ajustes`.
-2. Descarga o selecciona un `.gguf`.
-3. Cambia el modo de interacción a `Chat`.
+1. Abre `Ajustes` y elige un proveedor de IA.
+2. Ingresa la URL base, el nombre del modelo y la API key (un endpoint compatible con OpenAI o Anthropic).
+3. Acepta el aviso a terceros si el endpoint no es local.
+4. Cambia el modo de interacción a `Chat`.
 
-Si estás armando MIRA desde el repositorio para desarrollo o empaquetado, instala el extra opcional con:
+Solo se envían peticiones al proveedor cuando usas el modo chat. La API key se
+guarda junto a la base en `llm-secrets.json` con permisos `0600` y nunca forma
+parte de un respaldo.
 
-```bash
-pip install ".[chat]"
-```
-
-Si no hay modelo activo, MIRA vuelve automáticamente al modo asistente.
+Si no hay ningún proveedor configurado, MIRA vuelve automáticamente al modo asistente.

@@ -137,8 +137,19 @@ def _install_fake_runtime(
     pyside_module = types.ModuleType("PySide6")
     qtwidgets_module = types.ModuleType("PySide6.QtWidgets")
     qtwidgets_module.QApplication = FakeQApplication
+
+    class FakeQIcon:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def isNull(self) -> bool:
+            return True
+
+    qtgui_module = types.ModuleType("PySide6.QtGui")
+    qtgui_module.QIcon = FakeQIcon  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "PySide6", pyside_module)
     monkeypatch.setitem(sys.modules, "PySide6.QtWidgets", qtwidgets_module)
+    monkeypatch.setitem(sys.modules, "PySide6.QtGui", qtgui_module)
 
     db_holder: dict[str, _FakeDatabase] = {}
 
@@ -170,10 +181,6 @@ def _install_fake_runtime(
     pipeline_module = types.ModuleType("mira.ai.pipeline")
     pipeline_module.Pipeline = FakePipeline
 
-    model_registry_module = types.ModuleType("mira.ai.model_registry")
-    model_registry_module.discover_gguf_models = lambda: (discovered or [])
-    model_registry_module.find_model_path_by_name = lambda _name: found_model
-
     database_module = types.ModuleType("mira.db.database")
     database_module.Database = FakeDatabaseFactory
 
@@ -181,7 +188,6 @@ def _install_fake_runtime(
     main_window_module.MainWindow = FakeMainWindow
 
     monkeypatch.setitem(sys.modules, "mira.ai.pipeline", pipeline_module)
-    monkeypatch.setitem(sys.modules, "mira.ai.model_registry", model_registry_module)
     monkeypatch.setitem(sys.modules, "mira.db.database", database_module)
     monkeypatch.setitem(sys.modules, "mira.ui.main_window", main_window_module)
 
@@ -198,7 +204,7 @@ def test_parse_args_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert args.debug is False
 
 
-def test_main_starts_app_and_uses_persisted_model(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_main_starts_app_without_embedding_a_model(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     old_level = logging.getLogger().level
     set_levels: list[int] = []
     model_path = tmp_path / "saved.gguf"
@@ -239,7 +245,8 @@ def test_main_starts_app_and_uses_persisted_model(monkeypatch: pytest.MonkeyPatc
 
     pipeline_kwargs = state["pipeline_kwargs"]
     assert isinstance(pipeline_kwargs, dict)
-    assert pipeline_kwargs["model_path"] == str(model_path)
+    assert "model_path" not in pipeline_kwargs
+    assert pipeline_kwargs["db"] is db
     pipeline = state["pipeline"]
     assert hasattr(pipeline, "shutdown_called")
     assert pipeline.shutdown_called is True
@@ -255,7 +262,9 @@ def test_main_starts_app_and_uses_persisted_model(monkeypatch: pytest.MonkeyPatc
     assert app.version == main_module.APP_VERSION
 
 
-def test_main_clears_missing_preferred_model(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_main_ignores_model_argument_without_touching_settings(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     missing_model = tmp_path / "missing.gguf"
 
     state = _install_fake_runtime(
@@ -270,7 +279,7 @@ def test_main_clears_missing_preferred_model(monkeypatch: pytest.MonkeyPatch, tm
         main_module,
         "_parse_args",
         lambda: argparse.Namespace(
-            model=None,
+            model=str(missing_model),
             db=None,
             debug=False,
         ),
@@ -283,7 +292,7 @@ def test_main_clears_missing_preferred_model(monkeypatch: pytest.MonkeyPatch, tm
 
     db = state["db_holder"]["db"]
     assert isinstance(db, _FakeDatabase)
-    assert db.saved_settings["preferred_model"] == ""
+    assert "preferred_model" not in db.saved_settings
     pipeline = state["pipeline"]
     assert hasattr(pipeline, "shutdown_called")
     assert pipeline.shutdown_called is True
@@ -291,7 +300,7 @@ def test_main_clears_missing_preferred_model(monkeypatch: pytest.MonkeyPatch, tm
 
     window_kwargs = state["window_kwargs"]
     assert isinstance(window_kwargs, dict)
-    assert "ya no está disponible" in str(window_kwargs["startup_alert"])
+    assert window_kwargs["startup_alert"] is None
 
 
 def test_main_exits_early_when_initial_setup_is_cancelled(
@@ -836,31 +845,11 @@ def test_notify_user_message_uses_notification_service_not_chat() -> None:
     assert window.chat_messages == []
 
 
-def test_on_download_default_model_delegates_to_flow() -> None:
+def test_main_window_no_longer_offers_model_downloads() -> None:
     main_window_module = _import_main_window_or_xfail_headless()
 
-    class DummyFlow:
-        def __init__(self) -> None:
-            self.calls = 0
-            self.worker = object()
-
-        def start_default_download(self):
-            self.calls += 1
-            return types.SimpleNamespace(handle=types.SimpleNamespace(worker=self.worker))
-
-    class DummyWindow:
-        def __init__(self) -> None:
-            self._model_download_flow = DummyFlow()
-            self._download_session = None
-            self._download_worker = None
-
-    window = DummyWindow()
-
-    main_window_module.MainWindow._on_download_default_model(window)
-
-    assert window._model_download_flow.calls == 1
-    assert window._download_session.handle.worker is window._model_download_flow.worker
-    assert window._download_worker is window._model_download_flow.worker
+    assert not hasattr(main_window_module.MainWindow, "_on_download_default_model")
+    assert not hasattr(main_window_module.MainWindow, "_apply_download_model_lifecycle_state")
 
 
 def test_on_error_notifies_user_without_writing_to_chat() -> None:

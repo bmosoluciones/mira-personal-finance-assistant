@@ -203,13 +203,27 @@ class TagRepository:
             raise ValueError(f"Cannot assign more than {max_tags} tags to a transaction")
         return unique_ids
 
-    def set_transaction_tags(self, transaction_id: int, tag_ids: list[int]) -> None:
-        """Return set transaction tags."""
+    def set_transaction_tags(
+        self,
+        transaction_id: int,
+        tag_ids: list[int],
+        device_id: str | None = None,
+        touch_sync: bool = True,
+    ) -> None:
+        """Replace the tags of a transaction and optionally record the editing device."""
         unique_ids = self._normalize_tag_ids(tag_ids)
         with self._atomic():
             TransactionTag.delete().where(TransactionTag.transaction_id == transaction_id).execute()
             for tid in unique_ids:
                 TransactionTag.insert(transaction_id=transaction_id, tag=tid).on_conflict_ignore().execute()
+            if touch_sync and device_id:
+                from mira.db.model import Transaction
+                from mira.sync_utils import utc_now_iso
+
+                Transaction.update(
+                    last_modified_by_device_id=device_id,
+                    updated_at=utc_now_iso(),
+                ).where(Transaction.id == transaction_id).execute()
 
     def add_transaction_tag(self, transaction_id: int, tag_id: int) -> None:
         """Return add transaction tag."""

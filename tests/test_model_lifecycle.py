@@ -14,11 +14,22 @@ class _FakeDb:
         preferred_model: str = "",
         mode: str = "assistant",
         language: str = "es",
+        provider: str = "none",
+        model: str = "",
+        base_url: str = "http://localhost:1234/v1",
+        ack: str = "0",
+        ack_host: str = "",
     ) -> None:
+        self.path = Path("/tmp/mira-lifecycle.db")
         self._settings = {
             "preferred_model": preferred_model,
             "llm_interaction_mode": mode,
             "language": language,
+            "llm_provider": provider,
+            "llm_model": model,
+            "llm_base_url": base_url,
+            "llm_third_party_ack": ack,
+            "llm_ack_host": ack_host,
         }
         self.setting = self._SettingFacade(self)
 
@@ -40,76 +51,44 @@ class _FakePipeline:
         self.llm_ready = llm_ready
         self.reload_calls: list[str | None] = []
 
-    def reload_engine(self, model_path: str | None) -> None:
+    def reload_engine(self, model_path: str | None = None) -> None:
         self.reload_calls.append(model_path)
 
 
-def test_model_lifecycle_uses_selected_model_when_found(monkeypatch, tmp_path: Path) -> None:
+def test_model_lifecycle_uses_local_provider_when_configured() -> None:
     module = importlib.import_module("mira.services.model_lifecycle")
-    selected_path = tmp_path / "selected.gguf"
-    selected_path.write_text("x", encoding="utf-8")
-    monkeypatch.setattr(module, "find_model_path_by_name", lambda _name: selected_path)
-
-    db = _FakeDb(preferred_model="selected.gguf")
-    pipeline = _FakePipeline(llm_ready=True, chat_engine=type("ChatEngine", (), {})())
+    db = _FakeDb(provider="openai_compatible", model="local-model", base_url="http://127.0.0.1:1234/v1")
+    pipeline = _FakePipeline(llm_ready=True, chat_engine=type("RemoteChatEngine", (), {})())
     lifecycle = module.ModelLifecycle(db, pipeline)
 
     state = lifecycle.reload_selected_model(None, "assistant")
 
-    assert pipeline.reload_calls == [str(selected_path)]
-    assert state.active_model_name == "selected.gguf"
-    assert state.active_model_path == str(selected_path)
-    assert state.engine_info == "ParserEngine + ChatEngine (selected.gguf)"
+    assert pipeline.reload_calls == [None]
+    assert state.active_model_name == "local-model"
     assert state.mode_visible is True
-    assert state.status_message == "Cargando modelo LLM seleccionado: selected.gguf"
 
 
-def test_model_lifecycle_falls_back_to_runtime_model_when_selected_is_missing(
-    monkeypatch,
-) -> None:
+def test_model_lifecycle_ignores_cloud_provider_without_ack() -> None:
     module = importlib.import_module("mira.services.model_lifecycle")
-    monkeypatch.setattr(module, "find_model_path_by_name", lambda _name: None)
-
-    db = _FakeDb(preferred_model="missing.gguf")
-    pipeline = _FakePipeline(llm_ready=True, chat_engine=type("ChatEngine", (), {})())
-    lifecycle = module.ModelLifecycle(db, pipeline)
-
-    state = lifecycle.sync_engine_info("C:/runtime/model.gguf")
-
-    assert state.active_model_name == ""
-    assert state.active_model_path == "C:/runtime/model.gguf"
-    assert state.engine_info == "ParserEngine + ChatEngine (C:/runtime/model.gguf)"
-    assert state.status_message == "Usando modelo LLM definido por CLI."
-
-
-def test_model_lifecycle_forces_chat_mode_back_to_assistant_when_llm_is_unavailable(
-    monkeypatch,
-) -> None:
-    module = importlib.import_module("mira.services.model_lifecycle")
-    monkeypatch.setattr(module, "find_model_path_by_name", lambda _name: None)
-
-    db = _FakeDb(mode="chat")
+    db = _FakeDb(provider="anthropic", model="claude", mode="chat")
     pipeline = _FakePipeline(llm_ready=False)
     lifecycle = module.ModelLifecycle(db, pipeline)
 
     state = lifecycle.sync_engine_info(None)
 
-    assert state.engine_info == "ParserEngine"
     assert state.mode_visible is False
     assert state.forced_mode == "assistant"
-    assert state.mode_warning == "El modo chat requiere un modelo GGUF activo. Regresando a modo asistente."
     assert db.setting.get("llm_interaction_mode") == "assistant"
 
 
-def test_model_lifecycle_syncs_engine_info_without_selected_model(monkeypatch) -> None:
+def test_model_lifecycle_shows_chat_when_cloud_ack_matches_host() -> None:
     module = importlib.import_module("mira.services.model_lifecycle")
-    monkeypatch.setattr(module, "find_model_path_by_name", lambda _name: None)
-
-    db = _FakeDb(preferred_model="", language="en")
-    pipeline = _FakePipeline(llm_ready=True, chat_engine=type("ChatEngine", (), {})())
+    db = _FakeDb(provider="anthropic", model="claude", ack="1", ack_host="api.anthropic.com", language="en")
+    pipeline = _FakePipeline(llm_ready=True, chat_engine=type("RemoteChatEngine", (), {})())
     lifecycle = module.ModelLifecycle(db, pipeline)
 
     state = lifecycle.sync_engine_info(None)
 
-    assert state.engine_info == "ParserEngine + ChatEngine"
-    assert state.status_message is None
+    assert state.active_model_name == "claude"
+    assert state.mode_visible is True
+    assert state.forced_mode is None

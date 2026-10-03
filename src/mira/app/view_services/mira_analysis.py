@@ -16,7 +16,7 @@ from mira.app.view_services._common import (
     try_parse_waterfall_step_kind,
 )
 from mira.db.database import Database
-from mira.ui.i18n import tr
+from mira.i18n import tr
 
 
 @dataclass(frozen=True)

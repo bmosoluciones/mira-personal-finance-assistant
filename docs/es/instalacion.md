@@ -32,7 +32,7 @@ Artefactos publicados:
 ## Parámetros útiles
 
 - `--db PATH`: ruta personalizada de la base SQLite.
-- `--model PATH`: modelo GGUF opcional para modo chat.
+- `--model PATH`: obsoleto e ignorado (el chat se configura en Ajustes).
 - `--debug`: activa logging detallado.
 
 ## Notas importantes

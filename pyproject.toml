@@ -19,15 +19,18 @@ dependencies = [
     "openpyxl==3.1.5",
     "peewee==4.0.2",
     "pycparser==3.0",
-    "PySide6==6.10.2",
-    "qt-material==2.14",
     "segno==1.6.6",
     "zeroconf==0.148.0",
 ]
 
 [project.optional-dependencies]
-chat = [
-    "llama-cpp-python==0.2.0",
+gui = [
+    "PySide6==6.10.2",
+    "qt-material==2.14",
+]
+
+mcp = [
+    "mcp>=1.9.0",
 ]
 
 docs = [
@@ -37,6 +40,9 @@ docs = [
 ]
 
 dev = [
+    "PySide6==6.10.2",
+    "qt-material==2.14",
+    "mcp>=1.9.0",
     "build",
     "wheel",
     "openpyxl==3.1.5",

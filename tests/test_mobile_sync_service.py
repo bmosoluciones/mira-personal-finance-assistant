@@ -544,7 +544,7 @@ def test_mobile_sync_service_uses_standard_transaction_pipeline_for_mobile_creat
         calls.append(f"{tx['description']}:{source}")
         return None, None
 
-    monkeypatch.setattr(db._backend, "select_best_operation_message", _fake_select_best_operation_message)
+    monkeypatch.setattr(db, "select_best_operation_message", _fake_select_best_operation_message)
 
     service.push_transactions(
         token,

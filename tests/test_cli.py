@@ -191,16 +191,16 @@ def test_seed_demo_data_replaces_previous_seed_artifacts_without_duplicate_budge
 ) -> None:
     db = _database_from_template(seed_ready_en_snapshot, tmp_path / "repeatable.db")
     try:
-        original_add_transaction = db._backend.add_transaction
+        original_add_transaction = db.add_transaction
         fake_tx_ids = count(10_000)
 
         def _fast_add_transaction(**_: Any) -> dict[str, Any]:
             return {"id": next(fake_tx_ids)}
 
-        monkeypatch.setattr(db._backend, "add_transaction", _fast_add_transaction)
-        monkeypatch.setattr(db._backend, "upsert_budget_amount", lambda *args, **kwargs: None)
-        monkeypatch.setattr(db._backend, "add_transaction_tag", lambda *args, **kwargs: None)
-        monkeypatch.setattr(db._backend, "transfer_between_accounts", lambda *args, **kwargs: None)
+        monkeypatch.setattr(db, "add_transaction", _fast_add_transaction)
+        monkeypatch.setattr(db, "upsert_budget_amount", lambda *args, **kwargs: None)
+        monkeypatch.setattr(db, "add_transaction_tag", lambda *args, **kwargs: None)
+        monkeypatch.setattr(db, "transfer_between_accounts", lambda *args, **kwargs: None)
 
         first = db.setting.seed_demo_data(reference_date=date(2026, 1, 5))
 
@@ -278,7 +278,10 @@ def test_cli_seed_command_reports_completion_summary(
             "tag_links_created": 456,
         }
 
-    monkeypatch.setattr("mira.db.database.SettingFacade.seed_demo_data", _fake_seed_demo_data)
+    monkeypatch.setattr(
+        "mira.db.repositories.setting_repository.SettingRepository.seed_demo_data",
+        _fake_seed_demo_data,
+    )
 
     exit_code = cli_module.main(["--db", str(db_path), "seed"])
 
@@ -535,20 +538,20 @@ def test_cli_check_reports_success(monkeypatch: pytest.MonkeyPatch, capsys: pyte
     captured = capsys.readouterr()
 
     assert exit_code == 0
-    assert "Check OK: all required modules imported correctly." in captured.out
+    assert "Check OK: headless modules imported correctly." in captured.out
     assert captured.err == ""
 
 
-def test_cli_check_reports_qt_opengl_failures(
+def test_cli_check_reports_headless_import_failures(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    failing_modules = {"PySide6.QtWidgets", "PySide6.QtCharts"}
+    failing_modules = {"peewee"}
     original_import = cli_module.importlib.import_module
 
     def _fake_import(name: str) -> Any:
         if name in failing_modules:
-            raise ImportError(f"{name} missing graphics backend")
+            raise ImportError(f"{name} missing")
         return original_import("sys")
 
     monkeypatch.setattr(cli_module.importlib, "import_module", _fake_import)
@@ -557,5 +560,4 @@ def test_cli_check_reports_qt_opengl_failures(
     captured = capsys.readouterr()
 
     assert exit_code == 1
-    assert "OpenGL/Qt import failed" in captured.err
-    assert "verify graphics dependencies" in captured.err
+    assert "Check FAIL: cannot import peewee" in captured.err

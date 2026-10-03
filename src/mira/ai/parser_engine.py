@@ -30,7 +30,7 @@ from typing import Any
 from mira.ai.base_engine import BaseEngine
 from mira.ai.parser_signals import ParseSignals, collect_signals, resolve_intent
 from mira.ai.prompt_assets import PromptAssets
-from mira.ui.i18n import tr
+from mira.i18n import tr
 
 # ---------------------------------------------------------------------------
 # Amount / currency helpers
@@ -757,8 +757,8 @@ class TransactionParserEngine(BaseEngine):
     def chat(self, user_input: str) -> str:
         """Return chat."""
         return (
-            "El modo chat con LLM no está disponible porque no hay un modelo GGUF activo. "
-            "Selecciona un modelo en Configuración para habilitarlo."
+            "El modo chat con LLM no está disponible porque no hay un proveedor configurado. "
+            "Configura un proveedor en Ajustes para habilitarlo."
         )
 
     def set_default_currency(self, currency: str | None) -> None:

@@ -48,7 +48,7 @@ plugins:
             MIRA Analysis: Analisis MIRA
             Natural Language: Lenguaje Natural
             Import, Export and Backup: Importacion, Exportacion y Respaldo
-            Optional Local AI: IA Local Opcional
+            Optional AI Chat: IA Chat Opcional
             Troubleshooting: Solucion de Problemas
             FAQ: Preguntas Frecuentes
             Appendices: Anexos
@@ -88,7 +88,7 @@ nav:
   - MIRA Analysis: mira_analysis.md
   - Natural Language: natural_language.md
   - Import, Export and Backup: import_export_backup.md
-  - Optional Local AI: optional_local_ai.md
+  - Optional AI Chat: optional_local_ai.md
   - Troubleshooting: troubleshooting.md
   - FAQ: faq.md
   - Appendices:

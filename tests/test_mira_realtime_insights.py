@@ -165,7 +165,7 @@ def test_achievement_counter_and_month_savings_use_orm_without_legacy_cursor_con
         category=str(savings["name"]),
         tx_date="2026-03-11",
     )
-    assert not hasattr(db._backend, "_cursor")
+    assert not hasattr(db, "_cursor")
 
     previous, current = db.feedback.increment_achievement_counter("nl_transactions", step=2)
     assert (previous, current) == (0, 2)
@@ -284,7 +284,7 @@ def test_update_transaction_keeps_message_events_as_historical_records_without_l
     acc = db.account.get_or_create("General")
     salary, _food, _transport, _budget = _seed_budget_for_march_2026(db)
     db.feedback.increment_achievement_counter("mira_report_views", step=10)
-    assert not hasattr(db._backend, "_cursor")
+    assert not hasattr(db, "_cursor")
 
     tx = db.transaction.create(
         account_id=int(acc["id"]),

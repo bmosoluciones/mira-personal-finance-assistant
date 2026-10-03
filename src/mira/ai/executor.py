@@ -26,7 +26,7 @@ from mira.ai.executor_components import (
 from mira.db.database import Database
 from mira.db.helpers import fold_text
 from mira.db.money import Money
-from mira.ui.i18n import normalize_language, tr
+from mira.i18n import normalize_language, tr
 
 # ---------------------------------------------------------------------------
 # Category matching constants
