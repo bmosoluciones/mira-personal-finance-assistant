@@ -32,6 +32,7 @@ Revisión rápida:
 1. Confirma proveedor, URL base y modelo en `Ajustes`.
 2. Confirma que la API key se guardó y que aceptaste el aviso a terceros si el endpoint no es local.
 3. Revisa logs con `--debug`.
+
 ## Error al importar CSV
 
 Causas típicas:

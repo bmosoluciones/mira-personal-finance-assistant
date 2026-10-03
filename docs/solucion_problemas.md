@@ -32,6 +32,7 @@ Quick review:
 1. Confirm the provider, base URL and model are set in `Settings`.
 2. Confirm the API key was saved and the third-party notice was accepted when the endpoint is not local.
 3. Review logs with `--debug`.
+
 ## CSV import fails
 
 Typical causes:
