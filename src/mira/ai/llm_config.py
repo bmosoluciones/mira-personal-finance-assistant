@@ -56,9 +56,14 @@ class LlmConfig:
 
 def endpoint_host(config: LlmConfig) -> str:
     """Return the host that must be acknowledged before chat leaves the machine."""
-    if config.provider == "anthropic":
+    return endpoint_host_for(config.provider, config.base_url)
+
+
+def endpoint_host_for(provider: str, base_url: str) -> str:
+    """Return the host chat requests reach for a provider and base URL."""
+    if str(provider or "").strip().lower() == "anthropic":
         return "api.anthropic.com"
-    return url_host(config.base_url)
+    return url_host(base_url)
 
 
 def url_host(url: str) -> str:
@@ -67,9 +72,14 @@ def url_host(url: str) -> str:
     return (parsed.hostname or "").strip().lower()
 
 
+def is_loopback_host(host: str) -> bool:
+    """Return whether a bare hostname stays on this machine."""
+    return str(host or "").strip().lower() in _LOOPBACK_HOSTS
+
+
 def is_loopback_url(url: str) -> bool:
     """Return whether the endpoint stays on this machine."""
-    return url_host(url) in _LOOPBACK_HOSTS
+    return is_loopback_host(url_host(url))
 
 
 def secrets_path_for(db_path: Path) -> Path:

@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mira.ai.llm_config import url_host
+from mira.ai.llm_config import endpoint_host_for, is_loopback_host
 from mira.app.view_services import SettingsViewService, SettingsViewState
 from mira.db.database import CURRENCY_CODES, Database
 from mira.ui.i18n import SUPPORTED_LANGUAGES, normalize_language, tr
@@ -33,8 +33,6 @@ from mira.ui.views._shared import (
     _COMBO_STYLE,
     _section_title,
 )
-
-_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
 class SettingsView(QWidget):
@@ -338,7 +336,7 @@ class SettingsView(QWidget):
         is_configured = host != ""
         self._base_url_input.setVisible(is_openai)
         self._base_url_label.setVisible(is_openai)
-        needs_ack = bool(host) and host not in _LOOPBACK_HOSTS
+        needs_ack = bool(host) and not is_loopback_host(host)
         self._ack_check.setVisible(needs_ack)
         if needs_ack:
             self._ack_check.setText(
@@ -359,12 +357,10 @@ class SettingsView(QWidget):
 
     def _current_host(self) -> str:
         """Return the host chat requests would reach with the current form values."""
-        provider = self._provider_combo.currentData()
-        if provider == "anthropic":
-            return "api.anthropic.com"
-        if provider == "openai_compatible":
-            return url_host(self._base_url_input.text().strip())
-        return ""
+        return endpoint_host_for(
+            str(self._provider_combo.currentData() or "none"),
+            self._base_url_input.text().strip(),
+        )
 
     def _forget_api_key(self) -> None:
         """Delete the stored API key and clear the field."""
@@ -427,7 +423,7 @@ class SettingsView(QWidget):
 
         current = self._service.load_state()
         host = self._current_host()
-        needs_ack = bool(host) and host not in _LOOPBACK_HOSTS
+        needs_ack = bool(host) and not is_loopback_host(host)
         if needs_ack and not (current.llm_third_party_ack and current.llm_ack_host == host) and not ack:
             if self._confirm_third_party(host):
                 ack = True

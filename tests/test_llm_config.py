@@ -14,6 +14,8 @@ from mira.ai.llm_config import (
     LlmConfig,
     clear_api_key,
     endpoint_host,
+    endpoint_host_for,
+    is_loopback_host,
     is_loopback_url,
     load_llm_config,
     mcp_enabled,
@@ -201,3 +203,19 @@ def test_clear_api_key_removes_the_sidecar_and_is_idempotent(tmp_path: Path) -> 
     assert read_api_key(db_path) == ""
     clear_api_key(db_path)
     assert read_api_key(db_path) == ""
+
+
+def test_endpoint_host_for_matches_endpoint_host(db: Database) -> None:
+    assert endpoint_host_for("anthropic", "") == endpoint_host(_config(provider="anthropic")) == "api.anthropic.com"
+    assert endpoint_host_for("openai_compatible", "http://127.0.0.1:11434/v1") == "127.0.0.1"
+    assert endpoint_host_for("none", "") == ""
+
+
+def test_is_loopback_host_accepts_bare_hosts_only() -> None:
+    assert is_loopback_host("localhost") is True
+    assert is_loopback_host("LOCALHOST") is True
+    assert is_loopback_host("127.0.0.1") is True
+    assert is_loopback_host("::1") is True
+    assert is_loopback_host("api.openai.com") is False
+    assert is_loopback_host("localhost.evil.com") is False
+    assert is_loopback_host("") is False
