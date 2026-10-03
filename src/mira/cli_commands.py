@@ -58,8 +58,13 @@ def _action(kind: str, amount: str, account: str, description: str | None, categ
     }
 
 
+_MOVEMENT_KINDS = ("add_income", "add_expense")
+
+
 def add_movement(db: Database, *, kind: str, amount: str, account: str, description: str | None, category: str | None, tx_date: str | None, note: str | None) -> dict[str, Any]:
     """Record an income or expense through the local executor."""
+    if kind not in _MOVEMENT_KINDS:
+        raise ValueError(f"Unsupported movement kind: {kind}")
     _require_known_account(db, account)
     result = Executor(db).execute(_action(kind, amount, account, description, category, tx_date, note))
     if not result.success:

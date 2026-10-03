@@ -101,7 +101,10 @@ def _read_message() -> dict[str, Any] | None:
         except (UnicodeDecodeError, json.JSONDecodeError):
             logger.debug("Ignored a malformed MCP message from stdin.")
             continue
-        return payload if isinstance(payload, dict) else None
+        if not isinstance(payload, dict):
+            logger.debug("Ignored an MCP message that is not a JSON-RPC object.")
+            continue
+        return payload
 
 
 def _write_message(payload: dict[str, Any]) -> None:
