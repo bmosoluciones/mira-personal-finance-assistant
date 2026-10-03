@@ -1038,6 +1038,58 @@ class TestTags:
         with pytest.raises(DuplicateTagNameError):
             db.tag.update(int(variable["id"]), "Monthly", "#654321")
 
+    def test_set_transaction_tags_records_the_editing_device(self, db):
+        account = db.account.get_or_create("Tagged")
+        tx = db.transaction.create(
+            account_id=int(account["id"]),
+            tx_type="expense",
+            amount=10.0,
+            description="Tagged tx",
+        )
+        tag = db.tag.create("Needs review", color="#112233")
+
+        db.tag.set_for_transaction(int(tx["id"]), [int(tag["id"])], device_id="device-a")
+
+        stored = db.transaction.get(int(tx["id"]))
+        assert stored["last_modified_by_device_id"] == "device-a"
+        assert [row["id"] for row in db.tag.list_for_transaction(int(tx["id"]))] == [int(tag["id"])]
+
+    def test_set_transaction_tags_can_leave_the_sync_marker_alone(self, db):
+        account = db.account.get_or_create("Tagged")
+        tx = db.transaction.create(
+            account_id=int(account["id"]),
+            tx_type="expense",
+            amount=10.0,
+            description="Tagged tx",
+        )
+        tag = db.tag.create("Needs review", color="#112233")
+        before = db.transaction.get(int(tx["id"]))["last_modified_by_device_id"]
+
+        db.tag.set_for_transaction(
+            int(tx["id"]),
+            [int(tag["id"])],
+            device_id="device-a",
+            touch_sync=False,
+        )
+
+        stored = db.transaction.get(int(tx["id"]))
+        assert stored["last_modified_by_device_id"] == before
+        assert [row["id"] for row in db.tag.list_for_transaction(int(tx["id"]))] == [int(tag["id"])]
+
+    def test_set_transaction_tags_without_a_device_still_assigns_tags(self, db):
+        account = db.account.get_or_create("Tagged")
+        tx = db.transaction.create(
+            account_id=int(account["id"]),
+            tx_type="expense",
+            amount=10.0,
+            description="Tagged tx",
+        )
+        tag = db.tag.create("Needs review", color="#112233")
+
+        db.tag.set_for_transaction(int(tx["id"]), [int(tag["id"])])
+
+        assert [row["id"] for row in db.tag.list_for_transaction(int(tx["id"]))] == [int(tag["id"])]
+
 
 # ---------------------------------------------------------------------------
 # Summary

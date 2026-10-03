@@ -6,10 +6,25 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 
 ## [Unreleased]
 
+### Added
+
+- Optional MCP stdio server (`mira-cli mcp`) exposing five finance tools over newline-delimited JSON-RPC: `add_income`, `add_expense`, `transfer`, `list_transactions` and `report`. It stays disabled until the third-party warning is accepted, and refuses to write anything before that.
+
 ### Changed
 
+- The embedded llama.cpp/GGUF runtime is gone. Chat now talks to remote HTTP endpoints (OpenAI-compatible or Anthropic) configured in Settings; the model download and model lifecycle UI has been removed with it.
+- `mira-cli` gained real commands: `record`, `report`, `transactions list`, `income add`, `expense add` and `transfer`.
+- Tag edits now mark the editing device. `set_transaction_tags()` used to accept `device_id` and silently drop it, so changing a transaction's tags from the desktop did not propagate through mobile sync; it now updates `last_modified_by_device_id` and `updated_at`. Callers that must not trigger a sync (the mobile sync service itself) pass `touch_sync=False`.
+- PySide6 and qt-material moved to the `gui` extra: the database, AI and CLI layers install without Qt.
 - Updated coverage configuration to include `src/mira/ui` so future UI module refactors can be measured by unit tests.
 - Budget editor and monthly budget tracking now keep the category column constrained to a responsive share of the table width, budget cell edits update visible totals without recalculating the full matrix on each keystroke, and both real-vs-budget and monthly tracking expose a `Sin Categoria` row for uncategorized transactions.
+
+### Fixed
+
+- The MCP stdio server now speaks newline-delimited JSON-RPC instead of LSP-style `Content-Length` framing, which a real MCP client rejected.
+- `mira-cli income add` / `expense add` no longer fall back to the default account when the account you named does not exist; they report `Account not found` and exit 2 without recording anything.
+- `llm-secrets.json` is created already readable only by its owner (previously it existed briefly with the default umask before being chmod-ed), and the stored API key can now be deleted from Settings.
+- Chat failures report what actually went wrong (HTTP status, unreachable endpoint, empty response) instead of always claiming that no AI provider is configured.
 
 ## [0.0.1] - 2026-08-24
 
