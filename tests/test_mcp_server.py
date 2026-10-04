@@ -127,6 +127,8 @@ def test_unknown_method_returns_method_not_found_error(monkeypatch: pytest.Monke
 def test_tool_failure_is_reported_as_is_error_not_a_protocol_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(mcp_server, "_mcp_consent_enabled", lambda _db_path: True)
+
     def _boom(_db_path: str, _name: str, _arguments: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("Account not found: Nope")
 
@@ -142,6 +144,8 @@ def test_tool_failure_is_reported_as_is_error_not_a_protocol_error(
 
 
 def test_closed_client_pipe_ends_the_loop_cleanly(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(mcp_server, "_mcp_consent_enabled", lambda _db_path: True)
+
     def _broken(_db_path: str, _name: str, _arguments: dict[str, Any]) -> dict[str, Any]:
         raise OSError("Broken pipe")
 
@@ -152,6 +156,29 @@ def test_closed_client_pipe_ends_the_loop_cleanly(monkeypatch: pytest.MonkeyPatc
 
     assert exit_code == 0
     assert replies[0]["result"]["isError"] is True
+
+
+def test_active_session_rejects_tools_after_consent_is_revoked(monkeypatch: pytest.MonkeyPatch) -> None:
+    consent_states = iter((True, False))
+    executed_tools: list[str] = []
+    monkeypatch.setattr(mcp_server, "_mcp_consent_enabled", lambda _db_path: next(consent_states))
+    monkeypatch.setattr(
+        mcp_server,
+        "_call_tool",
+        lambda _db_path, name, _arguments: executed_tools.append(name) or {"content": []},
+    )
+    payload = _encode(_request("tools/call", message_id=1, params={"name": "report", "arguments": {}}))
+    payload += _encode(_request("tools/call", message_id=2, params={"name": "add_expense", "arguments": {}}))
+
+    exit_code, replies = _serve(payload, monkeypatch)
+
+    assert exit_code == 0
+    assert executed_tools == ["report"]
+    assert replies[0]["id"] == 1
+    assert replies[0]["result"] == {"content": []}
+    assert replies[1]["id"] == 2
+    assert replies[1]["result"]["isError"] is True
+    assert "revoked" in replies[1]["result"]["content"][0]["text"]
 
 
 def test_eof_without_any_request_returns_zero(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -186,6 +213,7 @@ def test_cli_argv_maps_each_tool_to_the_matching_command() -> None:
     assert listing[-6:] == ["transactions", "list", "--limit", "7", "--account", "Cash"]
     assert mcp_server._cli_argv(db_path, "report", {})[-1] == "report"
     assert mcp_server._cli_argv(db_path, "list_transactions", {}).count("--limit") == 1
+    assert "--require-mcp-consent" in listing
 
 
 def test_cli_argv_rejects_an_unknown_tool() -> None:
@@ -220,6 +248,7 @@ def test_date_filters_are_built_once_per_tool() -> None:
 def test_call_tool_returns_the_cli_json_as_text_content(monkeypatch: pytest.MonkeyPatch) -> None:
     def _fake_run(argv: list[str], **_kwargs: Any) -> Any:
         assert "--json" in argv
+        assert "--require-mcp-consent" in argv
         return type("Completed", (), {"returncode": 0, "stdout": '{"ok": true}', "stderr": ""})()
 
     monkeypatch.setattr(mcp_server.subprocess, "run", _fake_run)

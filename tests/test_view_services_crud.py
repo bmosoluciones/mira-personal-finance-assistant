@@ -169,6 +169,28 @@ def test_settings_view_service_save_roundtrip(db: Database) -> None:
     assert service.load_state() == saved
 
 
+def test_settings_view_service_rejects_remote_http_before_persisting(db: Database) -> None:
+    service = SettingsViewService(db)
+    db.setting.set("username", "Alex")
+
+    with pytest.raises(ValueError, match="must use HTTPS"):
+        service.save(
+            username="Bianca",
+            language="es",
+            theme="light_blue.xml",
+            default_currency="USD",
+            thousands_sep=",",
+            decimal_sep=".",
+            interaction_mode="chat",
+            llm_provider="openai_compatible",
+            llm_base_url="http://api.example.com/v1",
+            llm_model="remote-model",
+        )
+
+    assert db.setting.get("username") == "Alex"
+    assert db.setting.get("llm_provider") == "none"
+
+
 def test_settings_view_service_save_rejects_equal_separators_without_persisting(db: Database) -> None:
     service = SettingsViewService(db)
     db.setting.set("username", "Alex")

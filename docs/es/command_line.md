@@ -73,6 +73,11 @@ Hacen falta los dos ajustes (`mcp_enabled` y `mcp_third_party_ack`). Hasta
 entonces `mira-cli mcp` termina con estado `2` y explica por qué. Nada más de la
 CLI se ve afectado.
 
+El consentimiento se comprueba antes de cada llamada a una herramienta. Si
+desactivas MCP o revocas el aviso mientras un cliente está conectado, se
+rechazará su siguiente lectura o escritura. Para volver a usar las herramientas,
+activa MCP otra vez y reinicia el proceso del cliente.
+
 ### Cómo ejecutarlo
 
 ```bash

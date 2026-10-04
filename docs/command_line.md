@@ -73,6 +73,10 @@ Both settings (`mcp_enabled` and `mcp_third_party_ack`) must be set. Until
 then `mira-cli mcp` exits with status `2` and prints why. Nothing else in the
 CLI is affected.
 
+Consent is checked again before every tool call. If you disable MCP or revoke
+the notice while a client is connected, its next read or write request is
+rejected. Re-enable MCP and restart the client process to use the tools again.
+
 ### Running it
 
 ```bash

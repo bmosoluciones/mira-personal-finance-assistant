@@ -11,7 +11,7 @@ from typing import Any
 from urllib import error, request
 
 from mira.ai.base_engine import BaseEngine
-from mira.ai.llm_config import LlmConfig
+from mira.ai.llm_config import LlmConfig, endpoint_transport_allowed
 from mira.ai.schema_contract import build_chat_system_prompt
 
 logger = logging.getLogger(__name__)
@@ -65,6 +65,10 @@ class RemoteChatEngine(BaseEngine):
 
     def _openai_chat(self, system_prompt: str, user_input: str) -> str:
         """Return a completion from an OpenAI-compatible endpoint."""
+        if not endpoint_transport_allowed(self._config.provider, self._config.base_url):
+            raise RuntimeError(
+                "Remote chat requires HTTPS for non-local endpoints; HTTP is allowed only for loopback endpoints"
+            )
         base = self._config.base_url.rstrip("/")
         url = base if base.endswith("/chat/completions") else f"{base}/chat/completions"
         payload: dict[str, Any] = {

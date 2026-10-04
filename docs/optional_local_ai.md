@@ -28,6 +28,10 @@ That always remains the job of `TransactionParserEngine`.
 3. Accept the third-party notice when the endpoint is not local.
 4. Switch the interaction mode to `Chat`.
 
+Remote OpenAI-compatible endpoints must use HTTPS so chat text and API keys are
+encrypted in transit. Plain HTTP is allowed only for loopback endpoints such as
+`localhost`. Anthropic uses its fixed HTTPS endpoint.
+
 Chat requests are only sent when you use chat mode. The API key is stored next
 to the database in `llm-secrets.json` with `0600` permissions and is never part
 of a backup.

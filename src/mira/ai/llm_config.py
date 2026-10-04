@@ -49,6 +49,8 @@ class LlmConfig:
         """Return whether chat mode may run with the current consent."""
         if not self.enabled:
             return False
+        if not endpoint_transport_allowed(self.provider, self.base_url):
+            return False
         if not self.shares_with_third_party:
             return True
         return self.third_party_ack and self.ack_host == endpoint_host(self)
@@ -80,6 +82,24 @@ def is_loopback_host(host: str) -> bool:
 def is_loopback_url(url: str) -> bool:
     """Return whether the endpoint stays on this machine."""
     return is_loopback_host(url_host(url))
+
+
+def endpoint_transport_allowed(provider: str, base_url: str) -> bool:
+    """Require TLS for non-local OpenAI-compatible endpoints."""
+    normalized_provider = str(provider or "").strip().lower()
+    if normalized_provider == "anthropic":
+        return True  # The Anthropic endpoint is fixed to HTTPS.
+    if normalized_provider != "openai_compatible":
+        return False
+    try:
+        parsed = urlparse(base_url)
+        scheme = parsed.scheme.lower()
+        host = (parsed.hostname or "").strip().lower()
+    except ValueError:
+        return False
+    if scheme not in {"http", "https"} or not host:
+        return False
+    return scheme == "https" or is_loopback_host(host)
 
 
 def secrets_path_for(db_path: Path) -> Path:

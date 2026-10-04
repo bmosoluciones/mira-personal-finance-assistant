@@ -561,3 +561,16 @@ def test_cli_check_reports_headless_import_failures(
 
     assert exit_code == 1
     assert "Check FAIL: cannot import peewee" in captured.err
+
+
+def test_cli_internal_mcp_guard_rejects_commands_without_consent(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    db_path = tmp_path / "mcp-guard.db"
+
+    exit_code = cli_module.main(["--db", str(db_path), "--json", "--require-mcp-consent", "report"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 2
+    assert "consent has been revoked" in captured.err

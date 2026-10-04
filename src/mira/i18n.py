@@ -580,6 +580,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "El libro mayor nunca se envía. ¿Aceptas?"
         ),
         "settings.ai.ack.declined": "El chat permanece desactivado hasta que aceptes el aviso de terceros.",
+        "settings.ai.https_required": (
+            "Usa HTTPS para endpoints remotos. HTTP solo se permite para endpoints de loopback."
+        ),
         "settings.mcp.note": (
             "El servidor MCP permite que aplicaciones externas lean y registren datos a través de mira-cli. "
             "Solo se ejecuta en esta máquina (stdio)."
@@ -1393,6 +1396,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "The ledger itself is never sent. Do you accept?"
         ),
         "settings.ai.ack.declined": "Chat stays disabled until you accept the third-party notice.",
+        "settings.ai.https_required": "Use HTTPS for remote endpoints. HTTP is allowed only for loopback endpoints.",
         "settings.mcp.note": (
             "The MCP server lets external applications read and record data through mira-cli. "
             "It runs only on this machine (stdio)."

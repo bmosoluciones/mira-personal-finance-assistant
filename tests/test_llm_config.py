@@ -15,6 +15,7 @@ from mira.ai.llm_config import (
     clear_api_key,
     endpoint_host,
     endpoint_host_for,
+    endpoint_transport_allowed,
     is_loopback_host,
     is_loopback_url,
     load_llm_config,
@@ -64,6 +65,15 @@ def test_is_loopback_url_only_accepts_local_hosts() -> None:
     assert is_loopback_url("http://192.168.1.10:1234/v1") is False
 
 
+def test_endpoint_transport_requires_https_unless_endpoint_is_loopback() -> None:
+    assert endpoint_transport_allowed("openai_compatible", "http://localhost:1234/v1") is True
+    assert endpoint_transport_allowed("openai_compatible", "http://[::1]:1234/v1") is True
+    assert endpoint_transport_allowed("openai_compatible", "http://api.example.com/v1") is False
+    assert endpoint_transport_allowed("openai_compatible", "https://api.example.com/v1") is True
+    assert endpoint_transport_allowed("openai_compatible", "api.example.com/v1") is False
+    assert endpoint_transport_allowed("anthropic", "") is True
+
+
 def test_endpoint_host_returns_anthropic_host_for_anthropic_provider() -> None:
     assert endpoint_host(_config(provider="anthropic")) == "api.anthropic.com"
     assert endpoint_host(_config(base_url="https://api.openai.com/v1")) == "api.openai.com"
@@ -84,6 +94,13 @@ def test_chat_allowed_matrix() -> None:
         ack_host="api.openai.com",
     )
     assert acknowledged.chat_allowed is True
+
+    insecure_cloud = _config(
+        base_url="http://api.openai.com/v1",
+        third_party_ack=True,
+        ack_host="api.openai.com",
+    )
+    assert insecure_cloud.chat_allowed is False
 
     stale = _config(
         base_url="https://api.openai.com/v1",

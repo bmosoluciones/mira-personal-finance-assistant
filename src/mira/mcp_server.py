@@ -16,6 +16,9 @@ import subprocess
 import sys
 from typing import Any
 
+from mira.ai.llm_config import mcp_enabled
+from mira.db.database import Database
+
 logger = logging.getLogger(__name__)
 
 _TOOLS = (
@@ -115,7 +118,15 @@ def _write_message(payload: dict[str, Any]) -> None:
 
 def _cli_argv(db_path: str, tool: str, arguments: dict[str, Any]) -> list[str]:
     """Map an MCP tool call to a mira-cli command."""
-    base = [sys.executable, "-m", "mira.cli", "--db", db_path, "--json"]
+    base = [
+        sys.executable,
+        "-m",
+        "mira.cli",
+        "--db",
+        db_path,
+        "--json",
+        "--require-mcp-consent",
+    ]
     if tool == "add_income":
         return [*base, "income", "add", "--amount", str(arguments["amount"]), "--account", str(arguments["account"])]
     if tool == "add_expense":
@@ -151,6 +162,19 @@ def _optional_flags(argv: list[str], arguments: dict[str, Any]) -> list[str]:
         if arguments.get(key):
             argv.extend([flag, str(arguments[key])])
     return argv
+
+
+def _mcp_consent_enabled(db_path: str) -> bool:
+    """Re-read MCP consent from the database before exposing finance tools."""
+    db = Database(path=db_path)
+    try:
+        db.connect()
+        try:
+            return mcp_enabled(db)
+        finally:
+            db.close()
+    except Exception as exc:
+        raise RuntimeError(f"Unable to verify MCP consent: {exc}") from exc
 
 
 def _call_tool(db_path: str, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -202,6 +226,8 @@ def serve_stdio(db_path: str) -> int:
             raw_arguments = params.get("arguments")
             arguments: dict[str, Any] = raw_arguments if isinstance(raw_arguments, dict) else {}
             try:
+                if not _mcp_consent_enabled(db_path):
+                    raise PermissionError("MCP is disabled or its consent has been revoked in Settings.")
                 result = _call_tool(db_path, name, arguments)
             except (KeyError, OSError, RuntimeError, TypeError, ValueError) as exc:
                 _write_message(

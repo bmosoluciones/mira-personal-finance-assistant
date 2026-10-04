@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mira.ai.llm_config import endpoint_host_for, is_loopback_host
+from mira.ai.llm_config import endpoint_host_for, endpoint_transport_allowed, is_loopback_host
 from mira.app.view_services import SettingsViewService, SettingsViewState
 from mira.db.database import CURRENCY_CODES, Database
 from mira.i18n import SUPPORTED_LANGUAGES, normalize_language, tr
@@ -420,6 +420,22 @@ class SettingsView(QWidget):
         ack = self._ack_check.isChecked()
         mcp_on = self._mcp_check.isChecked()
         mcp_ack = self._mcp_ack_check.isChecked()
+
+        if provider == "openai_compatible" and not endpoint_transport_allowed(
+            provider,
+            base_url or "http://localhost:1234/v1",
+        ):
+            show_user_message(
+                self,
+                tr("settings.title", language, default="Settings"),
+                tr(
+                    "settings.ai.https_required",
+                    language,
+                    default="Use HTTPS for remote endpoints. HTTP is allowed only for loopback endpoints.",
+                ),
+                level="warning",
+            )
+            return
 
         current = self._service.load_state()
         host = self._current_host()

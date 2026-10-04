@@ -25,6 +25,8 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 - `mira-cli income add` / `expense add` no longer fall back to the default account when the account you named does not exist; they report `Account not found` and exit 2 without recording anything.
 - `llm-secrets.json` is written to an owner-only temporary file and atomically replaced, so a new API key is never written into a sidecar with broader permissions; the stored key can also be deleted from Settings.
 - Chat failures report what actually went wrong (HTTP status, unreachable endpoint, empty response) instead of always claiming that no AI provider is configured.
+- MCP tool calls recheck consent before each operation, so disabling MCP revokes access for already connected clients.
+- OpenAI-compatible remote endpoints now require HTTPS; HTTP remains available for loopback endpoints used by local models.
 
 ## [0.0.1] - 2026-08-24
 

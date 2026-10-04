@@ -79,6 +79,33 @@ def test_settings_view_saves_loopback_provider_without_prompt(
         view.close()
 
 
+def test_settings_view_rejects_remote_http_endpoint_before_saving(
+    monkeypatch: pytest.MonkeyPatch,
+    db: Database,
+) -> None:
+    _get_qapplication_or_xfail(monkeypatch)
+    views_module = importlib.import_module("mira.ui.views.settings")
+    warnings: list[tuple[str, str, str]] = []
+    monkeypatch.setattr(
+        views_module,
+        "show_user_message",
+        lambda _widget, title, message, level="info": warnings.append((title, message, level)),
+    )
+    view = views_module.SettingsView(db)
+    try:
+        view._provider_combo.setCurrentIndex(view._provider_combo.findData("openai_compatible"))
+        view._base_url_input.setText("http://api.example.com/v1")
+        view._model_input.setText("remote-model")
+
+        view._save()
+
+        assert warnings and "HTTPS" in warnings[0][1]
+        assert warnings[0][2] == "warning"
+        assert db.setting.get("llm_provider") == "none"
+    finally:
+        view.close()
+
+
 def test_settings_view_disables_provider_when_remote_ack_declined(
     monkeypatch: pytest.MonkeyPatch, db: Database
 ) -> None:

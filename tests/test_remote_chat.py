@@ -130,6 +130,23 @@ def test_openai_compatible_chat_posts_prompt_and_user_text_only(monkeypatch: pyt
     assert body["messages"][1] == {"role": "user", "content": "como voy este mes?"}
 
 
+def test_remote_http_endpoint_is_rejected_before_sending_text_or_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recorder = _Recorder({"choices": [{"message": {"content": "never"}}]}, monkeypatch)
+    config = _config(
+        base_url="http://api.example.com/v1",
+        api_key="sk-secret",
+        third_party_ack=True,
+        ack_host="api.example.com",
+    )
+
+    with pytest.raises(RuntimeError, match="requires HTTPS"):
+        RemoteChatEngine(config).chat("private financial details")
+
+    assert recorder.requests == []
+
+
 def test_openai_compatible_chat_does_not_send_api_key_when_empty(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

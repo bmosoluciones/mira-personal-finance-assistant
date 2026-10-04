@@ -45,6 +45,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print machine-readable JSON.",
     )
+    parser.add_argument("--require-mcp-consent", action="store_true", help=argparse.SUPPRESS)
 
     subparsers = parser.add_subparsers(dest="command")
 
@@ -242,6 +243,13 @@ def main(argv: list[str] | None = None) -> int:
 
     db = _open_database(args.db)
     try:
+        if args.require_mcp_consent and not mcp_enabled(db):
+            print(
+                "MCP is disabled or its consent has been revoked. Enable it in Settings and accept the notice.",
+                file=sys.stderr,
+            )
+            return 2
+
         if args.command == "backup":
             backup_path = db.backup.create(Path(args.output_file))
             print(f"Backup created: {backup_path}")
