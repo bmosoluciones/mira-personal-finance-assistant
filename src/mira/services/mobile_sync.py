@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 _PAIRING_CODE_DIGITS = "0123456789"
 _PAIRING_TOKEN_MIN_LENGTH = 12
+_MOBILE_SYNC_PORT = 8443
 _SERVICE_TYPE = "_mira-mobile-sync._tcp.local."
 _SERVICE_NAME = "MIRA Mobile Sync"
 _PROFILE_SETTINGS_SYNC_VERSION_KEY = "mobile_profile_settings_sync_version"
@@ -1787,7 +1788,7 @@ class MobileSyncServer:
             pairing_state = self.service.start_pairing()
             local_addresses = tuple(_discover_local_addresses())
             if self._httpd is None:
-                httpd = ThreadingHTTPServer(("0.0.0.0", 0), _MobileSyncRequestHandler)
+                httpd = ThreadingHTTPServer(("0.0.0.0", _MOBILE_SYNC_PORT), _MobileSyncRequestHandler)
                 httpd.daemon_threads = True
                 httpd.sync_server = self  # type: ignore[attr-defined]
                 self._configure_tls(httpd, local_addresses)
