@@ -329,6 +329,7 @@ class MobileSyncService:
                 "protocol_version": self.protocol_version,
                 "pairing_required": True,
                 "pairing_active": True,
+                "pairing_code": pairing_state.pairing_code,
                 "pairing_expires_at": normalize_utc_iso(pairing_state.expires_at),
                 "master_data_updated_at": self._current_master_data_updated_at(),
                 "capabilities": _SYNC_CAPABILITIES,
