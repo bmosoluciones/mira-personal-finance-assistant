@@ -211,7 +211,7 @@ def serve_stdio(db_path: str) -> int:
         message_id = message.get("id")
         method_value = message.get("method")
         if message.get("jsonrpc") != "2.0" or not isinstance(method_value, str):
-            response = {"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request"}}
+            response: dict[str, Any] = {"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request"}}
             if isinstance(message_id, (str, int)) and not isinstance(message_id, bool):
                 response["id"] = message_id
             _write_message(response)
@@ -319,7 +319,7 @@ def serve_stdio(db_path: str) -> int:
             )
             continue
         if method == "tools/list":
-            result = {"tools": list(_TOOLS)}
+            result: dict[str, Any] = {"tools": list(_TOOLS)}
             if modern:
                 result.update({"ttlMs": 300000, "cacheScope": "private"})
                 _write_message(modern_result(result))
