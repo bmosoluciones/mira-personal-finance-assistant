@@ -16,10 +16,15 @@ import subprocess
 import sys
 from typing import Any
 
+from mira import __version__
 from mira.ai.llm_config import mcp_enabled
 from mira.db.database import Database
 
 logger = logging.getLogger(__name__)
+
+_PROTOCOL_VERSION = "2026-07-28"
+_SERVER_INFO = {"name": "mira", "version": __version__}
+_SERVER_INFO_META = {"io.modelcontextprotocol/serverInfo": _SERVER_INFO}
 
 _TOOLS = (
     {
@@ -102,11 +107,11 @@ def _read_message() -> dict[str, Any] | None:
         try:
             payload = json.loads(stripped.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
-            logger.debug("Ignored a malformed MCP message from stdin.")
-            continue
+            logger.debug("Received a malformed MCP message from stdin.")
+            return {"__mcp_parse_error__": True}
         if not isinstance(payload, dict):
-            logger.debug("Ignored an MCP message that is not a JSON-RPC object.")
-            continue
+            logger.debug("Received an MCP message that is not a JSON-RPC object.")
+            return {"__mcp_invalid_request__": True}
         return payload
 
 
@@ -192,15 +197,115 @@ def _call_tool(db_path: str, name: str, arguments: dict[str, Any]) -> dict[str, 
 
 def serve_stdio(db_path: str) -> int:
     """Serve MCP tools over stdio until the client closes the stream."""
+    legacy_initialized = False
     while True:
         message = _read_message()
         if message is None:
             return 0
-        method = str(message.get("method") or "")
+        if message.get("__mcp_parse_error__"):
+            _write_message({"jsonrpc": "2.0", "error": {"code": -32700, "message": "Parse error"}})
+            continue
+        if message.get("__mcp_invalid_request__"):
+            _write_message({"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request"}})
+            continue
         message_id = message.get("id")
+        method_value = message.get("method")
+        if message.get("jsonrpc") != "2.0" or not isinstance(method_value, str):
+            response = {"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request"}}
+            if isinstance(message_id, (str, int)) and not isinstance(message_id, bool):
+                response["id"] = message_id
+            _write_message(response)
+            continue
+        if "id" in message and (message_id is None or isinstance(message_id, bool) or not isinstance(message_id, (str, int))):
+            _write_message({"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request"}})
+            continue
+        method = method_value
         if method == "notifications/initialized" or message_id is None:
             continue
+        params = message.get("params")
+        params = params if isinstance(params, dict) else {}
+        has_request_meta = "_meta" in params
+        raw_request_meta = params.get("_meta")
+        request_meta = raw_request_meta if isinstance(raw_request_meta, dict) else {}
+        modern = has_request_meta
+
+        # 2026-07-28 is stateless: every request carries protocol metadata.
+        # Keep the initialize handshake below for clients on earlier revisions.
+        if modern:
+            requested_version = request_meta.get("io.modelcontextprotocol/protocolVersion")
+            client_capabilities = request_meta.get("io.modelcontextprotocol/clientCapabilities")
+            if not isinstance(requested_version, str) or not isinstance(client_capabilities, dict):
+                _write_message(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": message_id,
+                        "error": {
+                            "code": -32602,
+                            "message": "Invalid params: _meta must include protocolVersion and clientCapabilities.",
+                        },
+                    }
+                )
+                continue
+            if requested_version != _PROTOCOL_VERSION:
+                _write_message(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": message_id,
+                        "error": {
+                            "code": -32022,
+                            "message": "Unsupported protocol version",
+                            "data": {"supported": [_PROTOCOL_VERSION], "requested": requested_version},
+                        },
+                    }
+                )
+                continue
+
+            def modern_result(result: dict[str, Any]) -> dict[str, Any]:
+                result.setdefault("resultType", "complete")
+                result["_meta"] = {**result.get("_meta", {}), **_SERVER_INFO_META}
+                return {"jsonrpc": "2.0", "id": message_id, "result": result}
+
+            if method == "server/discover":
+                _write_message(
+                    modern_result(
+                        {
+                            "supportedVersions": [_PROTOCOL_VERSION],
+                            "capabilities": {"tools": {}},
+                            "ttlMs": 300000,
+                            "cacheScope": "private",
+                        }
+                    )
+                )
+                continue
+            if method == "initialize":
+                _write_message(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": message_id,
+                        "error": {
+                            "code": -32601,
+                            "message": "Method not found: initialize; use server/discover for supported protocol versions.",
+                            "data": {"supported": [_PROTOCOL_VERSION]},
+                        },
+                    }
+                )
+                continue
+            if method == "ping":
+                _write_message(
+                    {"jsonrpc": "2.0", "id": message_id, "error": {"code": -32601, "message": "Method not found: ping"}}
+                )
+                continue
+        elif method != "initialize" and not legacy_initialized:
+            _write_message(
+                {
+                    "jsonrpc": "2.0",
+                    "id": message_id,
+                    "error": {"code": -32602, "message": "Invalid params: request metadata is required."},
+                }
+            )
+            continue
         if method == "initialize":
+            legacy_initialized = True
             _write_message(
                 {
                     "jsonrpc": "2.0",
@@ -208,20 +313,23 @@ def serve_stdio(db_path: str) -> int:
                     "result": {
                         "protocolVersion": "2024-11-05",
                         "capabilities": {"tools": {}},
-                        "serverInfo": {"name": "mira", "version": "0.0.1"},
+                        "serverInfo": _SERVER_INFO,
                     },
                 }
             )
             continue
         if method == "tools/list":
-            _write_message({"jsonrpc": "2.0", "id": message_id, "result": {"tools": list(_TOOLS)}})
+            result = {"tools": list(_TOOLS)}
+            if modern:
+                result.update({"ttlMs": 300000, "cacheScope": "private"})
+                _write_message(modern_result(result))
+            else:
+                _write_message({"jsonrpc": "2.0", "id": message_id, "result": result})
             continue
         if method == "ping":
             _write_message({"jsonrpc": "2.0", "id": message_id, "result": {}})
             continue
         if method == "tools/call":
-            raw_params = message.get("params")
-            params: dict[str, Any] = raw_params if isinstance(raw_params, dict) else {}
             name = str(params.get("name") or "")
             raw_arguments = params.get("arguments")
             arguments: dict[str, Any] = raw_arguments if isinstance(raw_arguments, dict) else {}
@@ -230,15 +338,16 @@ def serve_stdio(db_path: str) -> int:
                     raise PermissionError("MCP is disabled or its consent has been revoked in Settings.")
                 result = _call_tool(db_path, name, arguments)
             except (KeyError, OSError, RuntimeError, TypeError, ValueError) as exc:
-                _write_message(
-                    {
-                        "jsonrpc": "2.0",
-                        "id": message_id,
-                        "result": {"content": [{"type": "text", "text": str(exc)}], "isError": True},
-                    }
-                )
+                error_result = {
+                    "content": [{"type": "text", "text": str(exc)}],
+                    "isError": True,
+                }
+                if modern:
+                    _write_message(modern_result(error_result))
+                else:
+                    _write_message({"jsonrpc": "2.0", "id": message_id, "result": error_result})
                 continue
-            _write_message({"jsonrpc": "2.0", "id": message_id, "result": result})
+            _write_message(modern_result(result) if modern else {"jsonrpc": "2.0", "id": message_id, "result": result})
             continue
         _write_message(
             {

@@ -50,6 +50,15 @@ def _request(method: str, message_id: Any = 1, params: dict[str, Any] | None = N
     return payload
 
 
+def _modern_request(method: str, message_id: Any = 1, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = _request(method, message_id, params or {})
+    payload["params"]["_meta"] = {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities": {},
+    }
+    return payload
+
+
 def _serve(payload: bytes, monkeypatch: pytest.MonkeyPatch, db_path: str = "/tmp/mira.db") -> tuple[int, list[dict[str, Any]]]:
     stdout = _FakeStdout()
     monkeypatch.setattr(mcp_server.sys, "stdin", _FakeStdin(payload))
@@ -70,9 +79,42 @@ def test_initialize_advertises_protocol_version_and_server_info(monkeypatch: pyt
     assert result["serverInfo"]["name"] == "mira"
 
 
+def test_modern_discovery_advertises_supported_protocol_and_tools(monkeypatch: pytest.MonkeyPatch) -> None:
+    _exit_code, replies = _serve(_encode(_modern_request("server/discover")), monkeypatch)
+
+    result = replies[0]["result"]
+    assert result["supportedVersions"] == ["2026-07-28"]
+    assert result["capabilities"] == {"tools": {}}
+    assert result["resultType"] == "complete"
+    assert result["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == "mira"
+
+
+def test_modern_requests_require_metadata_and_reject_unsupported_versions(monkeypatch: pytest.MonkeyPatch) -> None:
+    missing = _request("server/discover")
+    unsupported = _modern_request("server/discover")
+    unsupported["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] = "1900-01-01"
+    payload = _encode(missing) + _encode(unsupported)
+
+    _exit_code, replies = _serve(payload, monkeypatch)
+
+    assert replies[0]["error"]["code"] == -32602
+    assert replies[1]["error"]["code"] == -32022
+    assert replies[1]["error"]["data"]["supported"] == ["2026-07-28"]
+
+
+def test_modern_tools_list_has_result_type_and_cache_hints(monkeypatch: pytest.MonkeyPatch) -> None:
+    _exit_code, replies = _serve(_encode(_modern_request("tools/list")), monkeypatch)
+
+    result = replies[0]["result"]
+    assert result["resultType"] == "complete"
+    assert result["ttlMs"] > 0
+    assert result["cacheScope"] == "private"
+    assert len(result["tools"]) == 5
+
+
 def test_stdio_transport_is_newline_delimited_not_lsp_framed(monkeypatch: pytest.MonkeyPatch) -> None:
     stdout = _FakeStdout()
-    monkeypatch.setattr(mcp_server.sys, "stdin", _FakeStdin(_encode(_request("ping"))))
+    monkeypatch.setattr(mcp_server.sys, "stdin", _FakeStdin(_encode(_modern_request("server/discover"))))
     monkeypatch.setattr(mcp_server.sys, "stdout", stdout)
 
     mcp_server.serve_stdio("/tmp/mira.db")
@@ -84,14 +126,14 @@ def test_stdio_transport_is_newline_delimited_not_lsp_framed(monkeypatch: pytest
     assert len(stdout.lines) == 1
 
 
-def test_ping_is_answered_with_an_empty_result(monkeypatch: pytest.MonkeyPatch) -> None:
-    _exit_code, replies = _serve(_encode(_request("ping")), monkeypatch)
+def test_ping_is_removed_from_the_modern_protocol(monkeypatch: pytest.MonkeyPatch) -> None:
+    _exit_code, replies = _serve(_encode(_modern_request("ping")), monkeypatch)
 
-    assert replies == [{"jsonrpc": "2.0", "id": 1, "result": {}}]
+    assert replies[0]["error"]["code"] == -32601
 
 
 def test_tools_list_exposes_the_finance_tools(monkeypatch: pytest.MonkeyPatch) -> None:
-    _exit_code, replies = _serve(_encode(_request("tools/list")), monkeypatch)
+    _exit_code, replies = _serve(_encode(_modern_request("tools/list")), monkeypatch)
 
     names = [tool["name"] for tool in replies[0]["result"]["tools"]]
     assert names == ["add_income", "add_expense", "transfer", "list_transactions", "report"]
@@ -102,22 +144,23 @@ def test_tools_list_exposes_the_finance_tools(monkeypatch: pytest.MonkeyPatch) -
 
 def test_notifications_and_blank_lines_get_no_reply(monkeypatch: pytest.MonkeyPatch) -> None:
     payload = _encode({"jsonrpc": "2.0", "method": "notifications/initialized"}) + b"\n" + b"   \n"
-    exit_code, replies = _serve(payload + _encode(_request("ping")), monkeypatch)
+    exit_code, replies = _serve(payload + _encode(_modern_request("server/discover")), monkeypatch)
 
     assert exit_code == 0
-    assert replies == [{"jsonrpc": "2.0", "id": 1, "result": {}}]
+    assert replies[0]["result"]["supportedVersions"] == ["2026-07-28"]
 
 
-def test_malformed_line_is_skipped_instead_of_killing_the_loop(monkeypatch: pytest.MonkeyPatch) -> None:
-    payload = b"{not json at all}\n" + b"\xff\xfe invalid utf-8\n" + b'["a list is not a request"]\n' + _encode(_request("ping"))
+def test_malformed_and_non_object_messages_return_jsonrpc_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = b"{not json at all}\n" + b"\xff\xfe invalid utf-8\n" + b'["a list is not a request"]\n' + _encode(_modern_request("server/discover"))
     exit_code, replies = _serve(payload, monkeypatch)
 
     assert exit_code == 0
-    assert replies == [{"jsonrpc": "2.0", "id": 1, "result": {}}]
+    assert [reply["error"]["code"] for reply in replies[:3]] == [-32700, -32700, -32600]
+    assert replies[3]["result"]["supportedVersions"] == ["2026-07-28"]
 
 
 def test_unknown_method_returns_method_not_found_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    _exit_code, replies = _serve(_encode(_request("resources/list", message_id=7)), monkeypatch)
+    _exit_code, replies = _serve(_encode(_modern_request("resources/list", message_id=7)), monkeypatch)
 
     assert replies[0]["id"] == 7
     assert replies[0]["error"]["code"] == -32601
@@ -133,7 +176,7 @@ def test_tool_failure_is_reported_as_is_error_not_a_protocol_error(
         raise RuntimeError("Account not found: Nope")
 
     monkeypatch.setattr(mcp_server, "_call_tool", _boom)
-    payload = _encode(_request("tools/call", params={"name": "add_expense", "arguments": {"amount": "1", "account": "Nope"}}))
+    payload = _encode(_modern_request("tools/call", params={"name": "add_expense", "arguments": {"amount": "1", "account": "Nope"}}))
 
     exit_code, replies = _serve(payload, monkeypatch)
 
@@ -150,7 +193,7 @@ def test_closed_client_pipe_ends_the_loop_cleanly(monkeypatch: pytest.MonkeyPatc
         raise OSError("Broken pipe")
 
     monkeypatch.setattr(mcp_server, "_call_tool", _broken)
-    payload = _encode(_request("tools/call", params={"name": "report", "arguments": {}}))
+    payload = _encode(_modern_request("tools/call", params={"name": "report", "arguments": {}}))
 
     exit_code, replies = _serve(payload, monkeypatch)
 
@@ -167,15 +210,16 @@ def test_active_session_rejects_tools_after_consent_is_revoked(monkeypatch: pyte
         "_call_tool",
         lambda _db_path, name, _arguments: executed_tools.append(name) or {"content": []},
     )
-    payload = _encode(_request("tools/call", message_id=1, params={"name": "report", "arguments": {}}))
-    payload += _encode(_request("tools/call", message_id=2, params={"name": "add_expense", "arguments": {}}))
+    payload = _encode(_modern_request("tools/call", message_id=1, params={"name": "report", "arguments": {}}))
+    payload += _encode(_modern_request("tools/call", message_id=2, params={"name": "add_expense", "arguments": {}}))
 
     exit_code, replies = _serve(payload, monkeypatch)
 
     assert exit_code == 0
     assert executed_tools == ["report"]
     assert replies[0]["id"] == 1
-    assert replies[0]["result"] == {"content": []}
+    assert replies[0]["result"]["content"] == []
+    assert replies[0]["result"]["resultType"] == "complete"
     assert replies[1]["id"] == 2
     assert replies[1]["result"]["isError"] is True
     assert "revoked" in replies[1]["result"]["content"][0]["text"]

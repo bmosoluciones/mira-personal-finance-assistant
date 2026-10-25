@@ -86,6 +86,9 @@ mira-cli --db ~/finanzas.db mcp
 The process reads newline-delimited JSON-RPC from stdin and writes it to
 stdout, one message per line. Warnings and errors go to stderr, so the
 protocol channel stays clean. It runs until the client closes the stream.
+The server implements MCP `2026-07-28` over stdio, including stateless
+`server/discover` and per-request protocol metadata. It also accepts the
+legacy `initialize` handshake for older clients.
 
 Point an MCP client at the command, for example:
 

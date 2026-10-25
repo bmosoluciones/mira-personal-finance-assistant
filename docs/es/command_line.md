@@ -88,6 +88,9 @@ El proceso lee JSON-RPC delimitado por saltos de línea desde la entrada estánd
 y lo escribe en la salida estándar, un mensaje por línea. Los avisos y errores
 van a la salida de error, así que el canal del protocolo queda limpio. Sigue
 funcionando hasta que el cliente cierra el flujo.
+El servidor implementa MCP `2026-07-28` sobre stdio, incluido
+`server/discover` sin estado y los metadatos por solicitud. También acepta el
+handshake `initialize` para clientes antiguos.
 
 Apunta un cliente MCP al comando, por ejemplo:
 
