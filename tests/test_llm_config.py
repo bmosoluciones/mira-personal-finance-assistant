@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import stat
+import sys
 from pathlib import Path
 
 import pytest
@@ -121,6 +122,7 @@ def test_chat_allowed_matrix() -> None:
     assert anthropic_ack.chat_allowed is True
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="0600 mode-bit checks are Linux-specific")
 def test_write_api_key_stores_secret_beside_database_with_owner_only_permissions(
     tmp_path: Path,
 ) -> None:
@@ -188,6 +190,7 @@ def test_mcp_enabled_requires_both_flags(db: Database) -> None:
     assert mcp_enabled(db) is False
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="0600 mode-bit checks are Linux-specific")
 def test_write_api_key_creates_the_sidecar_private_from_the_start(tmp_path: Path) -> None:
     db_path = tmp_path / "mira.db"
 
@@ -198,6 +201,7 @@ def test_write_api_key_creates_the_sidecar_private_from_the_start(tmp_path: Path
     assert read_api_key(db_path) == "sk-secret"
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="0600 mode-bit checks are Linux-specific")
 def test_write_api_key_repairs_permissions_of_an_existing_file(tmp_path: Path) -> None:
     db_path = tmp_path / "mira.db"
     secret_path = secrets_path_for(db_path)
