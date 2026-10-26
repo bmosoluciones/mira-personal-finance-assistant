@@ -65,24 +65,24 @@ class DatabaseRuntime:
         _ActiveDatabaseGuard.acquire(self)
         if self._database is not None and not self._database.is_closed():
             return
-        target_version = db_migrations.get_current_schema_version()
-        inspection = inspect_database_schema_details(
-            self.path,
-            current_version=target_version,
-            min_migratable_version=db_migrations.MIN_MIGRATABLE_SCHEMA_VERSION,
-        )
-        if inspection.status == "legacy":
-            version = inspection.user_version if inspection.user_version is not None else "unknown"
-            raise DatabaseSchemaError(
-                f"Database schema version {version} is not supported for in-place migration. "
-                "Pre-0.0.1a2 databases remain unsupported."
-            )
-        if inspection.status == "invalid":
-            detail = f" {inspection.error}" if inspection.error else ""
-            raise DatabaseSchemaError(f"The selected database file is not a valid MIRA database.{detail}")
-        self._database = create_peewee_database(str(self.path))
-        bind_database(self._database)
         try:
+            target_version = db_migrations.get_current_schema_version()
+            inspection = inspect_database_schema_details(
+                self.path,
+                current_version=target_version,
+                min_migratable_version=db_migrations.MIN_MIGRATABLE_SCHEMA_VERSION,
+            )
+            if inspection.status == "legacy":
+                version = inspection.user_version if inspection.user_version is not None else "unknown"
+                raise DatabaseSchemaError(
+                    f"Database schema version {version} is not supported for in-place migration. "
+                    "Pre-0.0.1a2 databases remain unsupported."
+                )
+            if inspection.status == "invalid":
+                detail = f" {inspection.error}" if inspection.error else ""
+                raise DatabaseSchemaError(f"The selected database file is not a valid MIRA database.{detail}")
+            self._database = create_peewee_database(str(self.path))
+            bind_database(self._database)
             self._database.connect(reuse_if_open=True)
             self._connection = self._database.connection()
             self._connection.row_factory = sqlite3.Row
@@ -91,8 +91,6 @@ class DatabaseRuntime:
                 try:
                     db_migrations.migrate_database(self._connection, int(inspection.user_version or 0), target_version)
                 except Exception as exc:
-                    self._close_handles()
-                    _ActiveDatabaseGuard.release(self)
                     detail = str(exc).strip()
                     raise DatabaseSchemaError(
                         f"Database migration failed. A backup was created at {backup_path}. {detail}"

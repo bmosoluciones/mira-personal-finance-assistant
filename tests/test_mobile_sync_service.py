@@ -773,6 +773,19 @@ def test_mobile_sync_push_rate_limit_key_includes_token(db: Database) -> None:
     server.check_rate_limit(path, client_host="127.0.0.1", token="token-b")
 
 
+def test_mobile_sync_write_rate_limit_caps_tokens_by_client_ip(db: Database) -> None:
+    server = MobileSyncServer(db)
+    path = "/api/mobile/v1/transactions/push"
+
+    for index in range(60):
+        server.check_rate_limit(path, client_host="127.0.0.1", token=f"token-{index}")
+
+    with pytest.raises(MobileSyncRateLimitError) as exc_info:
+        server.check_rate_limit(path, client_host="127.0.0.1", token="another-token")
+
+    assert exc_info.value.error_code == "rate_limited"
+
+
 def test_mobile_sync_server_stops_after_pairing_timeout_without_sessions(
     db: Database,
     monkeypatch: pytest.MonkeyPatch,

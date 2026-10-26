@@ -171,6 +171,19 @@ def test_connect_rejects_explicit_legacy_float_database_without_replacing_file(t
     assert {str(row[0]) for row in rows} == {"legacy account"}
 
 
+def test_connect_releases_guard_after_rejecting_an_invalid_database(tmp_path) -> None:
+    invalid_path = tmp_path / "invalid.db"
+    invalid_path.write_text("not a SQLite database", encoding="utf-8")
+    rejected = Database(path=invalid_path)
+
+    with pytest.raises(DatabaseSchemaError, match="not a valid MIRA database"):
+        rejected.connect()
+
+    usable = Database(path=tmp_path / "usable.db")
+    usable.connect()
+    usable.close()
+
+
 def test_default_path_rejects_legacy_float_database_without_archiving(monkeypatch, tmp_path) -> None:
     path = tmp_path / "xdg-data" / "mira" / "mira.db"
     _create_legacy_float_database(path)

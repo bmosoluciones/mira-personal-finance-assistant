@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
-from datetime import timedelta
+from datetime import datetime, timedelta
+from io import BytesIO
 
 import pytest
 
@@ -10,6 +11,8 @@ from mira.services.mobile_sync import (
     MobileSyncError,
     MobileSyncService,
     RateLimitRule,
+    _MobileSyncRateLimiter,
+    _MobileSyncRequestHandler,
 )
 from mira.sync_utils import generate_ulid
 
@@ -46,8 +49,6 @@ def test_mobile_sync_service_push_transactions_validation(db):
 
 
 def test_mobile_sync_rate_limiter(db):
-    from mira.services.mobile_sync import _MobileSyncRateLimiter
-
     limiter = _MobileSyncRateLimiter()
     rule = RateLimitRule(max_requests=2, window=timedelta(seconds=10))
     key = ("test",)
@@ -60,6 +61,40 @@ def test_mobile_sync_rate_limiter(db):
 
     limiter.clear()
     assert limiter.check(key, rule).allowed is True
+
+
+def test_mobile_sync_rate_limiter_purges_expired_buckets(db) -> None:
+    now = datetime(2026, 1, 1)
+    limiter = _MobileSyncRateLimiter(now_provider=lambda: now)
+    rule = RateLimitRule(max_requests=2, window=timedelta(seconds=10))
+    stale_key = ("stale",)
+
+    assert limiter.check(stale_key, rule).allowed is True
+    now += timedelta(seconds=11)
+
+    assert limiter.check(("active",), rule).allowed is True
+    assert stale_key not in limiter._requests
+
+
+def test_mobile_sync_request_body_rejects_oversized_or_timed_out_reads() -> None:
+    handler = object.__new__(_MobileSyncRequestHandler)
+    handler.headers = {"Content-Length": str(1024 * 1024 + 1)}
+
+    with pytest.raises(MobileSyncError, match="maximum allowed size"):
+        handler._read_json_body()
+
+    class TimeoutReader:
+        def read(self, _size: int) -> bytes:
+            raise TimeoutError
+
+    handler.headers = {"Content-Length": "2"}
+    handler.rfile = TimeoutReader()
+    with pytest.raises(MobileSyncError, match="timed out"):
+        handler._read_json_body()
+
+    handler.headers = {"Content-Length": "2"}
+    handler.rfile = BytesIO(b"{}")
+    assert handler._read_json_body() == {}
 
 
 def test_mobile_sync_resolve_account_failures(db):

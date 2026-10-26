@@ -59,6 +59,9 @@ _SYNC_CAPABILITIES = [
 ]
 _RATE_LIMIT_WINDOW = timedelta(minutes=1)
 _ANONYMOUS_TOKEN_KEY = "<anonymous>"
+_MAX_REQUEST_BODY_BYTES = 1024 * 1024
+_REQUEST_READ_TIMEOUT_SECONDS = 15.0
+_WRITE_RATE_LIMIT_KEY = "writes"
 
 
 @dataclass(frozen=True)
@@ -68,6 +71,9 @@ class RateLimitRule:
     max_requests: int
     window: timedelta
     include_token: bool = False
+
+
+_WRITE_RATE_LIMIT_RULE = RateLimitRule(max_requests=60, window=_RATE_LIMIT_WINDOW)
 
 
 @dataclass(frozen=True)
@@ -250,26 +256,36 @@ class _MobileSyncRateLimiter:
         """Initialize."""
         self._now_provider = now_provider
         self._requests: dict[tuple[str, ...], deque[datetime]] = {}
+        self._windows: dict[tuple[str, ...], timedelta] = {}
         self._lock = threading.RLock()
 
     def check(self, key: tuple[str, ...], rule: RateLimitRule) -> RateLimitDecision:
         """Return check."""
         now = self._now_provider()
-        cutoff = now - rule.window
         with self._lock:
+            self._purge_expired(now)
             bucket = self._requests.setdefault(key, deque())
-            while bucket and bucket[0] <= cutoff:
-                bucket.popleft()
+            self._windows[key] = rule.window
             if len(bucket) >= rule.max_requests:
                 retry_after = ceil(((bucket[0] + rule.window) - now).total_seconds())
                 return RateLimitDecision(allowed=False, retry_after_seconds=max(1, retry_after))
             bucket.append(now)
             return RateLimitDecision(allowed=True)
 
+    def _purge_expired(self, now: datetime) -> None:
+        for key, bucket in list(self._requests.items()):
+            cutoff = now - self._windows[key]
+            while bucket and bucket[0] <= cutoff:
+                bucket.popleft()
+            if not bucket:
+                del self._requests[key]
+                del self._windows[key]
+
     def clear(self) -> None:
         """Return clear."""
         with self._lock:
             self._requests.clear()
+            self._windows.clear()
 
 
 class MobileSyncService:
@@ -1582,6 +1598,11 @@ def _json_default(value: Any) -> Any:
 class _MobileSyncRequestHandler(BaseHTTPRequestHandler):
     server_version = "MIRAMobileSync/1.0"
 
+    def setup(self) -> None:
+        """Configure a bounded read timeout for each client connection."""
+        super().setup()
+        self.connection.settimeout(_REQUEST_READ_TIMEOUT_SECONDS)
+
     @property
     def sync_server(self) -> MobileSyncServer:
         """Return sync server."""
@@ -1681,11 +1702,19 @@ class _MobileSyncRequestHandler(BaseHTTPRequestHandler):
         self.sync_server.check_rate_limit(path, client_host=client_host, token=token)
 
     def _read_json_body(self) -> dict[str, Any]:
-        content_length = int(self.headers.get("Content-Length", "0") or 0)
-        raw = self.rfile.read(content_length) if content_length > 0 else b"{}"
+        try:
+            content_length = int(self.headers.get("Content-Length", "0") or 0)
+        except (TypeError, ValueError) as exc:
+            raise MobileSyncError("Invalid Content-Length header.") from exc
+        if content_length < 0 or content_length > _MAX_REQUEST_BODY_BYTES:
+            raise MobileSyncError("Request body exceeds the maximum allowed size.")
+        try:
+            raw = self.rfile.read(content_length) if content_length > 0 else b"{}"
+        except (OSError, TimeoutError) as exc:
+            raise MobileSyncError("Request body read timed out.") from exc
         try:
             decoded = json.loads(raw.decode("utf-8"))
-        except json.JSONDecodeError as exc:
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise MobileSyncError("Invalid JSON body.") from exc
         if not isinstance(decoded, dict):
             raise MobileSyncError("The request body must be a JSON object.")
@@ -1774,6 +1803,12 @@ class MobileSyncServer:
         if rule is None:
             return
         normalized_host = str(client_host or "").strip() or "unknown"
+        if rule.include_token:
+            aggregate_decision = self._rate_limiter.check(
+                (_WRITE_RATE_LIMIT_KEY, normalized_host), _WRITE_RATE_LIMIT_RULE
+            )
+            if not aggregate_decision.allowed:
+                raise MobileSyncRateLimitError(retry_after_seconds=aggregate_decision.retry_after_seconds)
         key: tuple[str, ...]
         if rule.include_token:
             key = (path, normalized_host, str(token or _ANONYMOUS_TOKEN_KEY))
