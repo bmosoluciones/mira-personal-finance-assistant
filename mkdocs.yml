@@ -48,12 +48,11 @@ plugins:
             MIRA Analysis: Analisis MIRA
             Natural Language: Lenguaje Natural
             Import, Export and Backup: Importacion, Exportacion y Respaldo
-            Optional AI Chat: IA Chat Opcional
             Command Line and MCP Server: Linea de Comandos y Servidor MCP
             Troubleshooting: Solucion de Problemas
             FAQ: Preguntas Frecuentes
             Appendices: Anexos
-            AI JSON Contract: Contrato JSON IA
+            Parser JSON Contract: Contrato JSON del parser
             Manual Linux install (hidden venv): Instalacion manual en Linux (venv oculto)
             Portable Windows .zip (advanced): Windows portable .zip (avanzado)
             Remote GUI over SSH (X11): GUI remota sobre SSH (X11)
@@ -70,10 +69,8 @@ extra_css:
 extra:
   install_links:
     # Public download URLs shown on the custom home page when provided.
-    exe: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1.exe"
-    zip: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1.zip"
-    wheel: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1-py3-none-any.whl"
-    source: "https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1.tar.gz"
+    wheel: "https://github.com/bmosoluciones/mira-personal-finance-assistant/releases/download/v0.1.0/mira_personal_finance_assistant-0.1.0-py3-none-any.whl"
+    source: "https://github.com/bmosoluciones/mira-personal-finance-assistant/releases/download/v0.1.0/mira_personal_finance_assistant-0.1.0.tar.gz"
     flatpak: "https://github.com/bmosoluciones/solutions.bmogroup.mira"
     snap: "https://github.com/bmosoluciones/mira-personal-finance-assistant/blob/main/packaging/snap/snapcraft.yaml"
 
@@ -89,12 +86,11 @@ nav:
   - MIRA Analysis: mira_analysis.md
   - Natural Language: natural_language.md
   - Import, Export and Backup: import_export_backup.md
-  - Optional AI Chat: optional_local_ai.md
   - Command Line and MCP Server: command_line.md
   - Troubleshooting: troubleshooting.md
   - FAQ: faq.md
   - Appendices:
-      - AI JSON Contract: ai_json_contract.md
+      - Parser JSON Contract: ai_json_contract.md
       - Manual Linux install (hidden venv): manual_install_hidden_venv_linux.md
       - Portable Windows .zip (advanced): portable_windows_zip_advanced.md
       - Remote GUI over SSH (X11): remote_gui_ssh_x11.md

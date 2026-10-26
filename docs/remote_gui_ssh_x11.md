@@ -10,13 +10,13 @@ Yes. MIRA can be installed and launched on a remote headless server, and its GUI
 
 ### On the remote server (Linux)
 
-1. Python 3.12 (MIRA requires at least 3.9).
+1. Python 3.12–3.14.
 2. A virtual environment is recommended.
 3. Base graphical dependencies for Qt/PySide6.
 4. `xauth` installed.
 5. An SSH service with X11 enabled.
 
-> Note: although PySide6 may support a wider range of Python versions depending on the release, this project declares `requires-python = ">=3.9"`.
+> Note: this project declares `requires-python = ">=3.12,<3.15"`.
 
 ### Recommended packages on the remote host (modern distributions)
 
@@ -74,7 +74,7 @@ From the repository:
 python3 -m venv mira_env
 source mira_env/bin/activate
 pip install --upgrade pip
-pip install https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1rc3-py3-none-any.whl
+pip install '.[gui]'
 ```
 
 ## Remote connection and GUI launch

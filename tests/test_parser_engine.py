@@ -8,13 +8,6 @@ from __future__ import annotations
 import pytest
 
 from mira.ai.parser_engine import TransactionParserEngine
-from mira.ai.schema_contract import build_assistant_system_prompt
-
-
-def test_assistant_system_prompt_mentions_required_contract_fields() -> None:
-    prompt = build_assistant_system_prompt()
-    assert '"action": "<add_income|add_expense|report|data_analysis|none>"' in prompt
-    assert '"converted_amount": <number or null>' in prompt
 
 
 @pytest.mark.parametrize(

@@ -9,7 +9,6 @@ import json
 
 import pytest
 
-from mira.ai.base_engine import BaseEngine
 from mira.ai.parser_engine import TransactionParserEngine
 from mira.ai.pipeline import Pipeline
 from mira.ai.validator import ValidationResult
@@ -125,12 +124,6 @@ class TestPipelineWithTransactionParserEngine:
     def test_engine_property(self, pipeline):
         assert isinstance(pipeline.engine, TransactionParserEngine)
 
-    def test_chat_mode_returns_unavailable_message_when_no_llm(self, pipeline):
-        result = pipeline.process_chat("hola")
-        assert result.action == "chat"
-        assert result.success is False
-        assert result.message == tr("chat.unavailable", "es")
-
 
 class TestPipelineCreditAccounts:
     def test_credit_card_purchase_uses_credit_account(self, pipeline, db):
@@ -197,41 +190,6 @@ class TestPipelineCreditAccounts:
 
         assert result.success is True
         assert result.action == "none"
-
-
-def test_pipeline_reload_engine_replaces_previous_engine(monkeypatch, db):
-    class DummyEngineA(TransactionParserEngine):
-        pass
-
-    class DummyEngineB(TransactionParserEngine):
-        pass
-
-    pipeline = Pipeline(db=db, engine=DummyEngineA())
-
-    def fake_get_chat_engine(config, **_kwargs):
-        assert config is not None
-        return DummyEngineB()
-
-    monkeypatch.setattr("mira.ai.pipeline.get_chat_engine", fake_get_chat_engine)
-
-    pipeline.reload_engine()
-
-    assert isinstance(pipeline.engine, DummyEngineA)
-    assert isinstance(pipeline.chat_engine, DummyEngineB)
-
-
-def test_pipeline_reload_engine_falls_back_on_error(monkeypatch, db):
-    pipeline = Pipeline(db=db, engine=TransactionParserEngine())
-
-    def fake_get_chat_engine(_model_path, **_kwargs):
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr("mira.ai.pipeline.get_chat_engine", fake_get_chat_engine)
-
-    pipeline.reload_engine()
-
-    assert isinstance(pipeline.engine, TransactionParserEngine)
-    assert pipeline.chat_engine is None
 
 
 # ---------------------------------------------------------------------------
@@ -302,35 +260,9 @@ class _EngineBadJson(TransactionParserEngine):
         raise json.JSONDecodeError("bad json", "{}", 0)
 
 
-class _EngineChatError(TransactionParserEngine):
-    def chat(self, _user_input: str) -> str:
-        raise RuntimeError("chat-fail")
-
-
 class _EngineCriticalError(TransactionParserEngine):
     def parse(self, _user_input: str):
         raise AssertionError("critical failure")
-
-
-class _EngineOk(BaseEngine):
-    def parse(self, _user_input: str):
-        return {
-            "action": "none",
-            "amount": None,
-            "description": None,
-            "category": None,
-            "account": None,
-            "base_currency": "USD",
-            "exchange_rate": None,
-            "converted_amount": None,
-            "report_type": None,
-            "period": None,
-            "filters": None,
-            "message": "ok",
-        }
-
-    def chat(self, _user_input: str) -> str:
-        return "ok"
 
 
 def test_pipeline_falls_back_when_engine_parse_fails(db):
@@ -416,42 +348,8 @@ def test_pipeline_process_raises_unexpected_executor_errors(monkeypatch, db):
         pipeline.process("received 100 salary")
 
 
-def test_pipeline_process_chat_returns_error_result_on_exception(db):
-    pipeline = Pipeline(db=db, engine=TransactionParserEngine())
-    pipeline._chat_engine = _EngineChatError()
-    result = pipeline.process_chat("hola")
-    assert result.success is False
-    assert result.action == "chat"
-
-
-def test_pipeline_process_chat_reports_the_actual_failure_not_a_missing_provider(db):
-    pipeline = Pipeline(db=db, engine=TransactionParserEngine())
-    pipeline._chat_engine = _EngineChatError()
-
-    result = pipeline.process_chat("hola")
-
-    assert "chat-fail" in str(result.message)
-    assert "proveedor" not in str(result.message).lower() or "no hay" not in str(result.message)
-
-
-def test_pipeline_process_chat_without_engine_says_no_provider_is_configured(db):
-    pipeline = Pipeline(db=db, engine=TransactionParserEngine())
-    pipeline._chat_engine = None
-
-    result = pipeline.process_chat("hola")
-
-    assert result.success is False
-    assert "chat-fail" not in str(result.message)
-
-
-def test_pipeline_llm_ready_is_true_for_chat_engine(db):
-    pipeline = Pipeline(db=db, engine=TransactionParserEngine())
-    pipeline._chat_engine = _EngineOk()
-    assert pipeline.llm_ready is True
-
-
 def test_pipeline_shutdown_calls_engine_shutdown(db):
-    class ShutdownEngine(_EngineOk):
+    class ShutdownEngine(TransactionParserEngine):
         def __init__(self) -> None:
             self.called = False
 
@@ -459,65 +357,9 @@ def test_pipeline_shutdown_calls_engine_shutdown(db):
             self.called = True
 
     engine = ShutdownEngine()
-    pipeline = Pipeline(db=db, engine=TransactionParserEngine())
-    pipeline._chat_engine = engine
+    pipeline = Pipeline(db=db, engine=engine)
     pipeline.shutdown()
     assert engine.called is True
-
-
-def test_pipeline_reload_engine_calls_previous_shutdown(monkeypatch, db):
-    class ShutdownEngine(_EngineOk):
-        def __init__(self) -> None:
-            self.called = False
-
-        def shutdown(self) -> None:
-            self.called = True
-
-    previous_engine = ShutdownEngine()
-    pipeline = Pipeline(db=db, engine=TransactionParserEngine())
-    pipeline._chat_engine = previous_engine
-    monkeypatch.setattr("mira.ai.pipeline.get_chat_engine", lambda *_args, **_kwargs: _EngineOk())
-
-    pipeline.reload_engine()
-
-    assert previous_engine.called is True
-    assert isinstance(pipeline.engine, TransactionParserEngine)
-    assert isinstance(pipeline.chat_engine, _EngineOk)
-
-
-def test_pipeline_process_uses_deterministic_parser_even_when_chat_engine_exists(monkeypatch, db):
-    class ChatOnlyEngine(BaseEngine):
-        def parse(self, _user_input: str):
-            raise RuntimeError("chat engine must not parse assistant requests")
-
-        def chat(self, _user_input: str) -> str:
-            return "chat-ok"
-
-    monkeypatch.setattr("mira.ai.pipeline.get_chat_engine", lambda *_args, **_kwargs: ChatOnlyEngine())
-
-    pipeline = Pipeline(db=db, cli_model_name="chat-model")
-    result = pipeline.process("received 250 salary")
-
-    assert result.success is True
-    assert result.action == "add_income"
-
-
-def test_pipeline_process_chat_uses_local_chat_engine_when_available(monkeypatch, db):
-    class ChatOnlyEngine(BaseEngine):
-        def parse(self, _user_input: str):
-            return {"action": "none"}
-
-        def chat(self, _user_input: str) -> str:
-            return "chat-ok"
-
-    monkeypatch.setattr("mira.ai.pipeline.get_chat_engine", lambda *_args, **_kwargs: ChatOnlyEngine())
-
-    pipeline = Pipeline(db=db, cli_model_name="chat-model")
-    result = pipeline.process_chat("hola")
-
-    assert result.success is True
-    assert result.action == "chat"
-    assert result.message == "chat-ok"
 
 
 def test_pipeline_passes_default_currency_to_engine(tmp_path):

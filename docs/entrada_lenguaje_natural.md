@@ -7,7 +7,7 @@ MIRA can capture actions from free text entered in the lower panel.
 General pipeline:
 
 1. text normalization
-2. interpretation by the active engine (deterministic or local LLM)
+2. interpretation by the deterministic parser
 3. schema validation
 4. action execution
 
@@ -67,13 +67,3 @@ Inside the input box you can use:
 
 - Up arrow: previous command.
 - Down arrow: next command or current draft.
-
-## Assistant vs Chat
-
-- `Assistant`: interprets and executes financial actions.
-- `Chat`: free conversation with a local model.
-
-Note:
-
-- Chat is available only when a local LLM is ready.
-- If there is no active model, MIRA falls back to the deterministic assistant parser.

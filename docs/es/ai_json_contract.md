@@ -1,4 +1,4 @@
-# Contrato JSON IA ↔ Backend ↔ Frontend
+# Contrato JSON del parser ↔ Backend ↔ Frontend
 
 Este documento define el **formato JSON oficial** aceptado por el sistema para interpretar instrucciones en lenguaje natural y convertirlas en acciones financieras.
 
@@ -45,7 +45,7 @@ Este documento define el **formato JSON oficial** aceptado por el sistema para i
     - `none`: No hay acción ejecutable
 
 - `amount` *(number, opcional según acción)*
-  - Monto original detectado en el prompt.
+  - Monto original detectado en la entrada.
   - Para `add_income` y `add_expense` es requerido.
   - Desde `0.0.1a2`, el backend normaliza los montos monetarios como valores exactos de dos decimales antes de persistirlos.
 
@@ -57,7 +57,7 @@ Este documento define el **formato JSON oficial** aceptado por el sistema para i
 
 Regla especial para ahorro:
 
-- Si la IA o el parser determinístico interpretan una frase de ahorro, la acción sigue siendo `add_expense`.
+- Si el parser determinístico interpreta una frase de ahorro, la acción sigue siendo `add_expense`.
 - En ese caso la `category` puede resolverse a una categoría técnica de ahorro como `savings` o su equivalente canónico interno.
 - Las categorías marcadas internamente como ahorro sí actualizan metas, pero no se computan como gasto real en reportes, análisis ni presupuestos.
 
@@ -140,7 +140,7 @@ Estos campos responden explícitamente a:
 
 ### Ejemplo A: Ingreso en moneda base
 
-**Prompt IA:**
+**Entrada del usuario:**
 
 > "Registra un ingreso de 1000 USD en la cuenta General por salario"
 
@@ -165,7 +165,7 @@ Estos campos responden explícitamente a:
 
 ### Ejemplo B: Gasto en moneda distinta a la base
 
-**Prompt IA:**
+**Entrada del usuario:**
 
 > "Anota un gasto de 500 MXN en comida desde General. Moneda base USD con tipo de cambio 0.058"
 
@@ -190,7 +190,7 @@ Estos campos responden explícitamente a:
 
 ### Ejemplo C: Reporte con tipo, período y filtro
 
-**Prompt IA:**
+**Entrada del usuario:**
 
 > "Quiero ver el reporte de gastos en restaurantes de los últimos 3 meses"
 
@@ -225,7 +225,7 @@ Estos campos responden explícitamente a:
 
 ### Ejemplo D: Reporte personalizado con rango de fechas
 
-**Prompt IA:**
+**Entrada del usuario:**
 
 > "Dame un balance del 2025-01-01 al 2025-01-31 para la cuenta General"
 
@@ -261,7 +261,7 @@ Estos campos responden explícitamente a:
 
 ### Ejemplo E: Análisis de datos por categoría y período
 
-**Prompt IA:**
+**Entrada del usuario:**
 
 > "Analiza mis datos de gastos de educación de los últimos 3 meses"
 
@@ -296,7 +296,7 @@ Estos campos responden explícitamente a:
 
 ### Ejemplo F: Sin acción ejecutable
 
-**Prompt IA:**
+**Entrada del usuario:**
 
 > "Hola, ¿cómo estás?"
 
@@ -319,37 +319,7 @@ Estos campos responden explícitamente a:
 }
 ```
 
-## 6) Plantilla recomendada para entrenar/promptear la IA
-
-Usar esta instrucción de sistema para forzar una salida consistente:
-
-```text
-Eres un parser financiero. Debes convertir el prompt del usuario a JSON válido.
-Responde únicamente JSON con las claves:
-action, amount, description, category, account, base_currency, exchange_rate, converted_amount, report_type, period, filters, message.
-
-Reglas:
-- action ∈ {add_income, add_expense, report, data_analysis, none}
-- Para add_income/add_expense:
-  - amount, base_currency, exchange_rate y converted_amount son obligatorios
-  - converted_amount = amount * exchange_rate redondeado a 2 decimales con ROUND_HALF_UP
-  - report_type, period y filters deben ser null
-- Para report:
-  - report_type obligatorio ∈ {expenses, incomes, balance, cashflow, summary}
-  - period obligatorio con preset ∈ {this_month,last_month,last_3_months,this_year,custom}
-  - si period.preset=custom, from y to son obligatorios
-  - filters opcional
-- Para data_analysis:
-  - period obligatorio con preset ∈ {this_month,last_month,last_3_months,this_year,custom}
-  - si period.preset=custom, from y to son obligatorios
-  - filters opcional
-  - report_type debe ser null
-- Para none:
-  - campos monetarios y de reporte pueden ir en null
-- No agregues texto fuera del JSON
-```
-
-## 7) Compatibilidad
+## 6) Compatibilidad
 
 - Este documento reemplaza el formato previo que no incluía campos de multimoneda, estructura explícita para reportes ni la acción `data_analysis`.
 - Backend y frontend deben validar presencia y consistencia de:

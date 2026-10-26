@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -20,7 +19,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mira.ai.llm_config import endpoint_host_for, endpoint_transport_allowed, is_loopback_host
 from mira.app.view_services import SettingsViewService, SettingsViewState
 from mira.db.database import CURRENCY_CODES, Database
 from mira.i18n import SUPPORTED_LANGUAGES, normalize_language, tr
@@ -176,8 +174,8 @@ class SettingsView(QWidget):
         form.addRow("", save_btn)
         layout.addWidget(general)
 
-        # AI Engine group
-        ai_grp = QGroupBox(tr("settings.ai_engine", self._language, default="AI Engine"))
+        # Parser and MCP integration.
+        ai_grp = QGroupBox(tr("settings.ai_engine", self._language, default="Assistant and MCP"))
         ai_grp.setStyleSheet(_grp_style)
         ai_layout = QVBoxLayout(ai_grp)
         ai_layout.setSpacing(8)
@@ -196,102 +194,12 @@ class SettingsView(QWidget):
             tr(
                 "settings.ai_note",
                 self._language,
-                default=(
-                    "The assistant always uses the deterministic local parser. "
-                    "Configure a provider only if you want free-form chat."
-                ),
+                default=("The assistant uses the deterministic parser to record transactions."),
             )
         )
         ai_note.setWordWrap(True)
         ai_note.setStyleSheet("font-size:10px;")
         ai_layout.addWidget(ai_note)
-
-        ai_form = QFormLayout()
-        ai_form.setSpacing(8)
-        ai_form.setContentsMargins(0, 4, 0, 0)
-
-        self._provider_combo = QComboBox()
-        self._provider_combo.setStyleSheet(_COMBO_STYLE)
-        self._provider_combo.addItem(
-            tr("settings.ai.provider.none", self._language, default="None (local only)"), "none"
-        )
-        self._provider_combo.addItem(
-            tr(
-                "settings.ai.provider.openai",
-                self._language,
-                default="OpenAI-compatible endpoint (LM Studio, Ollama, OpenAI...)",
-            ),
-            "openai_compatible",
-        )
-        self._provider_combo.addItem(
-            tr("settings.ai.provider.anthropic", self._language, default="Anthropic (Claude)"),
-            "anthropic",
-        )
-        self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
-        ai_form.addRow(
-            tr("settings.ai.provider", self._language, default="Chat provider:"),
-            self._provider_combo,
-        )
-
-        self._base_url_input = QLineEdit()
-        self._base_url_input.setStyleSheet(_input_style)
-        self._base_url_input.setPlaceholderText(
-            tr("settings.ai.base_url.placeholder", self._language, default="http://localhost:1234/v1")
-        )
-        self._base_url_label = QLabel(tr("settings.ai.base_url", self._language, default="Endpoint URL:"))
-        ai_form.addRow(self._base_url_label, self._base_url_input)
-
-        self._model_input = QLineEdit()
-        self._model_input.setStyleSheet(_input_style)
-        ai_form.addRow(tr("settings.ai.model", self._language, default="Model:"), self._model_input)
-
-        self._api_key_input = QLineEdit()
-        self._api_key_input.setStyleSheet(_input_style)
-        self._api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self._api_key_input.setPlaceholderText(
-            tr("settings.ai.api_key.placeholder", self._language, default="Not needed for local endpoints")
-        )
-        self._api_key_clear_btn = QPushButton(
-            tr("settings.ai.api_key_clear", self._language, default="Forget key")
-        )
-        self._api_key_clear_btn.setToolTip(
-            tr(
-                "settings.ai.api_key_clear.tooltip",
-                self._language,
-                default="Delete the stored API key from this device",
-            )
-        )
-        self._api_key_clear_btn.clicked.connect(self._forget_api_key)
-        api_key_row = QHBoxLayout()
-        api_key_row.setSpacing(8)
-        api_key_row.addWidget(self._api_key_input, 1)
-        api_key_row.addWidget(self._api_key_clear_btn)
-        ai_form.addRow(tr("settings.ai.api_key", self._language, default="API key:"), api_key_row)
-
-        ai_layout.addLayout(ai_form)
-
-        self._ack_check = QCheckBox(
-            tr(
-                "settings.ai.ack",
-                self._language,
-                default="I understand that chat text leaves this device towards {host}.",
-                params={"host": ""},
-            )
-        )
-        self._ack_check.setStyleSheet("font-size:11px;")
-        self._ack_check.setVisible(False)
-        ai_layout.addWidget(self._ack_check)
-
-        self._mode_label = QLabel(tr("settings.mode", self._language, default="LLM interaction mode"))
-        ai_layout.addWidget(self._mode_label)
-        self._mode_combo = QComboBox()
-        self._mode_combo.setStyleSheet(_COMBO_STYLE)
-        self._mode_combo.addItem(
-            tr("settings.mode.assistant", self._language, default="Assistant mode"),
-            "assistant",
-        )
-        self._mode_combo.addItem(tr("settings.mode.chat", self._language, default="Chat mode"), "chat")
-        ai_layout.addWidget(self._mode_combo)
 
         mcp_note = QLabel(
             tr(
@@ -329,63 +237,9 @@ class SettingsView(QWidget):
 
         layout.addStretch()
 
-    def _on_provider_changed(self) -> None:
-        """Return on provider changed."""
-        host = self._current_host()
-        is_openai = self._provider_combo.currentData() == "openai_compatible"
-        is_configured = host != ""
-        self._base_url_input.setVisible(is_openai)
-        self._base_url_label.setVisible(is_openai)
-        needs_ack = bool(host) and not is_loopback_host(host)
-        self._ack_check.setVisible(needs_ack)
-        if needs_ack:
-            self._ack_check.setText(
-                tr(
-                    "settings.ai.ack",
-                    self._language,
-                    default="I understand that chat text leaves this device towards {host}.",
-                    params={"host": host},
-                )
-            )
-        self._model_input.setEnabled(is_configured or self._provider_combo.currentData() != "none")
-        self._api_key_input.setEnabled(self._provider_combo.currentData() != "none")
-        self._api_key_clear_btn.setEnabled(bool(self._api_key_input.text().strip()))
-
     def _on_mcp_toggled(self, checked: bool) -> None:
         """Return on mcp toggled."""
         self._mcp_ack_check.setVisible(checked)
-
-    def _current_host(self) -> str:
-        """Return the host chat requests would reach with the current form values."""
-        return endpoint_host_for(
-            str(self._provider_combo.currentData() or "none"),
-            self._base_url_input.text().strip(),
-        )
-
-    def _forget_api_key(self) -> None:
-        """Delete the stored API key and clear the field."""
-        state = self._service.forget_api_key()
-        self._api_key_input.setText(state.llm_api_key)
-        self._api_key_clear_btn.setEnabled(False)
-
-    def _confirm_third_party(self, host: str) -> bool:
-        """Return whether the user accepted sending chat text to host."""
-        answer = QMessageBox.question(
-            self,
-            tr("settings.title", self._language, default="Settings"),
-            tr(
-                "settings.ai.ack.question",
-                self._language,
-                default=(
-                    "Chat text will leave this device and be sent to {host}. "
-                    "The ledger itself is never sent. Do you accept?"
-                ),
-                params={"host": host},
-            ),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        return answer == QMessageBox.StandardButton.Yes
 
     def _confirm_mcp(self) -> bool:
         """Return whether the user accepted the MCP third-party warning."""
@@ -412,52 +266,8 @@ class SettingsView(QWidget):
         )
         language = normalize_language(self._language_combo.currentData())
         theme = self._theme_combo.currentData() or "dark_teal.xml"
-        interaction_mode = self._mode_combo.currentData() or "assistant"
-        provider = str(self._provider_combo.currentData() or "none")
-        base_url = self._base_url_input.text().strip()
-        model = self._model_input.text().strip()
-        api_key = self._api_key_input.text().strip()
-        ack = self._ack_check.isChecked()
         mcp_on = self._mcp_check.isChecked()
         mcp_ack = self._mcp_ack_check.isChecked()
-
-        if provider == "openai_compatible" and not endpoint_transport_allowed(
-            provider,
-            base_url or "http://localhost:1234/v1",
-        ):
-            show_user_message(
-                self,
-                tr("settings.title", language, default="Settings"),
-                tr(
-                    "settings.ai.https_required",
-                    language,
-                    default="Use HTTPS for remote endpoints. HTTP is allowed only for loopback endpoints.",
-                ),
-                level="warning",
-            )
-            return
-
-        current = self._service.load_state()
-        host = self._current_host()
-        needs_ack = bool(host) and not is_loopback_host(host)
-        if needs_ack and not (current.llm_third_party_ack and current.llm_ack_host == host) and not ack:
-            if self._confirm_third_party(host):
-                ack = True
-                self._ack_check.setChecked(True)
-            else:
-                provider = "none"
-                ack = False
-                show_user_message(
-                    self,
-                    tr("settings.title", language, default="Settings"),
-                    tr(
-                        "settings.ai.ack.declined",
-                        language,
-                        default="Chat stays disabled until you accept the third-party notice.",
-                    ),
-                    level="info",
-                )
-        ack_host = host if ack else ""
 
         if mcp_on and not mcp_ack:
             if self._confirm_mcp():
@@ -486,13 +296,6 @@ class SettingsView(QWidget):
                 default_currency=str(self._default_currency_combo.currentData() or "USD"),
                 thousands_sep=str(self._thousands_sep_combo.currentData() or ","),
                 decimal_sep=str(self._decimal_sep_combo.currentData() or "."),
-                interaction_mode=interaction_mode,
-                llm_provider=provider,
-                llm_base_url=base_url or "http://localhost:1234/v1",
-                llm_model=model,
-                llm_api_key=api_key,
-                llm_third_party_ack=ack,
-                llm_ack_host=ack_host,
                 mcp_enabled=mcp_on,
                 mcp_third_party_ack=mcp_ack,
             )
@@ -538,32 +341,9 @@ class SettingsView(QWidget):
         if didx >= 0:
             self._decimal_sep_combo.setCurrentIndex(didx)
 
-        pidx = self._provider_combo.findData(state.llm_provider)
-        if pidx >= 0:
-            self._provider_combo.setCurrentIndex(pidx)
-        self._base_url_input.setText(state.llm_base_url)
-        self._model_input.setText(state.llm_model)
-        self._api_key_input.setText(state.llm_api_key)
-        self._api_key_clear_btn.setEnabled(bool(state.llm_api_key))
-        host = self._current_host()
-        self._ack_check.setChecked(bool(state.llm_third_party_ack) and state.llm_ack_host == host)
-        self._on_provider_changed()
-
-        midx = self._mode_combo.findData(state.interaction_mode or "assistant")
-        if midx >= 0:
-            self._mode_combo.setCurrentIndex(midx)
-
         self._mcp_check.setChecked(state.mcp_enabled)
-        self._mcp_ack_check.setChecked(
-            str(self._db.setting.get("mcp_third_party_ack") or "0") == "1"
-        )
+        self._mcp_ack_check.setChecked(str(self._db.setting.get("mcp_third_party_ack") or "0") == "1")
         self._mcp_ack_check.setVisible(state.mcp_enabled)
-
-    def set_engine_info(self, info: str) -> None:
-        """Return set engine info."""
-        self._engine_label.setText(
-            tr("settings.engine.info", self._language, default="Engine: {info}", params={"info": info})
-        )
 
     def _populate_currency_options(self) -> None:
         """Return populate currency options."""

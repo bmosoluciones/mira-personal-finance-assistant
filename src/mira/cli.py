@@ -11,11 +11,11 @@ import sys
 from importlib import metadata
 from pathlib import Path
 
-from mira.ai.llm_config import mcp_enabled
 from mira.cli_commands import add_movement, dump, list_transactions, record_text, report_summary, transfer
 from mira.db.database import Database
 from mira.db.errors import DatabaseSchemaError
 from mira.db.helpers import default_db_path_for_display
+from mira.mcp_consent import mcp_enabled
 
 
 def _build_parser() -> argparse.ArgumentParser:

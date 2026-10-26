@@ -49,27 +49,22 @@ Optional extras:
 
 ## Installation
 
-Official downloads and release artifacts are published at:
+Official source and Python package artifacts are published on GitHub Releases:
 
-- https://mira.bmogroup.solutions/releases/
+- https://github.com/bmosoluciones/mira-personal-finance-assistant/releases/latest
 
 MIRA is not planned for publication on PyPI, so end users should install it from the release site instead of relying on `pip install` or
 install from sources.
 
-Available release artifacts:
+Release artifacts:
 
-- `.exe`: Windows installer for the recommended desktop installation flow.
-- `.zip`: portable Windows distribution that can be extracted and run without an installer.
-- `.whl`: published to support Flatpak packaging, not as a PyPI distribution channel for end users.
-- `.tar.gz`: source release published to comply with GPL license obligations.
+- `.whl`: Python package for installation and packaging.
+- `.tar.gz`: source distribution, including the source and license.
 
 ## Running MIRA
 
-Recommended release flows:
-
-- Windows installer: install from the `.exe` package and launch MIRA from the Start menu.
-- Portable build: extract the `.zip` package and run `MIRA.exe`.
-- Flatpak: run `flatpak run solutions.bmogroup.MIRA`.
+To install the desktop interface from a source checkout, use `pip install '.[gui]'`.
+The CLI and MCP server can run without the GUI extra.
 
 ## Source and development workflows
 
@@ -105,7 +100,6 @@ mira-cli
 Useful flags:
 
 - `--db PATH`: custom SQLite database path
-- `--model PATH`: deprecated and ignored (chat is configured in Settings)
 - `--debug`: verbose logging
 
 ## Product flow
@@ -117,21 +111,9 @@ First-run setup covers onboarding basics:
 - currency and number formatting
 - accounts setup
 
-### Chat mode
-
-Chat is optional and talks to a remote HTTP provider (an OpenAI-compatible
-endpoint such as LM Studio or Ollama, or Anthropic):
-
-1. Open `Settings`
-2. Pick an AI provider, base URL, model and API key
-3. Accept the third-party notice when the endpoint is not local
-4. Switch interaction mode to `Chat`
-
-If no provider is configured, MIRA stays in deterministic assistant mode.
-
 ## How natural-language parsing works
 
-Assistant mode does not depend on an LLM.
+Transaction entry uses the deterministic parser without an LLM.
 
 The flow is:
 
@@ -140,14 +122,14 @@ The flow is:
 3. **Validate**: Results are checked against the schema contract.
 4. **Execute**: The action is applied to the local database.
 
-The curated prompt catalog used to pressure-test the parser lives in:
+The curated example phrases used to pressure-test the parser live in:
 
 - `src/mira/ai/nl_examples.csv`
 
 ## Architecture snapshot
 
-- `src/mira/ai/engine.py`: deterministic parser + optional local chat engine
-- `src/mira/ai/pipeline.py`: assistant processing and optional chat orchestration
+- `src/mira/ai/parser_engine.py`: deterministic transaction parser
+- `src/mira/ai/pipeline.py`: assistant processing and action validation
 - `src/mira/ai/executor.py`: applies validated actions to the database
 - `src/mira/ui/`: Qt dialogs, views, and main window
 - `src/mira/db/`: facade-based database layer backed by Peewee models and explicit ORM transactions

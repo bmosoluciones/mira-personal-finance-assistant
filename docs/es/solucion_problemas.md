@@ -14,24 +14,11 @@ Causas comunes:
 
 - Frase demasiado ambigua.
 - Falta monto numérico en gasto/ingreso.
-- Modelo local no disponible (si dependes de chat).
 
 Acciones:
 
 1. Usa frases más directas (ver ejemplos del manual).
 2. Revisa que exista categoría/cuenta o deja que MIRA cree según contexto.
-3. Verifica modo Assistant en lugar de Chat cuando no hay LLM.
-
-## Chat no aparece o no responde
-
-- El modo chat requiere un proveedor de IA configurado.
-- Sin proveedor (y modelo) en `Ajustes`, sólo estará disponible Assistant.
-
-Revisión rápida:
-
-1. Confirma proveedor, URL base y modelo en `Ajustes`.
-2. Confirma que la API key se guardó y que aceptaste el aviso a terceros si el endpoint no es local.
-3. Revisa logs con `--debug`.
 
 ## Error al importar CSV
 

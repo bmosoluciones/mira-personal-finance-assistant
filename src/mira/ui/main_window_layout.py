@@ -11,7 +11,6 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QPixmap
 from PySide6.QtWidgets import (
-    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -278,18 +277,6 @@ class MainWindowLayoutMixin:
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self._mode_switch = QComboBox()
-        self._mode_switch.setStyleSheet(
-            "QComboBox{border:1px solid palette(mid);border-radius:3px;padding:2px 6px;font-size:11px;}"
-        )
-        self._mode_switch.addItem(tr("settings.mode.assistant", self._language, default="Assistant mode"), "assistant")
-        self._mode_switch.addItem(tr("settings.mode.chat", self._language, default="Chat mode"), "chat")
-        saved_mode = self._db.setting.get("llm_interaction_mode") or "assistant"
-        if (mode_idx := self._mode_switch.findData(saved_mode)) >= 0:
-            self._mode_switch.setCurrentIndex(mode_idx)
-        self._mode_switch.currentIndexChanged.connect(self._on_mode_changed)
-        self._mode_switch.setVisible(self._model_lifecycle.sync_engine_info(self._cli_model_name).mode_visible)
-
         self._chat_content = QFrame()
         self._chat_content.setStyleSheet("")
         content_layout = QVBoxLayout(self._chat_content)
@@ -391,7 +378,6 @@ class MainWindowLayoutMixin:
             "QLineEdit{border:1px solid palette(mid);border-radius:4px;padding:6px 10px;font-size:13px;}"
         )
         self._input.returnPressed.connect(self._send)
-        input_row.addWidget(self._mode_switch)
         input_row.addWidget(self._input, 1)
         self._send_btn = QPushButton(tr("prompt.send", self._language, default="Enviar"))
         self._send_btn.setFixedWidth(80)

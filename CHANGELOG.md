@@ -6,9 +6,14 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-25
+
 ### Added
 
 - Optional MCP stdio server (`mira-cli mcp`) exposing five finance tools over newline-delimited JSON-RPC: `add_income`, `add_expense`, `transfer`, `list_transactions` and `report`. It stays disabled until the third-party warning is accepted, and refuses to write anything before that.
+- Local mobile sync server for pairing the mobile helper over HTTPS with ephemeral TLS certificates, certificate pinning, and LAN discovery.
+- MCP support for the published `2026-07-28` protocol revision, including stateless discovery and per-request metadata, while retaining the legacy initialization handshake.
+- Finance CLI commands for recording income, expenses, transfers, reports, and listing transactions.
 
 ### Changed
 
@@ -18,6 +23,7 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 - PySide6 and qt-material moved to the `gui` extra: the database, AI and CLI layers install without Qt.
 - Updated coverage configuration to include `src/mira/ui` so future UI module refactors can be measured by unit tests.
 - Budget editor and monthly budget tracking now keep the category column constrained to a responsive share of the table width, budget cell edits update visible totals without recalculating the full matrix on each keystroke, and both real-vs-budget and monthly tracking expose a `Sin Categoria` row for uncategorized transactions.
+- PySide6 and qt-material are optional GUI dependencies; the CLI and MCP server can run without Qt. The embedded llama.cpp runtime and model-download workflow were replaced by remote HTTP provider settings.
 
 ### Fixed
 
@@ -27,6 +33,8 @@ The format is inspired by Keep a Changelog and follows semantic releases.
 - Chat failures report what actually went wrong (HTTP status, unreachable endpoint, empty response) instead of always claiming that no AI provider is configured.
 - MCP tool calls recheck consent before each operation, so disabling MCP revokes access for already connected clients.
 - OpenAI-compatible remote endpoints now require HTTPS; HTTP remains available for loopback endpoints used by local models.
+- Mobile sync pairing now pins the announced TLS fingerprint, limits client hosts to local addresses, and rechecks pairing/session authorization before accepting sync operations.
+- Local Windows test runs skip Linux-specific POSIX permission-bit assertions; Linux CI continues to run those checks.
 
 ## [0.0.1] - 2026-08-24
 

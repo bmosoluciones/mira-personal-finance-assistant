@@ -10,13 +10,13 @@ Sí. MIRA puede instalarse e iniciarse en un servidor remoto sin monitor, y su i
 
 ### En el servidor remoto (Linux)
 
-1. Python 3.12 (MIRA requiere al menos 3.9).
+1. Python 3.12–3.14.
 2. Se recomienda un entorno virtual.
 3. Dependencias gráficas base para Qt/PySide6.
 4. `xauth` instalado.
 5. Un servicio SSH con X11 habilitado.
 
-> Nota: aunque PySide6 puede soportar una gama más amplia de versiones de Python dependiendo del lanzamiento, este proyecto declara `requires-python = ">=3.9"`.
+> Nota: este proyecto declara `requires-python = ">=3.12,<3.15"`.
 
 ### Paquetes recomendados en el host remoto (distribuciones modernas)
 
@@ -74,7 +74,7 @@ Desde el repositorio:
 python3 -m venv mira_env
 source mira_env/bin/activate
 pip install --upgrade pip
-pip install https://mira.bmogroup.solutions/releases/mira_personal_finance_assistant-0.0.1rc3-py3-none-any.whl
+pip install '.[gui]'
 ```
 
 ## Conexión remota e inicio de la GUI

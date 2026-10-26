@@ -128,12 +128,8 @@ def test_command_coordinator_runs_pipeline_and_wires_callbacks(monkeypatch) -> N
             self.calls.append(("assistant", text))
             return "assistant-result"
 
-        def process_chat(self, text: str) -> str:
-            self.calls.append(("chat", text))
-            return "chat-result"
-
     pipeline = Pipeline()
-    worker = module.PipelineCommandWorker(pipeline, "hola", "chat")
+    worker = module.PipelineCommandWorker(pipeline, "hola")
     results: list[str] = []
     errors: list[str] = []
     worker.finished.connect(results.append)
@@ -142,10 +138,10 @@ def test_command_coordinator_runs_pipeline_and_wires_callbacks(monkeypatch) -> N
     worker.run()
 
     coordinator = module.CommandCoordinator(pipeline)
-    threaded_worker = coordinator.execute("adios", "assistant", results.append, errors.append)
+    threaded_worker = coordinator.execute("adios", results.append, errors.append)
 
-    assert pipeline.calls == [("chat", "hola")]
-    assert results == ["chat-result"]
+    assert pipeline.calls == [("assistant", "hola")]
+    assert results == ["assistant-result"]
     assert errors == []
     assert threaded_worker.started is True
 
@@ -158,10 +154,7 @@ def test_command_coordinator_emits_error_text(monkeypatch) -> None:
         def process(self, _text: str) -> str:
             raise ValueError("boom")
 
-        def process_chat(self, _text: str) -> str:
-            raise AssertionError("unexpected")
-
-    worker = module.PipelineCommandWorker(BrokenPipeline(), "hola", "assistant")
+    worker = module.PipelineCommandWorker(BrokenPipeline(), "hola")
     errors: list[str] = []
     worker.error.connect(errors.append)
 

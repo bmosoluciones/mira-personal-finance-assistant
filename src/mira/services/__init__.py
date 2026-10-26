@@ -10,9 +10,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .database_io import DatabaseIOService
     from .mobile_sync import MobileSyncServer, MobileSyncService
-    from .model_lifecycle import ModelLifecycle, ModelLifecycleState
 
-__all__ = ["DatabaseIOService", "MobileSyncServer", "MobileSyncService", "ModelLifecycle", "ModelLifecycleState"]
+__all__ = ["DatabaseIOService", "MobileSyncServer", "MobileSyncService"]
 
 
 def __getattr__(name: str) -> Any:
@@ -27,12 +26,5 @@ def __getattr__(name: str) -> Any:
         return {
             "MobileSyncServer": MobileSyncServer,
             "MobileSyncService": MobileSyncService,
-        }[name]
-    if name in {"ModelLifecycle", "ModelLifecycleState"}:
-        from .model_lifecycle import ModelLifecycle, ModelLifecycleState
-
-        return {
-            "ModelLifecycle": ModelLifecycle,
-            "ModelLifecycleState": ModelLifecycleState,
         }[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

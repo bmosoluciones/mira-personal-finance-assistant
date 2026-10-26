@@ -32,12 +32,9 @@ Published artifacts:
 ## Useful parameters
 
 - `--db PATH`: custom SQLite database path.
-- `--model PATH`: deprecated and ignored (chat is configured in Settings).
 - `--debug`: enables verbose logging.
 
 ## Important notes
 
-- Assistant mode always uses the deterministic parser.
-- The local model is not used to record transactions.
-- Model download and selection are handled from `Settings`.
+- Natural-language transactions always use the deterministic parser.
 - If you are working from the repository as a developer, follow the development workflow described in the `README`.

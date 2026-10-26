@@ -536,11 +536,28 @@ def _migrate_v4_to_v5(conn: sqlite3.Connection) -> None:
             conn.execute(db_model._build_create_index_sql(index_spec))
 
 
+def _migrate_v5_to_v6(conn: sqlite3.Connection) -> None:
+    """Discard settings for the retired desktop chat client."""
+    conn.execute(
+        "DELETE FROM settings WHERE key IN (?, ?, ?, ?, ?, ?)",
+        (
+            "llm_interaction_mode",
+            "llm_provider",
+            "llm_base_url",
+            "llm_model",
+            "llm_third_party_ack",
+            "llm_ack_host",
+        ),
+    )
+    _record_schema_version(conn, 6)
+
+
 MIGRATIONS: dict[int, MigrationFn] = {
     1: _migrate_v1_to_v2,
     2: _migrate_v2_to_v3,
     3: _migrate_v3_to_v4,
     4: _migrate_v4_to_v5,
+    5: _migrate_v5_to_v6,
 }
 
 

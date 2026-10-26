@@ -5,7 +5,7 @@ La ventana principal de MIRA está compuesta por:
 - Barra de menú superior.
 - Barra lateral de navegación.
 - Área central de vistas.
-- Panel inferior de chat/comandos.
+- Panel inferior de comandos y respuestas del asistente.
 
 ## Navegación lateral
 
@@ -231,5 +231,4 @@ Configuraciones principales:
 - Tema.
 - Moneda por defecto.
 - Separadores numéricos.
-- Modelo preferido para IA local.
-- Modo de interacción (Assistant o Chat cuando hay LLM activo).
+- Acceso y consentimiento para el servidor MCP.

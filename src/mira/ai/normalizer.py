@@ -3,8 +3,7 @@
 
 """Text normalizer for MIRA.
 
-Pre-processes raw user input before it is passed to the LLM, applying
-deterministic regex corrections to improve model accuracy.
+Pre-processes raw user input before deterministic parsing.
 
 Steps applied (in order):
 1. Strip surrounding whitespace and collapse internal whitespace.
@@ -97,7 +96,7 @@ def normalise(text: str) -> str:
     Returns
     -------
     str
-        Cleaned string ready to be sent to the LLM engine.
+        Cleaned string ready for the transaction parser.
     """
     text = _collapse_whitespace(text)
     text = _normalise_currency(text)

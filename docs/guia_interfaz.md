@@ -5,7 +5,7 @@ The main MIRA window is composed of:
 - a top menu bar
 - a side navigation bar
 - a central workspace
-- a lower chat and command panel
+- a lower assistant command and response panel
 
 ## Side navigation
 
@@ -221,5 +221,4 @@ Main settings include:
 - theme
 - default currency
 - numeric separators
-- preferred local AI model
-- interaction mode (`Assistant` or `Chat` when a local LLM is active)
+- MCP server access and consent

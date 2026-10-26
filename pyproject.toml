@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mira-personal-finance-assistant"
-version = "0.0.1"
+version = "0.1.0"
 description = "MIRA – Manage Income & Resources Allocations. Personal Finance Assistant."
 readme = "README.md"
 license = {text = "GPL-3.0-or-later"}
@@ -63,6 +63,22 @@ mira = "mira.main:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mira"]
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+    ".github",
+    "CHANGELOG.md",
+    "COPYING",
+    "README.md",
+    "docs",
+    "mira_launcher.py",
+    "packaging",
+    "pyproject.toml",
+    "requirements.txt",
+    "run_mira.sh",
+    "src",
+    "tests",
+]
 
 [tool.black]
 line-length = 120

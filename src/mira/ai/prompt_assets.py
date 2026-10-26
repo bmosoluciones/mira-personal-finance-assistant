@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 - 2026 BMO Soluciones, S.A.
 
-"""Prompt assets and exact-example lookup for parser-oriented engines."""
+"""Exact-example lookup for the deterministic transaction parser."""
 
 from __future__ import annotations
 
@@ -11,36 +11,6 @@ from pathlib import Path
 from typing import Any
 
 from mira.ai.normalizer import normalise
-from mira.ai.schema_contract import build_assistant_system_prompt
-
-_SYSTEM_PROMPT = build_assistant_system_prompt()
-
-_FEW_SHOT_EXAMPLES = [
-    (
-        "I received my salary of 3000",
-        '{"action": "add_income", "amount": 3000, "description": "salary", "category": "salary", "account": null, "base_currency": "USD", "exchange_rate": 1.0, "converted_amount": 3000, "report_type": null, "period": null, "filters": null, "message": null}',
-    ),
-    (
-        "I spent 50 on groceries",
-        '{"action": "add_expense", "amount": 50, "description": "groceries", "category": "food", "account": null, "base_currency": "USD", "exchange_rate": 1.0, "converted_amount": 50, "report_type": null, "period": null, "filters": null, "message": null}',
-    ),
-    (
-        "show me my expenses in the last 3 months",
-        '{"action": "report", "amount": null, "description": null, "category": null, "account": null, "base_currency": "USD", "exchange_rate": null, "converted_amount": null, "report_type": "expenses", "period": {"preset": "last_3_months", "from": null, "to": null}, "filters": null, "message": null}',
-    ),
-    (
-        "analyze my data for this month",
-        '{"action": "data_analysis", "amount": null, "description": null, "category": null, "account": null, "base_currency": "USD", "exchange_rate": null, "converted_amount": null, "report_type": null, "period": {"preset": "this_month", "from": null, "to": null}, "filters": null, "message": null}',
-    ),
-    (
-        "cuanto gaste en comida el mes pasado",
-        '{"action": "report", "amount": null, "description": null, "category": null, "account": null, "base_currency": "USD", "exchange_rate": null, "converted_amount": null, "report_type": "expenses", "period": {"preset": "last_month", "from": null, "to": null}, "filters": {"categories": ["food"], "accounts": null, "min_amount": null, "max_amount": null, "text": null}, "message": null}',
-    ),
-    (
-        "what is the weather today",
-        '{"action": "none", "amount": null, "description": null, "category": null, "account": null, "base_currency": "USD", "exchange_rate": null, "converted_amount": null, "report_type": null, "period": null, "filters": null, "message": null}',
-    ),
-]
 
 
 def _normalize_exact_example_key(text: str) -> str:
@@ -196,23 +166,8 @@ def _exact_example_action(user_input: str) -> dict[str, Any] | None:
     return dict(action)
 
 
-def _build_prompt(user_input: str) -> str:
-    """Return build prompt."""
-    lines = [_SYSTEM_PROMPT]
-    for user_msg, assistant_msg in _FEW_SHOT_EXAMPLES:
-        lines.append(f"User: {user_msg}")
-        lines.append(f"Assistant: {assistant_msg}")
-    lines.append(f"User: {user_input}")
-    lines.append("Assistant:")
-    return "\n".join(lines)
-
-
 class PromptAssets:
-    """Prompt builder and exact-example provider."""
-
-    def build_parser_prompt(self, user_input: str) -> str:
-        """Return build parser prompt."""
-        return _build_prompt(user_input)
+    """Exact-example provider for the deterministic parser."""
 
     def get_exact_action(self, user_input: str) -> dict[str, Any] | None:
         """Return get exact action."""

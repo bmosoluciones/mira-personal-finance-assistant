@@ -7,7 +7,7 @@ MIRA permite capturar acciones desde texto libre en el panel inferior.
 Pipeline general:
 
 1. Normalización del texto.
-2. Interpretación por motor (determinístico o LLM local).
+2. Interpretación con el parser determinístico.
 3. Validación de esquema.
 4. Ejecución de acción.
 
@@ -67,13 +67,3 @@ En la caja de entrada puedes usar:
 
 - Flecha arriba: comando anterior.
 - Flecha abajo: siguiente comando o borrador actual.
-
-## Modo Assistant vs Chat
-
-- Assistant: interpreta y ejecuta acciones financieras.
-- Chat: conversación libre con modelo local.
-
-Nota:
-
-- Chat sólo está disponible cuando hay LLM local listo.
-- Si no hay modelo activo, MIRA usa el parser determinístico del asistente.

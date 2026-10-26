@@ -12,7 +12,7 @@ from typing import cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QLabel, QProgressDialog, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QLabel, QVBoxLayout, QWidget
 
 from mira import __version__ as APP_VERSION
 from mira.i18n import normalize_language, tr
@@ -222,75 +222,13 @@ class MainWindowLifecycleMixin:
         """Return on open documentation."""
         webbrowser.open(_DOCS_URL)
 
-    def _set_mode_switch_value(self, mode: str) -> None:
-        """Return set mode switch value."""
-        if not hasattr(self, "_mode_switch"):
-            return
-        idx = self._mode_switch.findData(mode)
-        if idx < 0 or self._mode_switch.currentIndex() == idx:
-            return
-        self._mode_switch.blockSignals(True)
-        self._mode_switch.setCurrentIndex(idx)
-        self._mode_switch.blockSignals(False)
-
-    def _current_mode_label(self) -> str:
-        """Return current mode label."""
-        mode = self._db.setting.get("llm_interaction_mode") or "assistant"
-        if mode == "assistant":
-            return tr("settings.mode.assistant", self._language, default="Assistant mode")
-        return tr("settings.mode.chat", self._language, default="Chat mode")
-
     def _set_interaction_enabled(self, enabled: bool) -> None:
         """Return set interaction enabled."""
         self._input.setEnabled(enabled)
         self._send_btn.setEnabled(enabled)
-        if hasattr(self, "_mode_switch"):
-            self._mode_switch.setEnabled(enabled)
-
-    def _show_reload_progress(self, mode_label: str) -> None:
-        """Return show reload progress."""
-        if self._reload_progress is not None:
-            self._reload_progress.close()
-        progress = QProgressDialog(
-            tr(
-                "status.reloading_model",
-                self._language,
-                default="Updating model for mode {mode}...",
-                params={"mode": mode_label},
-            ),
-            "",
-            0,
-            0,
-            self,
-        )
-        progress.setWindowTitle(tr("app.name", self._language, default="MIRA"))
-        progress.setCancelButton(None)
-        progress.setMinimumDuration(0)
-        progress.setWindowModality(Qt.WindowModality.ApplicationModal)
-        progress.setAutoClose(False)
-        progress.setAutoReset(False)
-        progress.show()
-        self._reload_progress = progress
-        QApplication.processEvents()
-
-    def _hide_reload_progress(self) -> None:
-        """Return hide reload progress."""
-        if self._reload_progress is None:
-            return
-        self._reload_progress.close()
-        self._reload_progress = None
 
     def _on_settings_saved(self, username: str) -> None:
         """Return on settings saved."""
-        mode_label = self._current_mode_label()
-        self._set_status(
-            tr(
-                "status.reloading_model",
-                self._language,
-                default="Updating model for mode {mode}...",
-                params={"mode": mode_label},
-            )
-        )
         self._status_bar.showMessage(
             tr(
                 "status.welcome",
@@ -299,43 +237,8 @@ class MainWindowLifecycleMixin:
                 default=f"Welcome, {username} | 100% offline - no data leaves your device.",
             )
         )
-        self._set_interaction_enabled(False)
-        self._show_reload_progress(mode_label)
-        try:
-            state = self._model_lifecycle.reload_selected_model(self._db.setting.get("llm_interaction_mode") or "assistant")
-            self._apply_model_lifecycle_state(state, show_mode_warning=True)
-        finally:
-            self._hide_reload_progress()
-            self._set_interaction_enabled(True)
-            self._set_status(tr("status.ready", self._language, default="●  Ready"))
-
-    def _on_mode_changed(self) -> None:
-        """Return on mode changed."""
-        mode = self._mode_switch.currentData() or "assistant"
-        self._db.setting.set("llm_interaction_mode", mode)
-        self._apply_model_lifecycle_state(
-            self._model_lifecycle.sync_engine_info(self._cli_model_name),
-            show_mode_warning=True,
-        )
-
-    def _sync_engine_info(self) -> None:
-        """Return sync engine info."""
-        self._apply_model_lifecycle_state(
-            self._model_lifecycle.sync_engine_info(self._cli_model_name),
-            show_mode_warning=False,
-        )
-
-    def _apply_model_lifecycle_state(self, state, *, show_mode_warning: bool) -> None:
-        """Return apply model lifecycle state."""
-        self._view_settings.set_engine_info(state.engine_info)
-        if hasattr(self, "_mode_switch"):
-            self._mode_switch.setVisible(state.mode_visible)
-            if state.forced_mode is not None:
-                self._set_mode_switch_value(state.forced_mode)
-        if state.status_message:
-            self._status_bar.showMessage(state.status_message, 3500)
-        if show_mode_warning and state.mode_warning:
-            self._status_bar.showMessage(state.mode_warning, 4500)
+        self._pipeline.reload_engine()
+        self._set_status(tr("status.ready", self._language, default="●  Ready"))
 
     def _on_language_changed(self, language: str) -> None:
         """Return on language changed."""

@@ -14,24 +14,11 @@ Common causes:
 
 - the sentence is too ambiguous
 - the amount is missing for income or expense
-- the local model is not available when you are expecting chat behavior
 
 Actions:
 
 1. Use more direct phrases.
 2. Confirm the account or category exists, or let MIRA resolve it from context.
-3. Check that you are in `Assistant` mode instead of `Chat` when no LLM is active.
-
-## Chat does not appear or does not respond
-
-- Chat mode requires a configured AI provider.
-- Without a provider (and model) in `Settings`, only `Assistant` mode is available.
-
-Quick review:
-
-1. Confirm the provider, base URL and model are set in `Settings`.
-2. Confirm the API key was saved and the third-party notice was accepted when the endpoint is not local.
-3. Review logs with `--debug`.
 
 ## CSV import fails
 

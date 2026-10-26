@@ -40,3 +40,27 @@ jobs:
       run: |
         xvfb-run -a pytest
         xvfb-run -a pytest -m full
+    - name: Build wheel and source distribution
+      if: matrix.python-version == '3.12'
+      run: python -m build --wheel --sdist
+
+  mobile-helper:
+    name: Mobile helper checks
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository and pinned submodules
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: Install mobile helper dependencies
+      run: npm ci --prefix tools/mobile-helper
+    - name: Audit mobile helper dependencies
+      run: npm audit --prefix tools/mobile-helper
+    - name: Test mobile helper
+      run: npm test --prefix tools/mobile-helper
+    - name: Build mobile helper
+      run: npm run build --prefix tools/mobile-helper

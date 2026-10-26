@@ -3,7 +3,7 @@
 
 """Action validator for MIRA.
 
-Ensures that the JSON dict produced by the LLM engine conforms to the
+Ensures that the action dict produced by the parser conforms to the
 expected schema before it is passed to the executor.
 """
 
@@ -65,7 +65,7 @@ class ValidationResult:
 
 
 def validate(raw: Any, *, default_base_currency: str = "USD") -> ValidationResult:
-    """Validate *raw* (the output of the LLM engine).
+    """Validate *raw* (the output of the transaction parser).
 
     Parameters
     ----------

@@ -162,15 +162,12 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "settings.restart_required.body": (
             "El cambio de idioma se guardó. Cierra y vuelve a abrir MIRA para aplicarlo por completo."
         ),
-        "status.reloading_model": "Actualizando modelo para modo {mode}...",
-        "status.model_loading_selected": "Cargando modelo LLM seleccionado: {model}",
-        "status.model_loading_cli": "Usando modelo LLM definido por CLI.",
         "chat.assistant.title": "MIRA Asistente",
         "app.name": "MIRA",
         "app.title": "MIRA – Asistente de Finanzas Personales",
         "common.cancel": "Cancelar",
-        "chat.panel.title": "Chat MIRA",
-        "chat.panel.toggle": "Colapsar / expandir panel de chat",
+        "chat.panel.title": "Respuestas de MIRA",
+        "chat.panel.toggle": "Colapsar / expandir panel de respuestas",
         "chat.clear": "Limpiar",
         "chat.prev": "Anterior",
         "chat.next": "Siguiente",
@@ -200,10 +197,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "transactions.file_error.unsupported_extension": "La extensión {extension} no está soportada. Usa .csv o .xlsx.",
         "transactions.file_error.missing_columns": "Faltan columnas requeridas: {columns}.",
         "transactions.file_error.ambiguous_headers": "Los encabezados {first} y {second} apuntan al mismo campo: {column}.",
-        "model.download.title": "MIRA – Descarga de modelo",
-        "model.download.progress": "Descargando {filename}…",
-        "model.download.success": "Modelo descargado:\n{path}",
-        "model.download.error.title": "MIRA – Error de descarga",
         "tag_manager.title": "Gestión de etiquetas",
         "tag_manager.add.title": "Agregar etiqueta",
         "tag_manager.edit.title": "Editar etiqueta",
@@ -558,31 +551,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "settings.theme.dark": "Oscuro",
         "settings.theme.light": "Claro",
         "settings.save": "Guardar ajustes",
-        "settings.ai_engine": "IA",
+        "settings.ai_engine": "Asistente y MCP",
         "settings.ai_rule_based": "Motor: parser determinista del asistente (local, sin conexión)",
-        "settings.ai_note": (
-            "El asistente siempre usa el parser determinista local. Configura un proveedor solo si quieres chat libre."
-        ),
-        "settings.ai.provider": "Proveedor de chat:",
-        "settings.ai.provider.none": "Ninguno (solo local)",
-        "settings.ai.provider.openai": "Endpoint compatible con OpenAI (LM Studio, Ollama, OpenAI...)",
-        "settings.ai.provider.anthropic": "Anthropic (Claude)",
-        "settings.ai.base_url": "URL del endpoint:",
-        "settings.ai.base_url.placeholder": "http://localhost:1234/v1",
-        "settings.ai.model": "Modelo:",
-        "settings.ai.api_key": "Clave de API:",
-        "settings.ai.api_key.placeholder": "No se necesita en endpoints locales",
-        "settings.ai.api_key_clear": "Olvidar clave",
-        "settings.ai.api_key_clear.tooltip": "Borra la clave de API guardada en este equipo",
-        "settings.ai.ack": "Entiendo que el texto del chat sale de este equipo hacia {host}.",
-        "settings.ai.ack.question": (
-            "El texto del chat saldrá de este dispositivo y se enviará a {host}. "
-            "El libro mayor nunca se envía. ¿Aceptas?"
-        ),
-        "settings.ai.ack.declined": "El chat permanece desactivado hasta que aceptes el aviso de terceros.",
-        "settings.ai.https_required": (
-            "Usa HTTPS para endpoints remotos. HTTP solo se permite para endpoints de loopback."
-        ),
+        "settings.ai_note": "El asistente usa el parser determinista para registrar transacciones.",
         "settings.mcp.note": (
             "El servidor MCP permite que aplicaciones externas lean y registren datos a través de mira-cli. "
             "Solo se ejecuta en esta máquina (stdio)."
@@ -594,10 +565,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "a través de mira-cli. ¿Aceptas?"
         ),
         "settings.mcp.ack.declined": "El servidor MCP permanece desactivado hasta que aceptes el aviso.",
-        "settings.mode": "Modo de interacción",
-        "settings.mode.assistant": "Modo Asistente",
-        "settings.mode.chat": "Modo Chat",
-        "settings.mode.chat_unavailable": "El modo chat requiere un proveedor configurado. Regresando a modo asistente.",
         "settings.saved_default_user": "Usuario",
         "setup.welcome.title": "MIRA",
         "setup.welcome.body": "¡Bienvenido a MIRA!\nConfiguración inicial completada.",
@@ -742,7 +709,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dialog.about.subtitle": "Manage Income & Resources Allocations",
         "dialog.about.version": "Versión: {version}",
         "dialog.about.license": "Licencia: {license}",
-        "dialog.about.details": "Por defecto MIRA no comparte datos con terceros. El asistente y la base quedan en este equipo. Puedes conectar un modelo local (LM Studio, Ollama u otro servidor compatible) y el chat sigue sin salir de la máquina. ChatGPT, Claude y el servidor MCP son opcionales: si los activas, esa información puede llegar a terceros.",
+        "dialog.about.details": "MIRA registra y consulta tus finanzas mediante un parser local. La base de datos permanece en este equipo. El servidor MCP es opcional y permite que aplicaciones externas accedan a tus datos si lo habilitas.",
         "dialog.about.company": "Desarrollado por BMO Soluciones, S.A.",
         "status.welcome": "Bienvenido, {username} | 100% offline – tus datos no salen de tu dispositivo.",
         "tools.freq.monthly": "Mensual",
@@ -998,9 +965,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "settings.saved.body": "Configuration was saved successfully.",
         "settings.restart_required.body": ("Language change was saved. Close and reopen MIRA to apply it completely."),
         "settings.validation.number_separators_distinct": "Thousands and decimal separators must be different.",
-        "status.reloading_model": "Updating model for mode {mode}...",
-        "status.model_loading_selected": "Loading selected LLM model: {model}",
-        "status.model_loading_cli": "Using LLM model defined by CLI.",
         "chat.assistant.title": "MIRA Assistant",
         "view.dashboard.title": "Dashboard",
         "dashboard.filter.this_month": "This month",
@@ -1258,8 +1222,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "app.name": "MIRA",
         "app.title": "MIRA – Personal Finance Assistant",
         "common.cancel": "Cancel",
-        "chat.panel.title": "MIRA Chat",
-        "chat.panel.toggle": "Collapse / Expand chat panel",
+        "chat.panel.title": "MIRA Responses",
+        "chat.panel.toggle": "Collapse / Expand response panel",
         "chat.clear": "Clear",
         "chat.prev": "Previous",
         "chat.next": "Next",
@@ -1289,10 +1253,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "transactions.file_error.unsupported_extension": "Unsupported transaction file extension: {extension}. Use .csv or .xlsx.",
         "transactions.file_error.missing_columns": "Missing required columns: {columns}.",
         "transactions.file_error.ambiguous_headers": "Headers {first} and {second} map to the same field: {column}.",
-        "model.download.title": "MIRA – Model Download",
-        "model.download.progress": "Downloading {filename}…",
-        "model.download.success": "Model downloaded:\n{path}",
-        "model.download.error.title": "MIRA – Download Error",
         "tag_manager.title": "Tag Management",
         "tag_manager.add.title": "Add Tag",
         "tag_manager.edit.title": "Edit Tag",
@@ -1373,30 +1333,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "goals.edit.title": "Edit Goal",
         "goals.delete.title": "Delete Goal",
         "goals.delete.body": "Delete savings goal '{name}'?\n\nThis action cannot be undone.",
-        "settings.ai_engine": "AI",
+        "settings.ai_engine": "Assistant and MCP",
         "settings.ai_rule_based": "Engine: deterministic assistant parser (local, offline)",
-        "settings.ai_note": (
-            "The assistant always uses the deterministic local parser. "
-            "Configure a provider only if you want free-form chat."
-        ),
-        "settings.ai.provider": "Chat provider:",
-        "settings.ai.provider.none": "None (local only)",
-        "settings.ai.provider.openai": "OpenAI-compatible endpoint (LM Studio, Ollama, OpenAI...)",
-        "settings.ai.provider.anthropic": "Anthropic (Claude)",
-        "settings.ai.base_url": "Endpoint URL:",
-        "settings.ai.base_url.placeholder": "http://localhost:1234/v1",
-        "settings.ai.model": "Model:",
-        "settings.ai.api_key": "API key:",
-        "settings.ai.api_key.placeholder": "Not needed for local endpoints",
-        "settings.ai.api_key_clear": "Forget key",
-        "settings.ai.api_key_clear.tooltip": "Delete the stored API key from this device",
-        "settings.ai.ack": "I understand that chat text leaves this device towards {host}.",
-        "settings.ai.ack.question": (
-            "Chat text will leave this device and be sent to {host}. "
-            "The ledger itself is never sent. Do you accept?"
-        ),
-        "settings.ai.ack.declined": "Chat stays disabled until you accept the third-party notice.",
-        "settings.ai.https_required": "Use HTTPS for remote endpoints. HTTP is allowed only for loopback endpoints.",
+        "settings.ai_note": "The assistant uses the deterministic parser to record transactions.",
         "settings.mcp.note": (
             "The MCP server lets external applications read and record data through mira-cli. "
             "It runs only on this machine (stdio)."
@@ -1408,10 +1347,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
             "through mira-cli. Do you accept?"
         ),
         "settings.mcp.ack.declined": "The MCP server stays disabled until you accept the notice.",
-        "settings.mode": "Interaction mode",
-        "settings.mode.assistant": "Assistant mode",
-        "settings.mode.chat": "Chat mode",
-        "settings.mode.chat_unavailable": "Chat mode requires a configured provider. Returning to assistant mode.",
         "settings.default_currency": "Default currency:",
         "settings.default_currency.help": (
             "Updates the default currency for new flows and for the assistant. "
@@ -1559,7 +1494,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "dialog.about.subtitle": "Manage Income & Resources Allocations",
         "dialog.about.version": "Version: {version}",
         "dialog.about.license": "License: {license}",
-        "dialog.about.details": "By default MIRA does not share data with third parties. The assistant and the database stay on this device. You can connect a local model (LM Studio, Ollama, or another compatible server) and chat still does not leave the machine. ChatGPT, Claude, and the MCP server are optional: if you enable them, that information may reach third parties.",
+        "dialog.about.details": "MIRA records and reviews finances using a local parser. The database stays on this device. The optional MCP server lets external applications access your data if you enable it.",
         "dialog.about.company": "Developed by BMO Soluciones, S.A.",
         "prompt.placeholder": 'Enter a transaction or command... e.g. "received 500 salary" or "spent 30 on groceries"',
         "prompt.send": "Send",
@@ -1708,8 +1643,6 @@ _TRANSLATIONS["es"].update(
             '  - "gaste 30 en comida"\n'
             '  - "reporte"'
         ),
-        "chat.unavailable": "El modo chat no está disponible porque no hay un proveedor de IA configurado en Ajustes. Puedes seguir usando el modo asistente para registrar y consultar tus finanzas.",
-        "chat.error": "La petición de chat falló: {detail}. Revisa el endpoint, el modelo y la clave de API en Ajustes.",
         "chat.parser.missing_amount.expense": "Parece un gasto, pero no detecte el monto ni la moneda. Puedes indicar cuanto gastaste y en que moneda?",
         "chat.parser.missing_amount.income": "Parece un ingreso, pero no detecte el monto ni la moneda. Puedes indicar cuanto recibiste y en que moneda?",
         "chat.parser.unknown_direction": "Detecte un monto de {amount:.0f}, pero no estoy seguro si es ingreso o gasto. Puedes indicarmelo?",
@@ -1722,7 +1655,6 @@ _TRANSLATIONS["es"].update(
         "reports.loaded.assistant": "Reporte cargado desde el asistente.",
         "reports.loaded.current": "Mostrando el ultimo reporte cargado. Pulsa Aplicar para actualizarlo.",
         "reports.load_error": "No se pudo cargar el reporte. Revisa los filtros e intenta de nuevo.",
-        "model.download.error.body_generic": "No se pudo descargar o activar el modelo. Intenta de nuevo.",
         "mira.analysis.category_detail.empty": "Selecciona una categoria para ver el desglose.",
         "mira.analysis.category_detail.selected": "Desglose de {name}",
         "mira.analysis.category_detail.none": "La categoria {name} no tiene desglose adicional.",
@@ -1784,15 +1716,6 @@ _TRANSLATIONS["es"].update(
         "dialog.category.type.income": "Ingreso",
         "dialog.transaction.category.search": "Buscar categorías…",
         "dialog.budget_create.validation.currency_required": "La moneda del presupuesto es obligatoria.",
-        "settings.engine.info": "Motor: {info}",
-        "chat.diagnostics.title": "Diagnóstico de IA",
-        "chat.diagnostics.body": (
-            "Parser del asistente: <b>{parser}</b><br>"
-            "Motor de chat: <b>{chat}</b><br><br>"
-            "El modo asistente siempre usa el parser determinista.<br>"
-            "El modo de chat opcional se configura en Ajustes → IA.<br>"
-            "<code>Ajustes → Proveedor de IA</code>"
-        ),
         "file.filter.sqlite_db": "Base de datos SQLite (*.db);;Todos los archivos (*)",
         "db.default_account_name": "Cuenta principal",
         "db.default_savings_name": "Ahorro",
@@ -1841,8 +1764,6 @@ _TRANSLATIONS["en"].update(
             '  - "spent 30 on groceries"\n'
             '  - "report"'
         ),
-        "chat.unavailable": "Chat mode is unavailable because no AI provider is configured in Settings. You can keep using assistant mode to record and review your finances.",
-        "chat.error": "The chat request failed: {detail}. Check the endpoint, the model and the API key in Settings.",
         "chat.parser.missing_amount.expense": "This looks like an expense, but I could not detect the amount or currency. Can you tell me how much you spent and in which currency?",
         "chat.parser.missing_amount.income": "This looks like income, but I could not detect the amount or currency. Can you tell me how much you received and in which currency?",
         "chat.parser.unknown_direction": "I detected an amount of {amount:.0f}, but I am not sure whether it is income or expense. Can you clarify?",
@@ -1855,7 +1776,6 @@ _TRANSLATIONS["en"].update(
         "reports.loaded.assistant": "Report loaded from the assistant.",
         "reports.loaded.current": "Showing the last loaded report. Press Apply to refresh it.",
         "reports.load_error": "The report could not be loaded. Review the filters and try again.",
-        "model.download.error.body_generic": "The model could not be downloaded or activated. Please try again.",
         "mira.analysis.category_detail.empty": "Select a category to see the drilldown.",
         "mira.analysis.category_detail.selected": "Breakdown of {name}",
         "mira.analysis.category_detail.none": "Category {name} has no additional drilldown.",
@@ -1917,15 +1837,6 @@ _TRANSLATIONS["en"].update(
         "dialog.category.type.income": "Income",
         "dialog.transaction.category.search": "Search categories…",
         "dialog.budget_create.validation.currency_required": "Budget currency is required.",
-        "settings.engine.info": "Engine: {info}",
-        "chat.diagnostics.title": "AI Diagnostics",
-        "chat.diagnostics.body": (
-            "Assistant parser: <b>{parser}</b><br>"
-            "Chat engine: <b>{chat}</b><br><br>"
-            "Assistant mode always uses the deterministic parser.<br>"
-            "Optional chat mode is configured in Settings → AI.<br>"
-            "<code>Settings → AI provider</code>"
-        ),
         "file.filter.sqlite_db": "SQLite DB (*.db);;All Files (*)",
         "db.default_account_name": "Main account",
         "db.default_savings_name": "Savings",

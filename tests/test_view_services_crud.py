@@ -158,7 +158,6 @@ def test_settings_view_service_save_roundtrip(db: Database) -> None:
         default_currency="crc",
         thousands_sep=" ",
         decimal_sep=",",
-        interaction_mode="assistant",
     )
 
     assert saved.username == "Alex"
@@ -169,28 +168,6 @@ def test_settings_view_service_save_roundtrip(db: Database) -> None:
     assert service.load_state() == saved
 
 
-def test_settings_view_service_rejects_remote_http_before_persisting(db: Database) -> None:
-    service = SettingsViewService(db)
-    db.setting.set("username", "Alex")
-
-    with pytest.raises(ValueError, match="must use HTTPS"):
-        service.save(
-            username="Bianca",
-            language="es",
-            theme="light_blue.xml",
-            default_currency="USD",
-            thousands_sep=",",
-            decimal_sep=".",
-            interaction_mode="chat",
-            llm_provider="openai_compatible",
-            llm_base_url="http://api.example.com/v1",
-            llm_model="remote-model",
-        )
-
-    assert db.setting.get("username") == "Alex"
-    assert db.setting.get("llm_provider") == "none"
-
-
 def test_settings_view_service_save_rejects_equal_separators_without_persisting(db: Database) -> None:
     service = SettingsViewService(db)
     db.setting.set("username", "Alex")
@@ -199,7 +176,6 @@ def test_settings_view_service_save_rejects_equal_separators_without_persisting(
     db.setting.set("default_currency", "USD")
     db.setting.set("number_thousands_separator", ",")
     db.setting.set("number_decimal_separator", ".")
-    db.setting.set("llm_interaction_mode", "assistant")
 
     with pytest.raises(ValueError, match="different"):
         service.save(
@@ -209,7 +185,6 @@ def test_settings_view_service_save_rejects_equal_separators_without_persisting(
             default_currency="crc",
             thousands_sep=".",
             decimal_sep=".",
-            interaction_mode="chat",
         )
 
     assert db.setting.get("username") == "Alex"
@@ -218,7 +193,6 @@ def test_settings_view_service_save_rejects_equal_separators_without_persisting(
     assert db.setting.get("default_currency") == "USD"
     assert db.setting.get("number_thousands_separator") == ","
     assert db.setting.get("number_decimal_separator") == "."
-    assert db.setting.get("llm_interaction_mode") == "assistant"
 
 
 def test_settings_view_service_load_state_normalizes_legacy_ambiguous_separators(db: Database) -> None:

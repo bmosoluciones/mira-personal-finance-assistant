@@ -53,9 +53,8 @@ def _get_qapplication_or_xfail(monkeypatch: pytest.MonkeyPatch):
 
 
 class _FakeDatabase:
-    def __init__(self, path: str | None = None, selected_model: str = "") -> None:
+    def __init__(self, path: str | None = None) -> None:
         self.path = path
-        self.selected_model = selected_model
         self.connected = False
         self.closed = False
         self.saved_settings: dict[str, str] = {}
@@ -81,10 +80,8 @@ class _FakeDatabase:
 
 
 class _DummyPipeline:
-    def __init__(self, cli_model_name: str | None = None) -> None:
-        self.llm_ready = False
+    def __init__(self) -> None:
         self.engine = object()
-        self.cli_model_name = cli_model_name
 
     def reload_engine(self) -> None:
         return None
@@ -96,9 +93,6 @@ class _DummyPipeline:
 def _install_fake_runtime(
     monkeypatch: pytest.MonkeyPatch,
     *,
-    selected_model: str = "",
-    found_model: Path | None = None,
-    discovered: list[Path] | None = None,
     app_exit_code: int = 0,
     startup_cancelled: bool = False,
 ) -> dict[str, object]:
@@ -153,7 +147,7 @@ def _install_fake_runtime(
 
     class FakeDatabaseFactory(_FakeDatabase):
         def __init__(self, path: str | None = None) -> None:
-            super().__init__(path=path, selected_model=selected_model)
+            super().__init__(path=path)
             db_holder["db"] = self
 
     class FakePipeline:
@@ -197,22 +191,22 @@ def test_parse_args_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(sys, "argv", ["mira"])
     args = main_module._parse_args()
 
-    assert args.model is None
     assert args.db is None
     assert args.debug is False
 
 
-def test_main_starts_app_without_embedding_a_model(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_parse_args_rejects_removed_model_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sys, "argv", ["mira", "--model", "old.gguf"])
+    with pytest.raises(SystemExit) as exc_info:
+        main_module._parse_args()
+    assert exc_info.value.code == 2
+
+
+def test_main_starts_parser_app(monkeypatch: pytest.MonkeyPatch) -> None:
     old_level = logging.getLogger().level
     set_levels: list[int] = []
-    model_path = tmp_path / "saved.gguf"
-    model_path.write_text("stub", encoding="utf-8")
-
     state = _install_fake_runtime(
         monkeypatch,
-        selected_model="saved.gguf",
-        found_model=model_path,
-        discovered=[model_path],
         app_exit_code=7,
     )
 
@@ -220,7 +214,6 @@ def test_main_starts_app_without_embedding_a_model(monkeypatch: pytest.MonkeyPat
         main_module,
         "_parse_args",
         lambda: argparse.Namespace(
-            model=None,
             db="custom.db",
             debug=True,
         ),
@@ -243,7 +236,6 @@ def test_main_starts_app_without_embedding_a_model(monkeypatch: pytest.MonkeyPat
 
     pipeline_kwargs = state["pipeline_kwargs"]
     assert isinstance(pipeline_kwargs, dict)
-    assert "model_path" not in pipeline_kwargs
     assert pipeline_kwargs["db"] is db
     pipeline = state["pipeline"]
     assert hasattr(pipeline, "shutdown_called")
@@ -260,46 +252,6 @@ def test_main_starts_app_without_embedding_a_model(monkeypatch: pytest.MonkeyPat
     assert app.version == main_module.APP_VERSION
 
 
-def test_main_ignores_model_argument_without_touching_settings(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    missing_model = tmp_path / "missing.gguf"
-
-    state = _install_fake_runtime(
-        monkeypatch,
-        selected_model="missing.gguf",
-        found_model=missing_model,
-        discovered=[],
-        app_exit_code=0,
-    )
-
-    monkeypatch.setattr(
-        main_module,
-        "_parse_args",
-        lambda: argparse.Namespace(
-            model=str(missing_model),
-            db=None,
-            debug=False,
-        ),
-    )
-
-    with pytest.raises(SystemExit) as exc_info:
-        main_module.main()
-
-    assert exc_info.value.code == 0
-
-    db = state["db_holder"]["db"]
-    assert isinstance(db, _FakeDatabase)
-    pipeline = state["pipeline"]
-    assert hasattr(pipeline, "shutdown_called")
-    assert pipeline.shutdown_called is True
-    assert state["cleanup_events"] == ["pipeline.shutdown"]
-
-    window_kwargs = state["window_kwargs"]
-    assert isinstance(window_kwargs, dict)
-    assert "startup_alert" not in window_kwargs
-
-
 def test_main_exits_early_when_initial_setup_is_cancelled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -313,7 +265,6 @@ def test_main_exits_early_when_initial_setup_is_cancelled(
         main_module,
         "_parse_args",
         lambda: argparse.Namespace(
-            model=None,
             db=None,
             debug=False,
         ),
@@ -356,7 +307,6 @@ def test_main_exits_when_pyside_is_missing(monkeypatch: pytest.MonkeyPatch, caps
         main_module,
         "_parse_args",
         lambda: argparse.Namespace(
-            model=None,
             db=None,
             debug=False,
         ),
@@ -445,7 +395,7 @@ def test_main_exits_with_no_display_message(
     monkeypatch.setattr(
         main_module,
         "_parse_args",
-        lambda: argparse.Namespace(model=None, db=None, debug=False),
+        lambda: argparse.Namespace(db=None, debug=False),
     )
 
     with pytest.raises(SystemExit) as exc_info:
@@ -625,16 +575,6 @@ def test_main_window_prompt_append_assistant_uses_qtimer_without_importing_main_
 
     assert len(qtimer_calls) == 1
     assert "Primer mensaje" in window.visible_message
-
-
-def test_main_window_no_longer_uses_startup_model_offer() -> None:
-    main_window_module = _import_main_window_or_xfail_headless()
-    assert not hasattr(main_window_module.MainWindow, "_offer_model_download_if_needed")
-
-
-def test_main_window_no_longer_exposes_start_model_download() -> None:
-    main_window_module = _import_main_window_or_xfail_headless()
-    assert not hasattr(main_window_module.MainWindow, "_start_model_download")
 
 
 def test_main_window_uses_laptop_friendly_splitters(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -840,13 +780,6 @@ def test_notify_user_message_uses_notification_service_not_chat() -> None:
 
     assert window._notification_service.calls == [("warning", "Aviso", "Texto", None)]
     assert window.chat_messages == []
-
-
-def test_main_window_no_longer_offers_model_downloads() -> None:
-    main_window_module = _import_main_window_or_xfail_headless()
-
-    assert not hasattr(main_window_module.MainWindow, "_on_download_default_model")
-    assert not hasattr(main_window_module.MainWindow, "_apply_download_model_lifecycle_state")
 
 
 def test_on_error_notifies_user_without_writing_to_chat() -> None:

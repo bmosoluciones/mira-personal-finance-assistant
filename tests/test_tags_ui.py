@@ -48,9 +48,7 @@ def _find_row_by_user_role(table, value: int) -> int:
 
 class _DummyPipeline:
     def __init__(self) -> None:
-        self.llm_ready = False
         self.engine = object()
-        self.cli_model_name = None
 
     def reload_engine(self) -> None:
         return None

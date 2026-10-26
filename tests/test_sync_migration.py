@@ -604,7 +604,7 @@ def test_database_connect_migrates_v4_database_missing_sync_tables_to_v5(tmp_pat
                 ).fetchall()
             }
             assert tables == {"sync_devices", "transaction_sync_events", "transaction_tombstones"}
-            assert int(conn.execute("PRAGMA user_version").fetchone()[0]) == 5
+            assert int(conn.execute("PRAGMA user_version").fetchone()[0]) == db_migrations.get_current_schema_version()
             event_total = int(conn.execute("SELECT COUNT(*) FROM transaction_sync_events").fetchone()[0] or 0)
             assert event_total == 1
     finally:

@@ -10,34 +10,28 @@ MIRA funciona con:
 
 ## Descargas oficiales
 
-Las distribuciones publicadas para MIRA están disponibles en:
+Las distribuciones publicadas de MIRA están disponibles en GitHub Releases:
 
-- https://mira.bmogroup.solutions/releases/
+- https://github.com/bmosoluciones/mira-personal-finance-assistant/releases/latest
 
 MIRA no se publicará en PyPI, así que no se recomienda instalarla con `pip` como flujo de usuario final.
 
-Artefactos publicados:
+Artefactos del release:
 
-- `.exe`: instalador recomendado para Windows.
-- `.zip`: distribución portable para Windows.
-- `.whl`: paquete publicado para construir la versión Flatpak.
-- `.tar.gz`: código fuente publicado para cumplir con la licencia GPL.
+- `.whl`: paquete Python para instalación y empaquetado.
+- `.tar.gz`: distribución de código fuente que incluye el código y la licencia.
 
 ## Arranque
 
-- Si instalaste el `.exe`, abre MIRA desde el menú Inicio.
-- Si descargaste el `.zip`, extrae el contenido y ejecuta `MIRA.exe`.
-- Si usas Flatpak, ejecuta `flatpak run solutions.bmogroup.MIRA`.
+- Desde una copia del código fuente, instala la aplicación de escritorio con `pip install '.[gui]'`.
+- La CLI y el servidor MCP no necesitan la opción GUI.
 
 ## Parámetros útiles
 
 - `--db PATH`: ruta personalizada de la base SQLite.
-- `--model PATH`: obsoleto e ignorado (el chat se configura en Ajustes).
 - `--debug`: activa logging detallado.
 
 ## Notas importantes
 
-- El modo asistente siempre usa el parser determinista.
-- El modelo local no se usa para registrar transacciones.
-- La descarga y selección de modelos se hace desde `Ajustes`.
+- Las transacciones en lenguaje natural siempre usan el parser determinista.
 - Si vas a trabajar desde el repositorio como desarrollador, usa el flujo de desarrollo descrito en el `README`.

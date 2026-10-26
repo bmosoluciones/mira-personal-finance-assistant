@@ -23,7 +23,7 @@ def _get_qapplication(monkeypatch: pytest.MonkeyPatch):
     return app
 
 
-def test_pipeline_worker_routes_chat_and_success_signal(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pipeline_worker_routes_parser_and_success_signal(monkeypatch: pytest.MonkeyPatch) -> None:
     _get_qapplication(monkeypatch)
     module = importlib.import_module("mira.ui.coordinators.command_coordinator")
 
@@ -35,19 +35,15 @@ def test_pipeline_worker_routes_chat_and_success_signal(monkeypatch: pytest.Monk
             self.calls.append(("assistant", text))
             return "assistant-result"
 
-        def process_chat(self, text: str) -> str:
-            self.calls.append(("chat", text))
-            return "chat-result"
-
     pipeline = DummyPipeline()
-    worker = module.PipelineCommandWorker(pipeline, "hola", "chat")
+    worker = module.PipelineCommandWorker(pipeline, "hola")
     results: list[object] = []
     worker.finished.connect(results.append)
 
     worker.run()
 
-    assert pipeline.calls == [("chat", "hola")]
-    assert results == ["chat-result"]
+    assert pipeline.calls == [("assistant", "hola")]
+    assert results == ["assistant-result"]
 
 
 def test_pipeline_worker_emits_error_signal(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -58,10 +54,7 @@ def test_pipeline_worker_emits_error_signal(monkeypatch: pytest.MonkeyPatch) -> 
         def process(self, _text: str) -> str:
             raise ValueError("boom")
 
-        def process_chat(self, _text: str) -> str:
-            raise AssertionError("should not use chat mode")
-
-    worker = module.PipelineCommandWorker(DummyPipeline(), "hola", "assistant")
+    worker = module.PipelineCommandWorker(DummyPipeline(), "hola")
     errors: list[str] = []
     worker.error.connect(errors.append)
 
@@ -81,10 +74,9 @@ def test_command_coordinator_connects_callbacks_and_starts(monkeypatch: pytest.M
             self.callbacks.append(callback)
 
     class FakeWorker:
-        def __init__(self, pipeline, user_input: str, mode: str) -> None:
+        def __init__(self, pipeline, user_input: str) -> None:
             self.pipeline = pipeline
             self.user_input = user_input
-            self.mode = mode
             self.finished = DummySignal()
             self.error = DummySignal()
             self.started = False
@@ -99,11 +91,10 @@ def test_command_coordinator_connects_callbacks_and_starts(monkeypatch: pytest.M
     success_calls: list[object] = []
     error_calls: list[str] = []
 
-    worker = coordinator.execute("hola", "assistant", success_calls.append, error_calls.append)
+    worker = coordinator.execute("hola", success_calls.append, error_calls.append)
 
     assert worker.pipeline is pipeline
     assert worker.user_input == "hola"
-    assert worker.mode == "assistant"
     assert len(worker.finished.callbacks) == 1
     worker.finished.callbacks[0]("assistant-result")
     assert success_calls == ["assistant-result"]

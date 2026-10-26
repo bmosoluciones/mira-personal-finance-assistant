@@ -23,13 +23,7 @@ class MainWindowPromptMixin:
         self._input.push(text)
         self._input.clear()
         self._before_command()
-        self._start_command(text, self._selected_interaction_mode())
-
-    def _selected_interaction_mode(self) -> str:
-        """Return selected interaction mode."""
-        if hasattr(self, "_mode_switch") and self._mode_switch.isVisible():
-            return self._mode_switch.currentData() or "assistant"
-        return "assistant"
+        self._start_command(text)
 
     def _before_command(self) -> None:
         """Return before command."""
@@ -37,11 +31,10 @@ class MainWindowPromptMixin:
         self._quick_btns_frame.setVisible(False)
         self._set_status(tr("status.processing", self._language, default="⧗  Thinking..."))
 
-    def _start_command(self, text: str, mode: str) -> None:
+    def _start_command(self, text: str) -> None:
         """Return start command."""
         self._worker = self._command_coordinator.execute(
             text=text,
-            mode=mode,
             on_success=self._on_result,
             on_error=self._on_error,
         )

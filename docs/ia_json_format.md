@@ -1,4 +1,4 @@
-# AI JSON Contract -> Backend -> Frontend
+# Parser JSON Contract -> Backend -> Frontend
 
 This document defines the official JSON format accepted by the system to interpret natural language instructions and convert them into financial actions.
 
@@ -44,7 +44,7 @@ This document defines the official JSON format accepted by the system to interpr
     - `none`: no executable action
 
 - `amount` *(number, optional depending on action)*
-  - Original amount detected in the prompt.
+  - Original amount detected in the input.
   - Required for `add_income` and `add_expense`.
   - Since `0.0.1a2`, the backend normalizes monetary numbers as exact two-decimal money values before persistence.
 
@@ -56,7 +56,7 @@ This document defines the official JSON format accepted by the system to interpr
 
 Special rule for savings:
 
-- If the AI or deterministic parser interprets a savings phrase, the action still remains `add_expense`.
+- If the deterministic parser interprets a savings phrase, the action still remains `add_expense`.
 - In that case `category` can resolve to a technical savings category such as `savings` or its internal canonical equivalent.
 - Categories internally marked as savings update goals but are excluded from real expense in reports, analysis, and budgets.
 
@@ -213,34 +213,7 @@ Special rule for savings:
 }
 ```
 
-## 6) Recommended system prompt
-
-```text
-You are a financial parser. Convert the user's prompt into valid JSON.
-Reply with JSON only and include these keys:
-action, amount, description, category, account, base_currency, exchange_rate, converted_amount, report_type, period, filters, message.
-
-Rules:
-- action in {add_income, add_expense, report, data_analysis, none}
-- For add_income/add_expense:
-  - amount, base_currency, exchange_rate, and converted_amount are required
-  - converted_amount = amount * exchange_rate rounded to 2 decimals with ROUND_HALF_UP
-  - report_type, period, and filters must be null
-- For report:
-  - report_type required in {expenses, incomes, balance, cashflow, summary}
-  - period required with preset in {this_month,last_month,last_3_months,this_year,custom}
-  - if period.preset=custom, from and to are required
-  - filters optional
-- For data_analysis:
-  - period required
-  - filters optional
-  - report_type must be null
-- For none:
-  - monetary and report fields may be null
-- Do not add any text outside the JSON
-```
-
-## 7) Compatibility
+## 6) Compatibility
 
 - This document replaces the previous format that did not include multi-currency fields, explicit report structure, or the `data_analysis` action.
 - Backend and frontend must validate the presence and consistency of `base_currency`, `exchange_rate`, `converted_amount`, `report_type`, `period`, and `filters`.

@@ -483,6 +483,7 @@ def test_cli_restore_reports_schema_upgrade(
             2: db_migrations._migrate_v2_to_v3,
             3: db_migrations._migrate_v3_to_v4,
             4: db_migrations._migrate_v4_to_v5,
+            5: db_migrations._migrate_v5_to_v6,
         },
     )
 
@@ -490,7 +491,7 @@ def test_cli_restore_reports_schema_upgrade(
     captured = capsys.readouterr()
 
     assert restore_exit == 0
-    assert "schema upgraded v1 -> v5" in captured.out
+    assert "schema upgraded v1 -> v6" in captured.out
     assert applied == [1]
 
     db = Database(path=db_path)

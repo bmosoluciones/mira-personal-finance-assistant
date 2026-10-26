@@ -84,12 +84,6 @@ def _parse_args() -> argparse.Namespace:
         description="MIRA – Personal Finance Assistant",
     )
     parser.add_argument(
-        "--model",
-        metavar="PATH",
-        help="Deprecated and ignored. Chat is configured with an AI provider in Settings.",
-        default=None,
-    )
-    parser.add_argument(
         "--db",
         metavar="PATH",
         help=f"Path to the SQLite database file. Defaults to {default_db_path_for_display()}.",
@@ -141,10 +135,7 @@ def main() -> None:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(2)
 
-    if args.model:
-        logging.info("Ignoring --model %s; chat now uses the provider configured in Settings.", args.model)
-
-    # Initialise AI pipeline
+    # Initialise the deterministic parser pipeline.
     pipeline: Pipeline | None = None
     try:
         pipeline = Pipeline(db=db)

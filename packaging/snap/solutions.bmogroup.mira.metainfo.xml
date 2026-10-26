@@ -53,9 +53,9 @@
     <keyword>income</keyword>
   </keywords>
   <releases>
-    <release version="0.0.1" date="2026-08-24">
+    <release version="0.1.0" date="2026-10-25">
       <description>
-        <p>Production release of MIRA with published desktop packaging artifacts.</p>
+        <p>MIRA adds a finance CLI, a consent-gated MCP server, and secure local mobile synchronization.</p>
         <ul>
           <li>Offline-first personal finance workflow</li>
           <li>Annual budgets, reports, and savings goals</li>

@@ -1,14 +1,11 @@
 name: Snap Package
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - packaging/snap/snapcraft.yaml
+  release:
+    types: [published]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: snap-package-${{ github.ref }}
@@ -23,9 +20,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Build snap from manifest
         id: snapcraft
         uses: snapcore/action-build@v1
         with:
           path: packaging/snap
+
+      - name: Attach Snap package to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: ${{ steps.snapcraft.outputs.snap }}

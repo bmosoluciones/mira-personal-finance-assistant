@@ -17,8 +17,8 @@ import sys
 from typing import Any
 
 from mira import __version__
-from mira.ai.llm_config import mcp_enabled
 from mira.db.database import Database
+from mira.mcp_consent import mcp_enabled
 
 logger = logging.getLogger(__name__)
 

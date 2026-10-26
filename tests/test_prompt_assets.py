@@ -12,15 +12,6 @@ from mira.ai import prompt_assets as prompt_assets_module
 from mira.ai.prompt_assets import PromptAssets
 
 
-def test_build_parser_prompt_includes_system_prompt_examples_and_user_input() -> None:
-    prompt = PromptAssets().build_parser_prompt("show me my expenses")
-
-    assert prompt.startswith(prompt_assets_module._SYSTEM_PROMPT)
-    assert "User: I received my salary of 3000" in prompt
-    assert "User: show me my expenses" in prompt
-    assert prompt.endswith("Assistant:")
-
-
 def test_get_exact_action_returns_copy(monkeypatch) -> None:
     stored = {"hello": {"action": "none", "message": "hi"}}
     monkeypatch.setattr(

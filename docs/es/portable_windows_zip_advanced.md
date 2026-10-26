@@ -1,5 +1,7 @@
 # Uso del archivo portable `.zip` de MIRA en Windows (sin instalador)
 
+> Esta guía describe el artefacto ZIP histórico de la versión 0.0.1. El release 0.1.0 de GitHub no incluye instalador ni ZIP portable para Windows.
+
 Esta guía es para usuarios avanzados de Windows que **no pueden instalar programas** con un instalador `.exe` y necesitan ejecutar MIRA desde el paquete portable `.zip`.
 
 ## Resultado esperado

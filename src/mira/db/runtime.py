@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -19,6 +20,8 @@ from mira.db.errors import DatabaseSchemaError
 from mira.db.helpers import get_default_db_path
 from mira.db.model import bind_database, create_peewee_database, initialize_schema, inspect_database_schema_details
 from mira.db.money import cents_to_decimal, cents_to_money, money_to_cents, money_to_decimal, round_money
+
+logger = logging.getLogger(__name__)
 
 
 class _ActiveDatabaseGuard:
@@ -96,6 +99,12 @@ class DatabaseRuntime:
                         f"Database migration failed. A backup was created at {backup_path}. {detail}"
                     ) from exc
             self._init_schema()
+            # The retired chat client's key was deliberately excluded from DB backups.
+            # Remove the matching sidecar after the schema is ready, including restores.
+            try:
+                self.path.with_name("llm-secrets.json").unlink(missing_ok=True)
+            except OSError as exc:
+                logger.warning("Could not remove retired chat credentials: %s", exc)
         except Exception:
             self._close_handles()
             _ActiveDatabaseGuard.release(self)

@@ -12,7 +12,6 @@ try:
         QDialog,
         QLineEdit,
         QMainWindow,
-        QProgressDialog,
         QWidget,
     )
 except ImportError as exc:  # pragma: no cover - exercised only on headless runtimes
@@ -23,7 +22,7 @@ from mira.ai.pipeline import Pipeline
 from mira.app import ApplicationController
 from mira.db.database import Database
 from mira.i18n import normalize_language, tr
-from mira.services import MobileSyncServer, ModelLifecycle
+from mira.services import MobileSyncServer
 from mira.ui.coordinators import ChatState
 from mira.ui.coordinators.command_coordinator import CommandCoordinator
 from mira.ui.dialogs import InitialSetupDialog
@@ -147,14 +146,11 @@ class MainWindow(
         self._act_prompt: QAction | None = None
         self._command_coordinator = CommandCoordinator(self._pipeline)
         self._controller = ApplicationController(self._db, self._pipeline)
-        self._model_lifecycle = ModelLifecycle(self._db, self._pipeline)
         self._mobile_sync_server = MobileSyncServer(self._db)
         self._mobile_sync_dialog: MobileSyncSessionDialog | None = None
         self._mobile_sync_event_timer = QTimer(self)
         self._language = normalize_language(self._db.setting.get("language"))
         self._theme = self._normalize_theme(self._db.setting.get("theme"))
-        self._cli_model_name = self._pipeline.cli_model_name
-        self._reload_progress: QProgressDialog | None = None
         self._chat_state = ChatState()
         self._startup_cancelled = False
 
@@ -171,7 +167,6 @@ class MainWindow(
         self._notification_proxy = MainWindowNotificationProxy(self)
         self._file_actions = MainWindowFileActions(self)
         self._refresh_all()
-        self._sync_engine_info()
         self._run_initial_setup_if_needed()
         QTimer.singleShot(2000, self._show_daily_contextual_message_if_needed)
 
@@ -259,28 +254,6 @@ class MainWindow(
             return
 
         self._file_actions.restore(path)
-
-    def _on_diagnostics(self) -> None:
-        """Return on diagnostics."""
-        parser_type = type(self._pipeline.engine).__name__
-        chat_engine = getattr(self._pipeline, "chat_engine", None)
-        chat_type = type(chat_engine).__name__ if chat_engine is not None else "Disabled"
-        self.notify_user_info(
-            self,
-            tr("chat.diagnostics.title", self._language, default="AI Diagnostics"),
-            tr(
-                "chat.diagnostics.body",
-                self._language,
-                default=(
-                    "Assistant parser: <b>{parser}</b><br>"
-                    "Chat engine: <b>{chat}</b><br><br>"
-                    "Assistant mode always uses the deterministic parser.<br>"
-                    "Optional chat mode is configured in Settings → AI.<br>"
-                    "<code>Settings → AI provider</code>"
-                ),
-                params={"parser": parser_type, "chat": chat_type},
-            ),
-        )
 
     def _on_mobile_sync(self) -> None:
         try:

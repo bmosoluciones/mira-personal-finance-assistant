@@ -754,13 +754,6 @@ class TransactionParserEngine(BaseEngine):
         # Stage 4 — build result.
         return _build_result(signals, intent, self._default_currency)
 
-    def chat(self, user_input: str) -> str:
-        """Return chat."""
-        return (
-            "El modo chat con LLM no está disponible porque no hay un proveedor configurado. "
-            "Configura un proveedor en Ajustes para habilitarlo."
-        )
-
     def set_default_currency(self, currency: str | None) -> None:
         """Return set default currency."""
         self._default_currency = str(currency or "").strip().upper() or None

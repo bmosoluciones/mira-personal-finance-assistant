@@ -1,5 +1,7 @@
 # Using the portable MIRA `.zip` on Windows (no installer)
 
+> This guide describes the legacy 0.0.1 ZIP artifact. The 0.1.0 GitHub Release does not include a Windows installer or portable ZIP.
+
 This guide is for advanced Windows users who **cannot install programs** with an `.exe` installer and need to run MIRA from the portable `.zip` package.
 
 ## Target result
